@@ -6,7 +6,7 @@ các thiết bị Android đã can thiệp phần cứng: **độ cell pin Li-io
 ---
 
 ## 📌 Tính năng chính
-* **Đo pin theo đường đặc tính điện áp (Voltage Mapping):** Tính toán và hiển thị đúng dung lượng pin dựa trên mức điện áp thực tế của cell 3.7V, khắc phục hiện tượng báo ảo của hệ thống Android gốc.
+* **Đo pin theo đường đặc tính điện áp (Voltage Mapping):** Tính toán và hiển thị đúng dung lượng pin dựa trên mức điện áp thực tế của cell 3.7V.
 * **Cảnh báo điện áp thấp (Low Voltage Guard):** Cảnh báo khi pin chạm ngưỡng xả sâu để tránh làm chai/hỏng cell pin.
 * **Biểu đồ theo dõi (History Graph):** Vẽ trực quan lịch sử dao động điện áp theo thời gian thực.
 * **Bộ Widget đa dạng:** Cung cấp nhiều kích thước widget (1x1, 3x1, 5x1) hiển thị % pin chuẩn, nhiệt độ, điện áp và ngày tháng.
