@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_details_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingStart="10px"
+    android:paddingTop="8dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/appwidget_temperature"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="2dp"
+        android:gravity="start"
+        android:text="--°C"
+        android:textColor="#00E676"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/appwidget_clients"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/appwidget_temperature"
+        android:layout_alignParentStart="true"
+        android:gravity="start"
+        android:text="Clients: 0"
+        android:textColor="#B0BEC5"
+        android:textSize="14sp" />
+</RelativeLayout>
