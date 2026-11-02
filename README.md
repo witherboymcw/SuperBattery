@@ -87,7 +87,7 @@ This application is strictly calibrated around specific hardware dynamics. Note 
 
 ## 📜 Credits & License
 * **Application Source Code:** Released under the [MIT License](LICENSE).
-* **Lunar Algorithm:** The `VietnameseLunarCalendar.kt` module implements the Vietnamese lunar conversion algorithm by **Ho Ngoc Duc**.
+* **Lunar Algorithm:** The `VietnameseLunarCalendar.kt` module implements **Ho Ngoc Duc**'s Vietnamese lunar conversion algorithm.
 
 ---
 
