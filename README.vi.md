@@ -47,7 +47,7 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
 >   * Output (iSmart 2): 5V=2.4A
 > * **Từ khoá tìm kiếm:** `RP-PB172` `RAVPower RP-PB172`
 
-| Cụm mạch sạc dự phòng | Khe hở đối lưu thoát nhiệt |
+| Các cổng I/O sạc dự phòng | Khe hở đối lưu thoát nhiệt |
 | :---: | :---: |
 | ![Cụm mạch sạc dự phòng](pobank.avif) | ![Khe hở thoát nhiệt](gap.avif) |
 | *Tận dụng phần vỏ và mạch sạc dự phòng để làm mạch sạc ngoài cho điện thoại.* | *Chừa một khe hở giữa thân điện thoại và vỏ sạc dự phòng để tối ưu tản nhiệt thụ động khi phát mạng liên tục.* |
