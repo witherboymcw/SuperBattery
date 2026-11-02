@@ -1,4 +1,4 @@
-**Tiếng Việt** | [English](README.en.md)
+**Tiếng Việt** | [English](README.md)
 
 ---
 
