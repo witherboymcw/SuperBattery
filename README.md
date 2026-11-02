@@ -2,7 +2,7 @@
 
 # SuperBattery ⚡
 
-A specialized Android utility application designed to monitor battery level and voltage on hardware-modified Android devices: equipped with a **3.7V nominal Li-ion cell (4.2V fully charged)** and an **external charging board wired in parallel with the battery BMS**, bypassing the system's default 3.85V/4.4V Li-Po battery management circuit.
+is a specialized Android utility application designed to monitor battery level and voltage on hardware-modified Android devices: equipped with a **3.7V nominal Li-ion cell (4.2V fully charged)** and an **external charging board wired in parallel with the battery BMS**, bypassing the system's default 3.85V/4.4V Li-Po battery management circuit.
 
 ---
 
