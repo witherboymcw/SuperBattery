@@ -30,7 +30,7 @@ _"With a high-capacity custom cell attached, why not use it as an emergency back
 | Home Screen & Widgets | In-App Dashboard |
 | :---: | :---: |
 | ![Home Screen & Widgets](homescr.avif) | ![In-App Dashboard](dashbo.avif) |
-| *Widget displaying battery temperature, hotspot status, solar/lunar dates, percentage, and voltage.* | *Dashboard tracking network throughput, live voltage chart, free RAM, and cell temperature.* |
+| *Widget displaying battery temperature, hotspot status, solar/lunar dates, percentage, and voltage.* | *Dashboard tracking network throughput, live voltage chart, free RAM, and cell temperature. RAM 67%.* |
 
 ### 2. Hardware Architecture & Thermal Design
 
