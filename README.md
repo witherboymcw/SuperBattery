@@ -1,31 +1,95 @@
+[Tiếng Việt](README.md) | **English (US)**
+
 # SuperBattery ⚡
 
-**SuperBattery** là ứng dụng Android chuyên dụng hỗ trợ theo dõi mức pin và điện áp dành riêng cho
-các thiết bị Android đã can thiệp phần cứng: **độ cell pin Li-ion 3.7V (đầy ở 4.2V)** và sử dụng **mạch sạc ngoài mắc song song BMS pin** thay thế cho chuẩn pin Li-Po 3.85V/4.4V mặc định của hệ thống.
+A specialized Android utility application designed to monitor battery level and voltage on hardware-modified Android devices: equipped with a **3.7V nominal Li-ion cell (4.2V fully charged)** and an **external charging board wired in parallel with the battery BMS**, bypassing the system's default 3.85V/4.4V Li-Po battery management circuit.
 
 ---
 
-## 📌 Tính năng chính
-* **Đo pin theo đường đặc tính điện áp (Voltage Mapping):** Tính toán và hiển thị đúng dung lượng pin dựa trên mức điện áp thực tế của cell 3.7V, khắc phục hiện tượng báo ảo của hệ thống Android gốc.
-* **Cảnh báo điện áp thấp (Low Voltage Guard):** Cảnh báo khi pin chạm ngưỡng xả sâu để tránh làm chai/hỏng cell pin.
-* **Biểu đồ theo dõi (History Graph):** Vẽ trực quan lịch sử dao động điện áp theo thời gian thực.
-* **Bộ Widget đa dạng:** Cung cấp nhiều kích thước widget (1x1, 3x1, 5x1) hiển thị % pin chuẩn, nhiệt độ, điện áp và ngày tháng.
-* **Tích hợp Hotspot & Lịch Âm:** Đếm thiết bị kết nối điểm phát sóng di động và hiển thị âm lịch Việt Nam ngay trên widget.
+## 📌 Motivation & Origin
+_"I use one SIM card for phone calls and another for mobile data. Because my primary phone only supports Dual SIM Dual Standby (DSDS), both SIM cards stay on standby, but only one can transmit data at a time. My cellular data drops whenever I'm on a phone call. In fact, data cuts off the moment an incoming call rings. To solve this, I repurposed an old phone: removed its stock battery, kept the factory BMS board, soldered the phone BMS, an external 3.7V cell, and an external charging board in parallel to act as a dedicated 4G-to-Wi-Fi hotspot. But that posed a challenge: how do you know when the battery is full? Since the battery is charged entirely through an external circuit, bypassing the phone's native charging controller, Android's battery meter stays permanently frozen at 1%."_
+
+* **Voltage-based battery level calculation** calibrated for a 3.7V cell curve, reflecting true remaining capacity from raw millivolts.
+* **Low-voltage system notifications** triggered before reaching critical discharge levels to protect the cell chemistry from premature degradation.
+
+_"A dedicated 4G hotspot companion needs more than just a raw battery readout. What else would be useful?"_
+* **Real-time telemetry graphs** for voltage history, battery temperature, and available system RAM.
+* **Main dashboard** consolidating real-time charts, battery percentage, and network data traffic.
+* **Custom home screen widgets** displaying battery %, temperature, raw voltage, and dates.
+* **Active hotspot client counter** embedded directly on the widget.
+* **Vietnamese Lunar Calendar display** built into the widget layout.
+
+_"With a high-capacity custom cell attached, why not use it as an emergency backup power source?"_
+* **Reverse charging capability** to supply power to external devices via the power bank circuit.
 
 ---
 
-## ⚠️ Tuyên bố miễn trừ trách nhiệm (Disclaimer)
-1. **An toàn phần cứng & Pin:** Việc độ chế cell pin, hàn nối mạch sạc ngoài và can thiệp phần cứng điện thoại tiềm ẩn rủi ro cháy nổ, hư hỏng linh kiện hoặc chập mạch nếu không có kiến thức kỹ thuật phù hợp. Tác giả **không chịu bất kỳ trách nhiệm nào** đối với mọi sự cố phần cứng, mất dữ liệu, chập cháy hoặc tai nạn phát sinh từ việc can thiệp thiết bị của bạn.
-2. **Bản chất dự án:** Dự án này ban đầu được xây dựng cho nhu cầu cá nhân. Phần logic thuật toán và giải pháp do tác giả tự xây dựng; mã nguồn được hỗ trợ sinh và hoàn thiện bằng phương pháp hỗ trợ bởi AI (Vibe Coding).
+## 📸 Real-World Showcase
+
+### 1. User Interface & Home Screen Widgets
+| Home Screen & Widgets | In-App Dashboard |
+| :---: | :---: |
+| ![Home Screen & Widgets](homescr.avif) | ![In-App Dashboard](dashbo.avif) |
+| *Widget displaying battery temperature, hotspot status, solar/lunar dates, percentage, and voltage.* | *Dashboard tracking network throughput, live voltage chart, free RAM, and cell temperature.* |
+
+### 2. Hardware Architecture & Thermal Design
+
+**Hardware specifications used in this build:**
+> * **Host Device:** Xiaomi Redmi Note 9S 4G (4GB RAM, 64GB UFS storage).
+> * **Donor Enclosure & Board:** RAVPower RP-PB172 (Multi-port 20,000mAh power bank enclosure).
+> * **Original Battery Spec:** 2 × 10,000mAh / 3.7V (74Wh).
+> * **Installed Battery Spec:** 1 × 10,000mAh / 3.7V (37Wh), form factor 1260110.
+> * **Charging & Power Delivery Specs:**
+>   * Input: Micro-USB (5V=2.1A), USB-C / Lightning (5V=2A, 9V=2A, 12V=1.5A)
+>   * Type-C Port (Bi-directional IN/OUT): 5V=3A, 9V=2A, 12V=1.5A (18W Max)
+>   * Output (iSmart 1): 5V=3A, 9V=2A, 12V=1.5A
+>   * Output (iSmart 2): 5V=2.4A
+> * **Hardware Identifiers:** `RP-PB172` `RAVPower RP-PB172`
+
+| Power Bank Circuitry | Passive Thermal Ventilation Gap |
+| :---: | :---: |
+| ![Power Bank Circuitry](pobank.avif) | ![Ventilation Gap](gap.avif) |
+| *Repurposing the power bank casing and PCB as an external charging system for the phone.* | *A deliberate standoff gap between phone chassis and battery casing to ensure passive airflow during continuous hotspot transmission.* |
 
 ---
 
-## 📜 Bản quyền & Ghi nhận (Credits & License)
-* **Mã nguồn ứng dụng:** Phát hành theo giấy phép [MIT License](LICENSE).
-* **Thuật toán Âm lịch:** Module `VietnameseLunarCalendar.kt` sử dụng thuật toán tính Âm lịch Việt Nam của **Hồ Ngọc Đức**.
+## ⚠️ Disclaimer
+1. Modifying lithium battery cells, soldering external charging circuits, and altering smartphone internals carry inherent risks of thermal runaway, fire, component damage, or short circuits without proper electrical safety precautions.
+2. The author **assumes no liability whatsoever** for hardware damage, data loss, fire hazards, or personal injuries resulting from modifications applied to your own devices.
+3. **Project Context:** This project was originally tailored for personal utility: **transforming an aging smartphone into a reliable 4G mobile hotspot**. Core architecture, mathematical curves, and circuit integration were designed by the author; implementation code was generated by AI.
+4. **Tested and calibrated on:**
+   * Redmi Note 9S 4G — 4GB/64GB, 395 PPI pixel density, 1080×2400 display.
+   * Redmi Note 10S 4G — 8GB/128GB, 409 PPI pixel density, 1080×2400 display.
+5. Displays running 1080×2400 resolution at 395–409 PPI **should render properly**.
+6. Displays with differing aspect ratios or resolutions may experience layout wrapping or misaligned elements.
+7. Screens with aspect ratios wider/shorter than 9:20, or devices oriented in landscape mode, **will require vertical scrolling** on the main dashboard screen.
 
 ---
 
-## 🛠️ Cài đặt & Đóng góp
-Dự án được xây dựng bằng **Android Studio**, ngôn ngữ **Kotlin**, sử dụng View Binding.
-Mọi đóng góp (Pull Request) nhằm tối ưu hóa bảng tra cứu điện áp (discharge curve) cho các loại cell khác nhau hoặc hoàn thiện giao diện đều rất được hoan nghênh.
+## ⚙️ Technical Notes & Hardware Quirks
+
+This application is strictly calibrated around specific hardware dynamics. Note the following design constraints before testing or adapting:
+
+* **Voltage Discharge Lookup Table:**
+  * Operating range is safely mapped within **3550 mV (0%) to 4140 mV (100%)**.
+  * The full-charge threshold is deliberately capped at **4140 mV** (rather than 4200 mV) to account for wire resistance and the cut-off behavior of the external power bank charge controller.
+  * The lower cut-off is anchored at **3550 mV** to protect the Li-ion cell from deep discharge and prevent transient voltage dips under 4G RF power bursts from abruptly resetting the device.
+* **Hotspot Client Counter Mechanism:**
+  * The widget determines active connected client counts by **reading system notification strings**.
+  * **System Requirement:** The device **must run MIUI 14 with the system language set to English (United Kingdom / English - UK)** to parse matching system string tokens (`"Tethering or hotspot active"`, `"connected devices"`).
+  * Other OEM skins (including Xiaomi HyperOS or AOSP) are currently untested.
+* **Thermal Threshold:**
+  * Triggers an urgent system warning notification if the battery temperature hits **≥ 45°C (113°F)**.
+* **Lunar Calendar Engine:**
+  * Pinned to the **GMT+7** time zone, utilizing Vietnamese Sexagenary (Can Chi) terminology.
+
+---
+
+## 📜 Credits & License
+* **Application Source Code:** Released under the [MIT License](LICENSE).
+* **Lunar Algorithm:** The `VietnameseLunarCalendar.kt` module implements the Vietnamese lunar conversion algorithm by **Ho Ngoc Duc**.
+
+---
+
+## 🛠️ Build & Contribution
+Built with **Android Studio** using **Kotlin**. Contributions regarding alternative discharge curve lookup tables for different cell types or layout enhancements across diverse aspect ratios are welcome.
