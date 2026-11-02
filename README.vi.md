@@ -1,4 +1,4 @@
-**Tiếng Việt** | [English](README.md)
+**Tiếng Việt** | [English - US](README.md)
 
 # SuperBattery ⚡
 
