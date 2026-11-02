@@ -46,7 +46,7 @@ _"With a high-capacity custom cell attached, why not use it as an emergency back
 >   * Output (iSmart 2): 5V=2.4A
 > * **Hardware Identifiers:** `RP-PB172` `RAVPower RP-PB172`
 
-| Power Bank Circuitry | Passive Thermal Ventilation Gap |
+| Power Bank Ports | Passive Thermal Ventilation Gap |
 | :---: | :---: |
 | ![Power Bank Circuitry](pobank.avif) | ![Ventilation Gap](gap.avif) |
 | *Repurposing the power bank casing and PCB as an external charging system for the phone.* | *A deliberate standoff gap between phone chassis and battery casing to ensure passive airflow during continuous hotspot transmission.* |
