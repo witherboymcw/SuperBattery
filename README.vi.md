@@ -1,7 +1,5 @@
 **Tiếng Việt** | [English](README.md)
 
----
-
 # SuperBattery ⚡
 
 là ứng dụng Android chuyên dụng hỗ trợ theo dõi mức pin và điện áp dành riêng cho các thiết bị Android đã can thiệp phần cứng: **độ cell pin Li-ion 3.7V (đầy ở 4.2V)** và sử dụng **mạch sạc ngoài mắc song song BMS pin** thay thế cho chuẩn pin Li-Po 3.85V/4.4V mặc định của hệ thống.
