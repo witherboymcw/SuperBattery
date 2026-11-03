@@ -6,7 +6,6 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.TrafficStats
 import android.os.BatteryManager
@@ -18,7 +17,6 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.view.Menu
 import android.view.View
-import android.widget.Button
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
@@ -37,26 +35,17 @@ class MainActivity : AppCompatActivity() {
     private var previousTx = -1L
     private var previousNetworkTime = 0L
     private var refreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS
-    private lateinit var permissionPanel: View
-    private lateinit var dashboard: View
 
     private val refreshDashboard = object : Runnable {
         override fun run() {
-            if (hasNotificationAccess()) {
-                updateDashboard()
-                handler.postDelayed(this, refreshIntervalMs)
-            }
+            updateDashboard()
+            handler.postDelayed(this, refreshIntervalMs)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         startService(Intent(this, BatteryMonitorService::class.java))
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
-        }
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
@@ -64,12 +53,7 @@ class MainActivity : AppCompatActivity() {
             view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        permissionPanel = findViewById(R.id.permission_panel)
-        dashboard = findViewById(R.id.dashboard)
         loadRefreshInterval()
-        findViewById<Button>(R.id.notification_access_button).setOnClickListener {
-            openNotificationAccessSettings()
-        }
         findViewById<View>(R.id.settings_button).setOnClickListener { showSettingsMenu(it) }
         initializeMetricCards()
     }
@@ -77,10 +61,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadRefreshInterval()
-        updateScreenForPermission()
         refreshWidgets()
         handler.removeCallbacks(refreshDashboard)
-        if (hasNotificationAccess()) handler.post(refreshDashboard)
+        handler.post(refreshDashboard)
     }
 
     override fun onUserLeaveHint() {
@@ -95,12 +78,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun initializeMetricCards() {
         setCard(R.id.card_battery, R.string.metric_battery, "—", "")
-    }
-
-    private fun updateScreenForPermission() {
-        val enabled = hasNotificationAccess()
-        permissionPanel.visibility = if (enabled) View.GONE else View.VISIBLE
-        dashboard.visibility = if (enabled) View.VISIBLE else View.GONE
     }
 
     private fun refreshWidgets() {
@@ -223,6 +200,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSettingsMenu(anchor: View) {
         val popup = PopupMenu(this, anchor)
+        popup.menu.add(Menu.NONE, MENU_ALLOW_NOTIFICATIONS, Menu.NONE, getString(R.string.allow_notifications))
+        popup.menu.add(Menu.NONE, MENU_NOTIFICATION_ACCESS, Menu.NONE, getString(R.string.manage_notification_access))
         val frequencies = popup.menu.addSubMenu(getString(R.string.update_frequency))
         frequencies.setGroupCheckable(Menu.NONE, true, true)
         val options = listOf(
@@ -237,7 +216,20 @@ class MainActivity : AppCompatActivity() {
         }
         popup.setOnMenuItemClickListener { item ->
             val selected = item.itemId.toLong()
-            if (selected in setOf(500L, 1_000L, 2_000L)) {
+            when {
+                item.itemId == MENU_ALLOW_NOTIFICATIONS -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                    ) {
+                        requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_REQUEST)
+                    }
+                    true
+                }
+                item.itemId == MENU_NOTIFICATION_ACCESS -> {
+                    openNotificationAccessSettings()
+                    true
+                }
+                selected in setOf(500L, 1_000L, 2_000L) -> {
                 refreshIntervalMs = selected
                 getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
                     .putLong(REFRESH_INTERVAL_KEY, selected)
@@ -245,7 +237,9 @@ class MainActivity : AppCompatActivity() {
                 handler.removeCallbacks(refreshDashboard)
                 handler.post(refreshDashboard)
                 true
-            } else false
+                }
+                else -> false
+            }
         }
         popup.show()
     }
@@ -263,5 +257,8 @@ class MainActivity : AppCompatActivity() {
         private const val SETTINGS_PREFS = "dashboard_settings"
         private const val REFRESH_INTERVAL_KEY = "refresh_interval_ms"
         private const val DEFAULT_REFRESH_INTERVAL_MS = 2_000L
+        private const val MENU_ALLOW_NOTIFICATIONS = 10_001
+        private const val MENU_NOTIFICATION_ACCESS = 10_002
+        private const val NOTIFICATION_PERMISSION_REQUEST = 1001
     }
 }

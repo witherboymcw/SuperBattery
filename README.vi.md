@@ -59,11 +59,11 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
 2. Tác giả **không chịu bất kì trách nhiệm nào** đối với mọi sự cố phần cứng, mất dữ liệu, chập cháy hoặc tai nạn phát sinh từ việc can thiệp phần cứng thiết bị của bạn.
 3. **Bản chất dự án** là ban đầu được xây dựng cho nhu cầu cá nhân: **Biến điện thoại cũ thành trạm phát sóng 4G**. Phần logic thuật toán và giải pháp do tác giả tự xây dựng; mã nguồn được hỗ trợ sinh và hoàn thiện bởi AI.
 4. **Đã thử nghiệm và hiển thị tốt nhất** trên:
-* Redmi Note 9S 4G - 4GB-64GB, mật độ điểm ảnh 395 ppi, độ phân giải 1080x2400.
-* Redmi Note 10S 4G - 8GB-128GB, mật độ điểm ảnh 409 ppi, độ phân giải 1080x2400.
-5. Các màn hình có độ phân giải 1080x2400 với mật độ từ 395 đến 409 ppi **có thể** sẽ hiển thị tốt.
-6. Các màn hình có thông số khác có thể bị xuống dòng hoặc xuất hiện ô trống.
-7. Các thiết bị có màn hình tỉ lệ ngắn hơn 9x20 và các thiết bị đang xoay ngang màn hình **chắc chắn** sẽ phải cuộn trang trên màn hình app chính.
+   * Redmi Note 9S 4G
+   * Redmi Note 10S 4G
+   * TECNO Camon 40 4G
+   * Redmi Note 12 Pro Plus 5G
+5. Các thiết bị có màn hình tỉ lệ ngắn hơn 9x19,5, các thiết bị đang xoay ngang màn hình, và các thiết bị đang bật nút điều hướng hệ thống **chắc chắn** sẽ phải cuộn trang trên màn hình app chính.
 
 ---
 

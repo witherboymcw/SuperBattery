@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:singleLine="true"
-        android:text="Saturday, 24 October 2026"
+        android:text="Saturday, 24 October"
         android:textColor="#00E676"
         android:textSize="18sp"
         android:textStyle="bold" />

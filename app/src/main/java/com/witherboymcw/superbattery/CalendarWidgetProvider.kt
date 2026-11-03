@@ -47,7 +47,7 @@ class CalendarWidgetProvider : AppWidgetProvider() {
                     this,
                     R.id.calendar_solar_date,
                     R.id.calendar_lunar_date,
-                    "EEEE, dd MMMM yyyy"
+                    "EEEE, dd MMMM"
                 )
             }
             val refreshIntent = Intent(context, BatteryWidget::class.java).apply {
