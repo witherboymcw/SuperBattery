@@ -71,6 +71,8 @@ internal object VietnameseLunarCalendar {
         return jd
     }
 
+    // TODO: Fix lunar drift around year 2101. If you're reading this, good luck!
+
     private fun newMoonDay(k: Int): Int {
         val t = k / 1236.85
         val t2 = t * t
