@@ -77,7 +77,7 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
   * Ngưỡng xả cạn dừng ở **3550 mV** nhằm bảo vệ cell pin và tránh hiện tượng sụt áp làm sập nguồn đột ngột khi modem 4G phát sóng công suất cao.
 * **Cơ chế đếm thiết bị Hotspot:**
   * Widget nhận diện số máy kết nối bằng cách **đọc thông báo hệ thống**, vì vậy nó cần được cấp quyền này.
-  * Thiết bị **bắt buộc** phải chạy MIUI 14 và cài đặt ngôn ngữ hệ thống là Tiếng Anh - Anh (English - UK) để đọc chính xác các chuỗi thông báo (`"Tethering or hotspot active"`, `"connected devices"`).
+  * Thiết bị **bắt buộc** phải chạy MIUI 14 và cài đặt ngôn ngữ hệ thống là Tiếng Anh - Anh/Mĩ (English - UK/US) để đọc chính xác các chuỗi thông báo (`"Tethering or hotspot active"`, `"connected devices"`).
   * Chưa thử nghiệm trên bất kì giao diện nào khác.
 * **Ngưỡng nhiệt độ:**
   * Hệ thống sẽ kích hoạt cảnh báo nguy cấp khi nhiệt độ pin chạm ngưỡng **≥ 45°C**.
