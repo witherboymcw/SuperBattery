@@ -43,4 +43,9 @@
     <string name="update_every_half_second">Every 0.5 seconds</string>
     <string name="update_every_second">Every 1 second</string>
     <string name="update_every_two_seconds">Every 2 seconds</string>
+    <string name="use_system_battery_counter">Use system battery counter</string>
+    <string name="language">Language</string>
+    <string name="language_header">🌐 Language</string>
+    <string name="language_english">English</string>
+    <string name="language_vietnamese">Vietnamese (Tiếng Việt)</string>
 </resources>

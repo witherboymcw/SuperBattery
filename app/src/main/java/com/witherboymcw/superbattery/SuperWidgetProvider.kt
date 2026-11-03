@@ -47,7 +47,7 @@ class SuperWidgetProvider : AppWidgetProvider() {
             val voltage = if (rawVoltage > 0) BatteryWidget.getSmoothedVoltage(rawVoltage) else 0
             val temperatureC =
                 (batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
-            val percent = if (voltage > 0) BatteryWidget.calculatePercentage(voltage) else 0
+            val percent = BatteryWidget.getBatteryPercentage(context, batteryStatus, voltage)
 
             val views = RemoteViews(context.packageName, R.layout.widget_super_5x1).apply {
                 setTextViewText(R.id.super_temperature, String.format("%.0f°C", temperatureC))

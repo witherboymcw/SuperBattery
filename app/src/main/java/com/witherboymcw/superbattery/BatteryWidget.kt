@@ -12,6 +12,7 @@ import android.os.SystemClock
 import android.widget.RemoteViews
 import android.graphics.Color
 import java.util.LinkedList
+import java.util.Locale
 
 class BatteryWidget : AppWidgetProvider() {
 
@@ -43,12 +44,58 @@ class BatteryWidget : AppWidgetProvider() {
 
     companion object {
         const val ACTION_MANUAL_REFRESH = "com.witherboymcw.superbattery.ACTION_MANUAL_REFRESH"
+        const val SETTINGS_PREFS = "dashboard_settings"
+        const val USE_SYSTEM_BATTERY_KEY = "use_system_battery_counter"
+        const val APP_LANGUAGE_KEY = "app_language"
 
         private const val VOLTAGE_SAMPLE_LIMIT = 15
         private const val VOLTAGE_SAMPLE_INTERVAL_MS = 500L
         private const val VOLTAGE_SAMPLE_RESET_GAP_MS = 60_000L
         private val voltageSamples = LinkedList<Int>()
         private var lastVoltageSampleTimeMs = Long.MIN_VALUE
+
+        internal fun getAppLocale(context: Context): Locale {
+            val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+            val savedLang = prefs.getString(APP_LANGUAGE_KEY, null)
+            if (!savedLang.isNullOrEmpty()) {
+                return Locale.forLanguageTag(savedLang)
+            }
+            val appLocales = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
+            if (!appLocales.isEmpty) {
+                val loc = appLocales[0]
+                if (loc != null) return loc
+            }
+            return Locale.getDefault()
+        }
+
+        internal fun getLocalizedContext(context: Context): Context {
+            val locale = getAppLocale(context)
+            val config = context.resources.configuration
+            config.setLocale(locale)
+            return context.createConfigurationContext(config)
+        }
+
+        internal fun isUseSystemBatteryCounter(context: Context): Boolean {
+            return context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+                .getBoolean(USE_SYSTEM_BATTERY_KEY, false)
+        }
+
+        internal fun getSystemBatteryPercentage(batteryIntent: Intent?): Int {
+            if (batteryIntent == null) return 0
+            val level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            return if (level >= 0 && scale > 0) {
+                (level * 100f / scale).toInt()
+            } else 0
+        }
+
+        internal fun getBatteryPercentage(context: Context, batteryIntent: Intent?, voltageMv: Int): Int {
+            return if (isUseSystemBatteryCounter(context)) {
+                getSystemBatteryPercentage(batteryIntent)
+            } else {
+                if (voltageMv > 0) calculatePercentage(voltageMv) else 0
+            }
+        }
         // Single conservative voltage-to-charge curve, compressed to 3550–4140 mV.
         private val dischargeTable = listOf(
             4140 to 100,
@@ -201,9 +248,11 @@ class BatteryWidget : AppWidgetProvider() {
             context: Context,
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int,
+            batteryStatus: Intent?,
             smoothedVoltageMv: Int
         ) {
-            val percent = calculatePercentage(smoothedVoltageMv)
+            val localizedContext = getLocalizedContext(context)
+            val percent = getBatteryPercentage(context, batteryStatus, smoothedVoltageMv)
 
             val views = RemoteViews(context.packageName, R.layout.battery_widget)
             
@@ -211,12 +260,12 @@ class BatteryWidget : AppWidgetProvider() {
             val percentColor = percentageColor(percent)
             views.setTextColor(R.id.appwidget_percent, percentColor)
             updateCriticalEvent(context, "battery_percent", percent <= 10,
-                context.getString(R.string.critical_percent_title),
-                context.getString(R.string.critical_percent_message, percent))
+                localizedContext.getString(R.string.critical_percent_title),
+                localizedContext.getString(R.string.critical_percent_message, percent))
             
-            // Chỉ hiển thị số mV (đã bỏ thời gian và số V)
-            views.setTextViewText(R.id.appwidget_voltage, "$smoothedVoltageMv mV")
-            // Gán sự kiện chạm để cập nhật thủ công tức thì
+            views.setTextViewText(R.id.appwidget_voltage, 
+                "$smoothedVoltageMv mV")
+
             val refreshIntent = Intent(context, BatteryWidget::class.java).apply {
                 action = ACTION_MANUAL_REFRESH
                 setPackage(context.packageName)
@@ -256,7 +305,7 @@ class BatteryWidget : AppWidgetProvider() {
             val batteryStatus = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val rawVoltageMv = batteryStatus?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
             val smoothedVoltageMv = getSmoothedVoltage(rawVoltageMv)
-            appWidgetIds.forEach { updateAppWidget(context, appWidgetManager, it, smoothedVoltageMv) }
+            appWidgetIds.forEach { updateAppWidget(context, appWidgetManager, it, batteryStatus, smoothedVoltageMv) }
         }
 
         internal fun updateCriticalEvent(context: Context, key: String, active: Boolean, title: String, message: String) {

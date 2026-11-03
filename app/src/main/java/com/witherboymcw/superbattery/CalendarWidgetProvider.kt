@@ -10,7 +10,6 @@ import android.widget.RemoteViews
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.util.Locale
 
 class CalendarWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
@@ -75,13 +74,14 @@ class CalendarWidgetProvider : AppWidgetProvider() {
             val day = now.get(Calendar.DAY_OF_MONTH)
             val month = now.get(Calendar.MONTH) + 1
             val year = now.get(Calendar.YEAR)
-            val solarFormat = SimpleDateFormat(solarPattern, Locale.ENGLISH).apply {
+            val appLocale = BatteryWidget.getAppLocale(context)
+            val solarFormat = SimpleDateFormat(solarPattern, appLocale).apply {
                 timeZone = now.timeZone
             }
             val solarText = solarFormat.format(Date())
             val lunar = VietnameseLunarCalendar.fromSolar(day, month, year)
             val lunarText = String.format(
-                Locale.getDefault(),
+                appLocale,
                 "%02d - %02d - %04d %s",
                 lunar.day,
                 lunar.month,
