@@ -13,8 +13,8 @@ android {
         applicationId = "com.witherboymcw.superbattery"
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "26.11.03"
+        versionCode = 3
+        versionName = "26.11.04"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
