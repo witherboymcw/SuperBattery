@@ -42,7 +42,8 @@ class BatteryDetailsWidget : AppWidgetProvider() {
 
             val localizedContext = BatteryWidget.getLocalizedContext(context)
             val views = RemoteViews(context.packageName, R.layout.battery_details_widget)
-            views.setTextViewText(R.id.appwidget_temperature, String.format("%.0f°C", tempCelsius))
+            val formattedTemp = BatteryWidget.formatWidgetTemperature(context, tempCelsius)
+            views.setTextViewText(R.id.appwidget_temperature, formattedTemp)
             val temperatureColor = temperatureColor(tempCelsius)
             views.setTextColor(R.id.appwidget_temperature, temperatureColor)
             BatteryWidget.updateCriticalEvent(
@@ -50,7 +51,7 @@ class BatteryDetailsWidget : AppWidgetProvider() {
                 "temperature",
                 tempCelsius >= 45f,
                 localizedContext.getString(R.string.critical_temperature_title),
-                localizedContext.getString(R.string.critical_temperature_message, tempCelsius.toInt())
+                localizedContext.getString(R.string.critical_temperature_message, formattedTemp)
             )
             views.setTextViewText(
                 R.id.appwidget_clients,

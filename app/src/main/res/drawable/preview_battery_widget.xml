@@ -1,0 +1,48 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="176dp"
+    android:height="72dp"
+    android:viewportWidth="220"
+    android:viewportHeight="90">
+
+    <!-- Background -->
+    <path
+        android:fillColor="#1A202C"
+        android:pathData="M 12 0 H 208 A 12 12 0 0 1 220 12 V 78 A 12 12 0 0 1 208 90 H 12 A 12 12 0 0 1 0 78 V 12 A 12 12 0 0 1 12 0 Z" />
+
+    <!-- Inner Border -->
+    <path
+        android:strokeColor="#2D3748"
+        android:strokeWidth="1"
+        android:pathData="M 12 1 H 208 A 11 11 0 0 1 219 12 V 78 A 11 11 0 0 1 208 89 H 12 A 11 11 0 0 1 1 78 V 12 A 11 11 0 0 1 12 1 Z" />
+
+    <!-- Percentage Text: "85%" (Green #00E676) -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M 152 20 C 146 20 142 24 142 29 C 142 32 144 35 147 37 C 143 39 140 43 140 48 C 140 54 145 59 152 59 C 159 59 164 54 164 48 C 164 43 161 39 157 37 C 160 35 162 32 162 29 C 162 24 158 20 152 20 Z M 152 25 C 155 25 157 27 157 29 C 157 32 155 34 152 34 C 149 34 147 32 147 29 C 147 27 149 25 152 25 Z M 152 41 C 156 41 159 44 159 48 C 159 52 156 54 152 54 C 148 54 145 52 145 48 C 145 44 148 41 152 41 Z" />
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M 168 21 H 186 V 26 H 173 V 35 C 175 33 178 32 181 32 C 187 32 191 36 191 43 C 191 51 185 59 178 59 C 172 59 168 55 167 50 L 172 48 C 173 51 175 54 178 54 C 182 54 186 49 186 43 C 186 38 183 36 179 36 C 176 36 173 38 172 40 L 168 39 V 21 Z" />
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M 197 22 C 195 22 193 24 193 26 C 193 28 195 30 197 30 C 199 30 201 28 201 26 C 201 24 199 22 197 22 Z M 205 21 L 194 58 H 197 L 208 21 H 205 Z M 205 50 C 203 50 201 52 201 54 C 201 56 203 58 205 58 C 207 58 209 56 209 54 C 209 52 207 50 205 50 Z" />
+
+    <!-- Voltage Text: "4150 mV" (Blue-Grey #B0BEC5) -->
+    <path
+        android:fillColor="#B0BEC5"
+        android:pathData="M 148 66 L 140 77 V 79 H 148 V 83 H 150 V 79 H 153 V 77 H 150 V 66 H 148 Z M 148 71 V 77 H 144 L 148 71 Z" />
+    <path
+        android:fillColor="#B0BEC5"
+        android:pathData="M 157 68 L 154 70 V 72 L 157 70 V 83 H 159 V 68 H 157 Z" />
+    <path
+        android:fillColor="#B0BEC5"
+        android:pathData="M 163 68 H 170 V 70 H 165 V 74 C 166 73 168 73 169 73 C 172 73 174 75 174 78 C 174 81 171 83 168 83 C 165 83 163 81 163 79 L 165 78 C 165 80 166 81 168 81 C 170 81 172 79 172 78 C 172 76 170 75 168 75 C 166 75 165 76 164 77 L 163 76 V 68 Z" />
+    <path
+        android:fillColor="#B0BEC5"
+        android:pathData="M 179 68 C 176 68 174 71 174 75 C 174 80 176 83 179 83 C 182 83 184 80 184 75 C 184 71 182 68 179 68 Z M 179 70 C 181 70 182 72 182 75 C 182 79 181 81 179 81 C 177 81 176 79 176 75 C 176 72 177 70 179 70 Z" />
+    <path
+        android:fillColor="#B0BEC5"
+        android:pathData="M 189 73 V 83 H 191 V 76 C 191 74 192 73 194 73 C 195 73 196 74 196 76 V 83 H 198 V 76 C 198 74 199 73 201 73 C 202 73 203 74 203 76 V 83 H 205 V 75 C 205 73 203 71 201 71 C 199 71 198 72 197 73 C 196 72 195 71 193 71 C 191 71 190 72 189 74 V 73 H 187 V 83 H 189 V 73 Z" />
+    <path
+        android:fillColor="#B0BEC5"
+        android:pathData="M 207 68 L 210 83 H 212 L 215 68 H 213 L 211 79 L 209 68 H 207 Z" />
+</vector>

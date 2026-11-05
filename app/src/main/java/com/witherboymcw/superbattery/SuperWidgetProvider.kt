@@ -35,6 +35,7 @@ class SuperWidgetProvider : AppWidgetProvider() {
     companion object {
         internal fun updateAllWidgets(context: Context, manager: AppWidgetManager) {
             val ids = manager.getAppWidgetIds(ComponentName(context, SuperWidgetProvider::class.java))
+            if (ids.isEmpty()) return
             ids.forEach { updateAppWidget(context, manager, it) }
         }
 
@@ -49,8 +50,18 @@ class SuperWidgetProvider : AppWidgetProvider() {
                 (batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
             val percent = BatteryWidget.getBatteryPercentage(context, batteryStatus, voltage)
 
+            val localizedContext = BatteryWidget.getLocalizedContext(context)
+            val formattedTemp = BatteryWidget.formatWidgetTemperature(context, temperatureC)
+            BatteryWidget.updateCriticalEvent(
+                context,
+                "temperature",
+                temperatureC >= 45f,
+                localizedContext.getString(R.string.critical_temperature_title),
+                localizedContext.getString(R.string.critical_temperature_message, formattedTemp)
+            )
+
             val views = RemoteViews(context.packageName, R.layout.widget_super_5x1).apply {
-                setTextViewText(R.id.super_temperature, String.format("%.0f°C", temperatureC))
+                setTextViewText(R.id.super_temperature, formattedTemp)
                 setTextColor(R.id.super_temperature, BatteryDetailsWidget.temperatureColor(temperatureC))
                 setTextViewText(R.id.super_clients, DeviceConnectionCounter.displayText(context))
                 CalendarWidgetProvider.applyDateText(
@@ -62,7 +73,8 @@ class SuperWidgetProvider : AppWidgetProvider() {
                 )
                 setTextViewText(R.id.super_battery_percent, "$percent%")
                 setTextColor(R.id.super_battery_percent, BatteryWidget.percentageColor(percent))
-                setTextViewText(R.id.super_voltage, if (voltage > 0) "$voltage mV" else "— mV")
+                val voltageUnit = BatteryWidget.getVoltageUnit(context)
+                setTextViewText(R.id.super_voltage, if (voltage > 0) BatteryWidget.formatVoltage(voltage, voltageUnit) else "—")
             }
             val refreshIntent = Intent(context, BatteryWidget::class.java).apply {
                 action = BatteryWidget.ACTION_MANUAL_REFRESH

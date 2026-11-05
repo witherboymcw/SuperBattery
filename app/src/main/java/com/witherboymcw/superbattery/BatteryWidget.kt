@@ -14,6 +14,44 @@ import android.graphics.Color
 import java.util.LinkedList
 import java.util.Locale
 
+enum class TempUnit(val code: String, val symbol: String) {
+    CELSIUS("celsius", "ºC"),
+    FAHRENHEIT("fahrenheit", "ºF"),
+    KELVIN("kelvin", "K");
+
+    companion object {
+        fun fromCode(code: String?): TempUnit = when (code) {
+            "fahrenheit" -> FAHRENHEIT
+            "kelvin" -> KELVIN
+            else -> CELSIUS
+        }
+    }
+}
+
+enum class VoltageUnit(val code: String, val symbol: String) {
+    MV("mv", "mV"),
+    V("v", "V");
+
+    companion object {
+        fun fromCode(code: String?): VoltageUnit = when (code) {
+            "v" -> V
+            else -> MV
+        }
+    }
+}
+
+enum class RamUnit(val code: String, val symbol: String) {
+    MB("mb", "MB"),
+    GB("gb", "GB");
+
+    companion object {
+        fun fromCode(code: String?): RamUnit = when (code) {
+            "gb" -> GB
+            else -> MB
+        }
+    }
+}
+
 class BatteryWidget : AppWidgetProvider() {
 
     override fun onUpdate(
@@ -47,6 +85,97 @@ class BatteryWidget : AppWidgetProvider() {
         const val SETTINGS_PREFS = "dashboard_settings"
         const val USE_SYSTEM_BATTERY_KEY = "use_system_battery_counter"
         const val APP_LANGUAGE_KEY = "app_language"
+        const val TEMP_UNIT_KEY = "temp_unit"
+        const val VOLTAGE_UNIT_KEY = "voltage_unit"
+        const val RAM_UNIT_KEY = "ram_unit"
+
+        internal fun getVoltageUnit(context: Context): VoltageUnit {
+            val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+            return VoltageUnit.fromCode(prefs.getString(VOLTAGE_UNIT_KEY, "mv"))
+        }
+
+        internal fun convertVoltage(voltageMv: Float, unit: VoltageUnit): Float {
+            return when (unit) {
+                VoltageUnit.MV -> voltageMv
+                VoltageUnit.V -> voltageMv / 1000f
+            }
+        }
+
+        internal fun convertToVoltageMv(value: Float, unit: VoltageUnit): Float {
+            return when (unit) {
+                VoltageUnit.MV -> value
+                VoltageUnit.V -> value * 1000f
+            }
+        }
+
+        internal fun formatVoltage(voltageMv: Int, unit: VoltageUnit): String {
+            return when (unit) {
+                VoltageUnit.MV -> "$voltageMv mV"
+                VoltageUnit.V -> String.format(Locale.getDefault(), "%.2f V", voltageMv / 1000f)
+            }
+        }
+
+        internal fun getRamUnit(context: Context): RamUnit {
+            val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+            return RamUnit.fromCode(prefs.getString(RAM_UNIT_KEY, "mb"))
+        }
+
+        internal fun convertRam(ramMb: Float, unit: RamUnit): Float {
+            return when (unit) {
+                RamUnit.MB -> ramMb
+                RamUnit.GB -> ramMb / 1024f
+            }
+        }
+
+        internal fun convertToRamMb(value: Float, unit: RamUnit): Float {
+            return when (unit) {
+                RamUnit.MB -> value
+                RamUnit.GB -> value * 1024f
+            }
+        }
+
+        internal fun getTemperatureUnit(context: Context): TempUnit {
+            val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+            return TempUnit.fromCode(prefs.getString(TEMP_UNIT_KEY, "celsius"))
+        }
+
+        internal fun convertTemperature(tempCelsius: Float, unit: TempUnit): Float {
+            return when (unit) {
+                TempUnit.CELSIUS -> tempCelsius
+                TempUnit.FAHRENHEIT -> tempCelsius * 1.8f + 32f
+                TempUnit.KELVIN -> tempCelsius + 273.15f
+            }
+        }
+
+        internal fun convertToCelsius(value: Float, unit: TempUnit): Float {
+            return when (unit) {
+                TempUnit.CELSIUS -> value
+                TempUnit.FAHRENHEIT -> (value - 32f) / 1.8f
+                TempUnit.KELVIN -> value - 273.15f
+            }
+        }
+
+        internal fun formatDashboardTemperature(context: Context, tempCelsius: Float): String {
+            val unit = getTemperatureUnit(context)
+            val converted = convertTemperature(tempCelsius, unit)
+            return when (unit) {
+                TempUnit.KELVIN -> String.format(Locale.getDefault(), "%.1f K", converted)
+                else -> String.format(Locale.getDefault(), "%.1f%s", converted, unit.symbol)
+            }
+        }
+
+        internal fun formatWidgetTemperature(context: Context, tempCelsius: Float): String {
+            val unit = getTemperatureUnit(context)
+            return formatWidgetTemperature(tempCelsius, unit)
+        }
+
+        internal fun formatWidgetTemperature(tempCelsius: Float, unit: TempUnit): String {
+            val converted = convertTemperature(tempCelsius, unit)
+            return when (unit) {
+                TempUnit.KELVIN -> String.format(Locale.getDefault(), "%.0f K", converted)
+                else -> String.format(Locale.getDefault(), "%.0f%s", converted, unit.symbol)
+            }
+        }
 
         private const val VOLTAGE_SAMPLE_LIMIT = 15
         private const val VOLTAGE_SAMPLE_INTERVAL_MS = 500L
@@ -54,23 +183,31 @@ class BatteryWidget : AppWidgetProvider() {
         private val voltageSamples = LinkedList<Int>()
         private var lastVoltageSampleTimeMs = Long.MIN_VALUE
 
+        internal fun getSystemPrimaryLanguage(): String {
+            val locales = android.content.res.Resources.getSystem().configuration.locales
+            return if (!locales.isEmpty) {
+                locales[0]?.language ?: "en"
+            } else {
+                "en"
+            }
+        }
+
         internal fun getAppLocale(context: Context): Locale {
             val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
-            val savedLang = prefs.getString(APP_LANGUAGE_KEY, null)
-            if (!savedLang.isNullOrEmpty()) {
-                return Locale.forLanguageTag(savedLang)
+            val savedLang = prefs.getString(APP_LANGUAGE_KEY, "system") ?: "system"
+            if (savedLang == "system" || savedLang.isEmpty()) {
+                return if (getSystemPrimaryLanguage() == "vi") Locale.forLanguageTag("vi") else Locale.ENGLISH
             }
-            val appLocales = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
-            if (!appLocales.isEmpty) {
-                val loc = appLocales[0]
-                if (loc != null) return loc
+            val tag = when (savedLang) {
+                "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
+                else -> savedLang
             }
-            return Locale.getDefault()
+            return Locale.forLanguageTag(tag)
         }
 
         internal fun getLocalizedContext(context: Context): Context {
             val locale = getAppLocale(context)
-            val config = context.resources.configuration
+            val config = android.content.res.Configuration(context.resources.configuration)
             config.setLocale(locale)
             return context.createConfigurationContext(config)
         }
@@ -249,22 +386,17 @@ class BatteryWidget : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int,
             batteryStatus: Intent?,
-            smoothedVoltageMv: Int
+            smoothedVoltageMv: Int,
+            percent: Int = getBatteryPercentage(context, batteryStatus, smoothedVoltageMv)
         ) {
-            val localizedContext = getLocalizedContext(context)
-            val percent = getBatteryPercentage(context, batteryStatus, smoothedVoltageMv)
-
             val views = RemoteViews(context.packageName, R.layout.battery_widget)
             
             views.setTextViewText(R.id.appwidget_percent, "$percent%")
             val percentColor = percentageColor(percent)
             views.setTextColor(R.id.appwidget_percent, percentColor)
-            updateCriticalEvent(context, "battery_percent", percent <= 10,
-                localizedContext.getString(R.string.critical_percent_title),
-                localizedContext.getString(R.string.critical_percent_message, percent))
             
-            views.setTextViewText(R.id.appwidget_voltage, 
-                "$smoothedVoltageMv mV")
+            val voltageUnit = getVoltageUnit(context)
+            views.setTextViewText(R.id.appwidget_voltage, formatVoltage(smoothedVoltageMv, voltageUnit))
 
             val refreshIntent = Intent(context, BatteryWidget::class.java).apply {
                 action = ACTION_MANUAL_REFRESH
@@ -290,7 +422,9 @@ class BatteryWidget : AppWidgetProvider() {
             val detailsIds = appWidgetManager.getAppWidgetIds(
                 ComponentName(context, BatteryDetailsWidget::class.java)
             )
-            detailsIds.forEach { BatteryDetailsWidget.updateAppWidget(context, appWidgetManager, it) }
+            if (detailsIds.isNotEmpty()) {
+                detailsIds.forEach { BatteryDetailsWidget.updateAppWidget(context, appWidgetManager, it) }
+            }
 
             CalendarWidgetProvider.updateAllWidgets(context, appWidgetManager)
             SuperWidgetProvider.updateAllWidgets(context, appWidgetManager)
@@ -301,11 +435,24 @@ class BatteryWidget : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetIds: IntArray
         ) {
-            if (appWidgetIds.isEmpty()) return
             val batteryStatus = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val rawVoltageMv = batteryStatus?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
             val smoothedVoltageMv = getSmoothedVoltage(rawVoltageMv)
-            appWidgetIds.forEach { updateAppWidget(context, appWidgetManager, it, batteryStatus, smoothedVoltageMv) }
+            val percent = getBatteryPercentage(context, batteryStatus, smoothedVoltageMv)
+
+            val isSystemBattery = isUseSystemBatteryCounter(context)
+            val isBatteryLevelCritical = !isSystemBattery && percent in 1..10
+            val localizedContext = getLocalizedContext(context)
+            updateCriticalEvent(
+                context,
+                "battery_percent",
+                isBatteryLevelCritical,
+                localizedContext.getString(R.string.critical_percent_title),
+                localizedContext.getString(R.string.critical_percent_message, percent)
+            )
+
+            if (appWidgetIds.isEmpty()) return
+            appWidgetIds.forEach { updateAppWidget(context, appWidgetManager, it, batteryStatus, smoothedVoltageMv, percent) }
         }
 
         internal fun updateCriticalEvent(context: Context, key: String, active: Boolean, title: String, message: String) {

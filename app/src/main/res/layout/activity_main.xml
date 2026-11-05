@@ -45,7 +45,7 @@
                     android:contentDescription="@string/settings"
                     android:padding="12dp"
                     android:src="@android:drawable/ic_menu_preferences"
-                    android:tint="?attr/colorControlNormal" />
+                    app:tint="?attr/colorControlNormal" />
             </LinearLayout>
 
             <LinearLayout
@@ -110,9 +110,15 @@
             </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_voltage_graph"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="10dp"
+                app:cardBackgroundColor="?attr/colorSurface"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -146,14 +152,22 @@
                         android:id="@+id/voltage_graph"
                         android:layout_width="match_parent"
                         android:layout_height="150dp"
+                        android:layout_marginTop="8dp"
+                        android:padding="8dp"
                         android:contentDescription="@string/voltage_title" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_ram_graph"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="10dp"
+                app:cardBackgroundColor="?attr/colorSurface"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -187,14 +201,22 @@
                         android:id="@+id/ram_graph"
                         android:layout_width="match_parent"
                         android:layout_height="150dp"
+                        android:layout_marginTop="8dp"
+                        android:padding="8dp"
                         android:contentDescription="@string/ram_title" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_temperature_graph"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="10dp"
+                app:cardBackgroundColor="?attr/colorSurface"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -228,6 +250,8 @@
                         android:id="@+id/temperature_graph"
                         android:layout_width="match_parent"
                         android:layout_height="150dp"
+                        android:layout_marginTop="8dp"
+                        android:padding="8dp"
                         android:contentDescription="@string/temperature_title" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

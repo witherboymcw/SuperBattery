@@ -29,7 +29,7 @@
             android:autoSizeTextType="uniform"
             android:gravity="start"
             android:singleLine="true"
-            android:text="--°C"
+            android:text="35°C"
             android:textColor="#00E676"
             android:textSize="28sp"
             android:textStyle="bold" />
@@ -100,7 +100,7 @@
             android:autoSizeTextType="uniform"
             android:gravity="end"
             android:singleLine="true"
-            android:text="--%"
+            android:text="85%"
             android:textColor="#00E676"
             android:textSize="28sp"
             android:textStyle="bold" />
@@ -111,7 +111,7 @@
             android:layout_height="wrap_content"
             android:gravity="end"
             android:singleLine="true"
-            android:text="0 mV"
+            android:text="4150 mV"
             android:textColor="#B0BEC5"
             android:textSize="14sp" />
     </LinearLayout>

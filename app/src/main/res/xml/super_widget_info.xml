@@ -5,6 +5,7 @@
     android:initialLayout="@layout/widget_super_5x1"
     android:minWidth="300dp"
     android:minHeight="40dp"
+    android:previewImage="@drawable/preview_super_widget"
     android:previewLayout="@layout/widget_super_5x1"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="5"

@@ -15,7 +15,7 @@
         android:layout_alignParentEnd="true"
         android:layout_marginTop="2dp"
         android:gravity="end"
-        android:text="--%"
+        android:text="85%"
         android:textColor="#00E676"
         android:textSize="28sp"
         android:textStyle="bold" />
@@ -27,7 +27,7 @@
         android:layout_below="@id/appwidget_percent"
         android:layout_alignParentEnd="true"
         android:gravity="end"
-        android:text="0.00 V"
+        android:text="4150 mV"
         android:textColor="#B0BEC5"
         android:textSize="14sp" />
 

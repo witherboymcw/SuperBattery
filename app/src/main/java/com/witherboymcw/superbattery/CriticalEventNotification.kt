@@ -22,6 +22,11 @@ internal object CriticalEventNotification {
         val stateKey = "active_$key"
         val wasActive = prefs.getBoolean(stateKey, false)
         if (!active) {
+            if (wasActive) {
+                try {
+                    NotificationManagerCompat.from(context).cancel(key.hashCode())
+                } catch (_: SecurityException) { }
+            }
             prefs.edit().putBoolean(stateKey, false).apply()
             return
         }

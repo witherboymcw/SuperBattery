@@ -36,6 +36,7 @@ class CalendarWidgetProvider : AppWidgetProvider() {
     companion object {
         internal fun updateAllWidgets(context: Context, manager: AppWidgetManager) {
             val ids = manager.getAppWidgetIds(ComponentName(context, CalendarWidgetProvider::class.java))
+            if (ids.isEmpty()) return
             ids.forEach { updateWidget(context, manager, it) }
         }
 

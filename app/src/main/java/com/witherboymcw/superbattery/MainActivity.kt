@@ -58,10 +58,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ensureInitialLanguage()
+
+        val savedTheme = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
+            .getString(APP_THEME_KEY, "system") ?: "system"
+        val targetNightMode = if (savedTheme == "oled") {
+            setTheme(R.style.Theme_SuperBattery_Oled)
+            AppCompatDelegate.MODE_NIGHT_YES
+        } else {
+            when (savedTheme) {
+                "light" -> AppCompatDelegate.MODE_NIGHT_NO
+                "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+                else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            }
+        }
+        if (AppCompatDelegate.getDefaultNightMode() != targetNightMode) {
+            AppCompatDelegate.setDefaultNightMode(targetNightMode)
+        }
+
         super.onCreate(savedInstanceState)
         startService(Intent(this, BatteryMonitorService::class.java))
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        applyGraphBackgrounds(savedTheme)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -103,19 +122,34 @@ class MainActivity : AppCompatActivity() {
         if (dropdownFrequency?.visibility == View.VISIBLE) {
             outState.putBoolean(KEY_FREQUENCY_DROPDOWN_OPEN, true)
         }
+        val dropdownTheme = findViewById<View>(R.id.dropdown_theme)
+        if (dropdownTheme?.visibility == View.VISIBLE) {
+            outState.putBoolean(KEY_THEME_DROPDOWN_OPEN, true)
+        }
+        val dropdownTempUnit = findViewById<View>(R.id.dropdown_temp_unit)
+        if (dropdownTempUnit?.visibility == View.VISIBLE) {
+            outState.putBoolean(KEY_TEMP_UNIT_DROPDOWN_OPEN, true)
+        }
+        val dropdownVoltageUnit = findViewById<View>(R.id.dropdown_voltage_unit)
+        if (dropdownVoltageUnit?.visibility == View.VISIBLE) {
+            outState.putBoolean(KEY_VOLTAGE_UNIT_DROPDOWN_OPEN, true)
+        }
+        val dropdownRamUnit = findViewById<View>(R.id.dropdown_ram_unit)
+        if (dropdownRamUnit?.visibility == View.VISIBLE) {
+            outState.putBoolean(KEY_RAM_UNIT_DROPDOWN_OPEN, true)
+        }
     }
 
     override fun onResume() {
         super.onResume()
         loadRefreshInterval()
-        refreshWidgets()
         updateNotificationPermissionStatuses()
         handler.removeCallbacks(refreshDashboard)
         handler.post(refreshDashboard)
     }
 
     override fun onUserLeaveHint() {
-        refreshWidgets()
+        handler.post { refreshWidgets() }
         super.onUserLeaveHint()
     }
 
@@ -170,27 +204,45 @@ class MainActivity : AppCompatActivity() {
         }
 
         val langGroup = findViewById<RadioGroup>(R.id.language_radio_group)
+        val rbLangSystem = findViewById<RadioButton>(R.id.lang_system)
         val rbVietnamese = findViewById<RadioButton>(R.id.lang_vietnamese)
         val rbEnglish = findViewById<RadioButton>(R.id.lang_english)
+        val rbBrainrot = findViewById<RadioButton>(R.id.lang_brainrot)
 
         val savedLang = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
-            .getString(BatteryWidget.APP_LANGUAGE_KEY, null)
-        val currentLocales = AppCompatDelegate.getApplicationLocales()
-        val currentTag = savedLang ?: if (!currentLocales.isEmpty) currentLocales[0]?.language else Locale.getDefault().language
-        if (currentTag == "vi") {
-            rbVietnamese?.isChecked = true
-            selectedLanguageText?.text = getString(R.string.language_vietnamese)
-        } else {
-            rbEnglish?.isChecked = true
-            selectedLanguageText?.text = getString(R.string.language_english)
+            .getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
+
+        when (savedLang) {
+            "vi" -> {
+                rbVietnamese?.isChecked = true
+                selectedLanguageText?.text = getString(R.string.language_vietnamese)
+            }
+            "en" -> {
+                rbEnglish?.isChecked = true
+                selectedLanguageText?.text = getString(R.string.language_english)
+            }
+            "art", "en-0rot", "en-x-brainrot", "en-brainrot", "en-BR" -> {
+                rbBrainrot?.isChecked = true
+                selectedLanguageText?.text = getString(R.string.language_brainrot)
+            }
+            else -> {
+                rbLangSystem?.isChecked = true
+                selectedLanguageText?.text = getString(R.string.at_system)
+            }
         }
 
         langGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetLang = if (checkedId == R.id.lang_vietnamese) "vi" else "en"
-            selectedLanguageText?.text = if (checkedId == R.id.lang_vietnamese) {
-                getString(R.string.language_vietnamese)
-            } else {
-                getString(R.string.language_english)
+            val targetLang = when (checkedId) {
+                R.id.lang_vietnamese -> "vi"
+                R.id.lang_english -> "en"
+                R.id.lang_brainrot -> "art"
+                else -> "system"
+            }
+            selectedLanguageText?.text = when (targetLang) {
+                "vi" -> getString(R.string.language_vietnamese)
+                "en" -> getString(R.string.language_english)
+                "art" -> getString(R.string.language_brainrot)
+                else -> getString(R.string.at_system)
             }
             setAppLanguage(targetLang)
         }
@@ -266,7 +318,80 @@ class MainActivity : AppCompatActivity() {
             handler.post(refreshDashboard)
         }
 
-        // 5. Use system battery counter
+        // 5. Theme dropdown
+        val headerTheme = findViewById<View>(R.id.header_theme)
+        val dropdownTheme = findViewById<View>(R.id.dropdown_theme)
+        val arrowTheme = findViewById<ImageView>(R.id.arrow_theme)
+        val selectedThemeText = findViewById<TextView>(R.id.selected_theme_text)
+
+        headerTheme?.setOnClickListener {
+            val isExpanded = dropdownTheme?.visibility == View.VISIBLE
+            dropdownTheme?.visibility = if (isExpanded) View.GONE else View.VISIBLE
+            arrowTheme?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
+        }
+
+        if (savedInstanceState?.getBoolean(KEY_THEME_DROPDOWN_OPEN) == true) {
+            dropdownTheme?.visibility = View.VISIBLE
+            arrowTheme?.rotation = 180f
+        }
+
+        val themeGroup = findViewById<RadioGroup>(R.id.theme_radio_group)
+        val rbThemeSystem = findViewById<RadioButton>(R.id.theme_system)
+        val rbLight = findViewById<RadioButton>(R.id.theme_light)
+        val rbDark = findViewById<RadioButton>(R.id.theme_dark)
+        val rbOled = findViewById<RadioButton>(R.id.theme_oled)
+
+        val prefs = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
+        val currentTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
+
+        when (currentTheme) {
+            "light" -> {
+                rbLight?.isChecked = true
+                selectedThemeText?.text = getString(R.string.theme_light)
+            }
+            "dark" -> {
+                rbDark?.isChecked = true
+                selectedThemeText?.text = getString(R.string.theme_dark)
+            }
+            "oled" -> {
+                rbOled?.isChecked = true
+                selectedThemeText?.text = getString(R.string.theme_oled)
+            }
+            else -> {
+                rbThemeSystem?.isChecked = true
+                selectedThemeText?.text = getString(R.string.at_system)
+            }
+        }
+
+        themeGroup?.setOnCheckedChangeListener { _, checkedId ->
+            val targetTheme = when (checkedId) {
+                R.id.theme_light -> "light"
+                R.id.theme_dark -> "dark"
+                R.id.theme_oled -> "oled"
+                else -> "system"
+            }
+            val textRes = when (targetTheme) {
+                "light" -> R.string.theme_light
+                "dark" -> R.string.theme_dark
+                "oled" -> R.string.theme_oled
+                else -> R.string.at_system
+            }
+            selectedThemeText?.text = getString(textRes)
+
+            val activeTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
+            if (activeTheme != targetTheme) {
+                prefs.edit().putString(APP_THEME_KEY, targetTheme).apply()
+                val mode = when (targetTheme) {
+                    "light" -> AppCompatDelegate.MODE_NIGHT_NO
+                    "dark", "oled" -> AppCompatDelegate.MODE_NIGHT_YES
+                    else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                }
+                AppCompatDelegate.setDefaultNightMode(mode)
+                recreate()
+            }
+        }
+
+        // 6. Use system battery counter
         val checkboxSystemBattery = findViewById<MaterialCheckBox>(R.id.checkbox_use_system_battery)
         val cardSystemBattery = findViewById<View>(R.id.card_use_system_battery)
 
@@ -277,6 +402,166 @@ class MainActivity : AppCompatActivity() {
             checkboxSystemBattery?.isChecked = newValue
             getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
                 .putBoolean(BatteryWidget.USE_SYSTEM_BATTERY_KEY, newValue)
+                .apply()
+            updateDashboard()
+            refreshWidgets()
+        }
+
+        // 7. Voltage unit dropdown
+        val headerVoltageUnit = findViewById<View>(R.id.header_voltage_unit)
+        val dropdownVoltageUnit = findViewById<View>(R.id.dropdown_voltage_unit)
+        val arrowVoltageUnit = findViewById<ImageView>(R.id.arrow_voltage_unit)
+        val selectedVoltageUnitText = findViewById<TextView>(R.id.selected_voltage_unit_text)
+
+        headerVoltageUnit?.setOnClickListener {
+            val isExpanded = dropdownVoltageUnit?.visibility == View.VISIBLE
+            dropdownVoltageUnit?.visibility = if (isExpanded) View.GONE else View.VISIBLE
+            arrowVoltageUnit?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
+        }
+
+        if (savedInstanceState?.getBoolean(KEY_VOLTAGE_UNIT_DROPDOWN_OPEN) == true) {
+            dropdownVoltageUnit?.visibility = View.VISIBLE
+            arrowVoltageUnit?.rotation = 180f
+        }
+
+        val voltageUnitGroup = findViewById<RadioGroup>(R.id.voltage_unit_radio_group)
+        val rbVoltageMv = findViewById<RadioButton>(R.id.voltage_unit_mv)
+        val rbVoltageV = findViewById<RadioButton>(R.id.voltage_unit_v)
+
+        val currentVoltageUnit = BatteryWidget.getVoltageUnit(this)
+        when (currentVoltageUnit) {
+            VoltageUnit.V -> {
+                rbVoltageV?.isChecked = true
+                selectedVoltageUnitText?.text = getString(R.string.voltage_unit_v)
+            }
+            else -> {
+                rbVoltageMv?.isChecked = true
+                selectedVoltageUnitText?.text = getString(R.string.voltage_unit_mv)
+            }
+        }
+
+        voltageUnitGroup?.setOnCheckedChangeListener { _, checkedId ->
+            val targetUnit = when (checkedId) {
+                R.id.voltage_unit_v -> VoltageUnit.V
+                else -> VoltageUnit.MV
+            }
+            val textRes = when (targetUnit) {
+                VoltageUnit.V -> R.string.voltage_unit_v
+                else -> R.string.voltage_unit_mv
+            }
+            selectedVoltageUnitText?.text = getString(textRes)
+
+            getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
+                .putString(BatteryWidget.VOLTAGE_UNIT_KEY, targetUnit.code)
+                .apply()
+            updateDashboard()
+            refreshWidgets()
+        }
+
+        // 8. RAM unit dropdown
+        val headerRamUnit = findViewById<View>(R.id.header_ram_unit)
+        val dropdownRamUnit = findViewById<View>(R.id.dropdown_ram_unit)
+        val arrowRamUnit = findViewById<ImageView>(R.id.arrow_ram_unit)
+        val selectedRamUnitText = findViewById<TextView>(R.id.selected_ram_unit_text)
+
+        headerRamUnit?.setOnClickListener {
+            val isExpanded = dropdownRamUnit?.visibility == View.VISIBLE
+            dropdownRamUnit?.visibility = if (isExpanded) View.GONE else View.VISIBLE
+            arrowRamUnit?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
+        }
+
+        if (savedInstanceState?.getBoolean(KEY_RAM_UNIT_DROPDOWN_OPEN) == true) {
+            dropdownRamUnit?.visibility = View.VISIBLE
+            arrowRamUnit?.rotation = 180f
+        }
+
+        val ramUnitGroup = findViewById<RadioGroup>(R.id.ram_unit_radio_group)
+        val rbRamMb = findViewById<RadioButton>(R.id.ram_unit_mb)
+        val rbRamGb = findViewById<RadioButton>(R.id.ram_unit_gb)
+
+        val currentRamUnit = BatteryWidget.getRamUnit(this)
+        when (currentRamUnit) {
+            RamUnit.GB -> {
+                rbRamGb?.isChecked = true
+                selectedRamUnitText?.text = getString(R.string.ram_unit_gb)
+            }
+            else -> {
+                rbRamMb?.isChecked = true
+                selectedRamUnitText?.text = getString(R.string.ram_unit_mb)
+            }
+        }
+
+        ramUnitGroup?.setOnCheckedChangeListener { _, checkedId ->
+            val targetUnit = when (checkedId) {
+                R.id.ram_unit_gb -> RamUnit.GB
+                else -> RamUnit.MB
+            }
+            val textRes = when (targetUnit) {
+                RamUnit.GB -> R.string.ram_unit_gb
+                else -> R.string.ram_unit_mb
+            }
+            selectedRamUnitText?.text = getString(textRes)
+
+            getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
+                .putString(BatteryWidget.RAM_UNIT_KEY, targetUnit.code)
+                .apply()
+            updateDashboard()
+            refreshWidgets()
+        }
+
+        // 9. Temperature unit dropdown
+        val headerTempUnit = findViewById<View>(R.id.header_temp_unit)
+        val dropdownTempUnit = findViewById<View>(R.id.dropdown_temp_unit)
+        val arrowTempUnit = findViewById<ImageView>(R.id.arrow_temp_unit)
+        val selectedTempUnitText = findViewById<TextView>(R.id.selected_temp_unit_text)
+
+        headerTempUnit?.setOnClickListener {
+            val isExpanded = dropdownTempUnit?.visibility == View.VISIBLE
+            dropdownTempUnit?.visibility = if (isExpanded) View.GONE else View.VISIBLE
+            arrowTempUnit?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
+        }
+
+        if (savedInstanceState?.getBoolean(KEY_TEMP_UNIT_DROPDOWN_OPEN) == true) {
+            dropdownTempUnit?.visibility = View.VISIBLE
+            arrowTempUnit?.rotation = 180f
+        }
+
+        val tempUnitGroup = findViewById<RadioGroup>(R.id.temp_unit_radio_group)
+        val rbCelsius = findViewById<RadioButton>(R.id.temp_unit_celsius)
+        val rbFahrenheit = findViewById<RadioButton>(R.id.temp_unit_fahrenheit)
+        val rbKelvin = findViewById<RadioButton>(R.id.temp_unit_kelvin)
+
+        val currentTempUnit = BatteryWidget.getTemperatureUnit(this)
+        when (currentTempUnit) {
+            TempUnit.FAHRENHEIT -> {
+                rbFahrenheit?.isChecked = true
+                selectedTempUnitText?.text = getString(R.string.temp_unit_fahrenheit)
+            }
+            TempUnit.KELVIN -> {
+                rbKelvin?.isChecked = true
+                selectedTempUnitText?.text = getString(R.string.temp_unit_kelvin)
+            }
+            else -> {
+                rbCelsius?.isChecked = true
+                selectedTempUnitText?.text = getString(R.string.temp_unit_celsius)
+            }
+        }
+
+        tempUnitGroup?.setOnCheckedChangeListener { _, checkedId ->
+            val targetUnit = when (checkedId) {
+                R.id.temp_unit_fahrenheit -> TempUnit.FAHRENHEIT
+                R.id.temp_unit_kelvin -> TempUnit.KELVIN
+                else -> TempUnit.CELSIUS
+            }
+            val textRes = when (targetUnit) {
+                TempUnit.FAHRENHEIT -> R.string.temp_unit_fahrenheit
+                TempUnit.KELVIN -> R.string.temp_unit_kelvin
+                else -> R.string.temp_unit_celsius
+            }
+            selectedTempUnitText?.text = getString(textRes)
+
+            getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
+                .putString(BatteryWidget.TEMP_UNIT_KEY, targetUnit.code)
                 .apply()
             updateDashboard()
             refreshWidgets()
@@ -311,14 +596,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun ensureInitialLanguage() {
+        val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
+        var savedLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
+        val validLangs = setOf("system", "vi", "en", "art")
+
+        if (savedLang !in validLangs) {
+            savedLang = "system"
+            prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, "system").apply()
+        }
+
+        val effectiveTag = if (savedLang == "system") {
+            if (BatteryWidget.getSystemPrimaryLanguage() == "vi") "vi" else "en"
+        } else {
+            savedLang
+        }
+
+        val currentLocales = AppCompatDelegate.getApplicationLocales()
+        val currentTag = currentLocales.toLanguageTags()
+        if (currentTag != effectiveTag) {
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(effectiveTag))
+        }
+    }
+
     private fun setAppLanguage(langCode: String) {
         val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
-        val currentLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, null)
+        val currentLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
         if (currentLang != langCode) {
             prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, langCode).commit()
-            val locale = Locale.forLanguageTag(langCode)
-            Locale.setDefault(locale)
-            val appLocales = LocaleListCompat.forLanguageTags(langCode)
+
+            val effectiveTag = if (langCode == "system") {
+                if (BatteryWidget.getSystemPrimaryLanguage() == "vi") "vi" else "en"
+            } else {
+                langCode
+            }
+
+            val appLocales = LocaleListCompat.forLanguageTags(effectiveTag)
             AppCompatDelegate.setApplicationLocales(appLocales)
             refreshWidgets()
         }
@@ -420,6 +733,46 @@ class MainActivity : AppCompatActivity() {
         setCard(R.id.card_battery, R.string.metric_battery, "—", "")
     }
 
+    private fun applyGraphBackgrounds(theme: String) {
+        val isOled = theme == "oled"
+        val graphBg = if (isOled) Color.BLACK else Color.TRANSPARENT
+        val voltageGraph = findViewById<HistoryGraphView>(R.id.voltage_graph)
+        val ramGraph = findViewById<HistoryGraphView>(R.id.ram_graph)
+        val tempGraph = findViewById<HistoryGraphView>(R.id.temperature_graph)
+
+        voltageGraph?.setBackgroundColor(graphBg)
+        ramGraph?.setBackgroundColor(graphBg)
+        tempGraph?.setBackgroundColor(graphBg)
+
+        val plotBg = if (isOled) Color.BLACK else Color.TRANSPARENT
+        voltageGraph?.setPlotBackgroundColor(plotBg)
+        ramGraph?.setPlotBackgroundColor(plotBg)
+        tempGraph?.setPlotBackgroundColor(plotBg)
+
+        val cardVoltage = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_voltage_graph)
+        val cardRam = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_ram_graph)
+        val cardTemp = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_temperature_graph)
+
+        if (isOled) {
+            cardVoltage?.setCardBackgroundColor(Color.BLACK)
+            cardRam?.setCardBackgroundColor(Color.BLACK)
+            cardTemp?.setCardBackgroundColor(Color.BLACK)
+            cardVoltage?.strokeWidth = (resources.displayMetrics.density * 1f).toInt()
+            cardRam?.strokeWidth = (resources.displayMetrics.density * 1f).toInt()
+            cardTemp?.strokeWidth = (resources.displayMetrics.density * 1f).toInt()
+        } else {
+            val defaultSurface = com.google.android.material.color.MaterialColors.getColor(
+                this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT
+            )
+            cardVoltage?.setCardBackgroundColor(defaultSurface)
+            cardRam?.setCardBackgroundColor(defaultSurface)
+            cardTemp?.setCardBackgroundColor(defaultSurface)
+            cardVoltage?.strokeWidth = 0
+            cardRam?.strokeWidth = 0
+            cardTemp?.strokeWidth = 0
+        }
+    }
+
     private fun refreshWidgets() {
         BatteryWidget.updateAllWidgets(this, android.appwidget.AppWidgetManager.getInstance(this))
     }
@@ -447,13 +800,14 @@ class MainActivity : AppCompatActivity() {
             batteryValue,
             ""
         )
+        val voltageUnit = BatteryWidget.getVoltageUnit(this)
+        val ramUnit = BatteryWidget.getRamUnit(this)
+
         findViewById<TextView>(R.id.voltage_current).text = if (voltageMv > 0) {
-            getString(R.string.current_voltage_format, voltageMv)
+            BatteryWidget.formatVoltage(voltageMv, voltageUnit)
         } else "—"
-        findViewById<TextView>(R.id.temperature_current).text = getString(
-            R.string.current_temperature_format,
-            temperatureC
-        )
+        findViewById<TextView>(R.id.temperature_current).text =
+            BatteryWidget.formatDashboardTemperature(this, temperatureC)
         if (voltageMv > 0) addSample(voltageHistory, voltageMv.toFloat(), sampleTime)
         if (battery != null) addSample(temperatureHistory, temperatureC, sampleTime)
 
@@ -468,25 +822,63 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.ram_current).text = getString(R.string.current_ram_format, usedPercent)
 
         updateNetworkStats()
+
+        val mappedVoltageHistory = voltageHistory.map { sample ->
+            HistoryGraphView.Sample(
+                sample.timestampMs,
+                BatteryWidget.convertVoltage(sample.value, voltageUnit)
+            )
+        }
+        val (minVoltage, maxVoltage, voltageSuffix) = when (voltageUnit) {
+            VoltageUnit.MV -> Triple(3300f, 4300f, " mV")
+            VoltageUnit.V -> Triple(3.3f, 4.3f, " V")
+        }
         findViewById<HistoryGraphView>(R.id.voltage_graph).setHistory(
-            voltageHistory.toList(), 3300f, 4300f, " mV", sampleTime
+            mappedVoltageHistory, minVoltage, maxVoltage, voltageSuffix, sampleTime
         ) { voltage ->
-            val percent = BatteryWidget.getBatteryPercentage(this, battery, voltage.toInt())
+            val rawMv = BatteryWidget.convertToVoltageMv(voltage, voltageUnit).toInt()
+            val percent = BatteryWidget.getBatteryPercentage(this, battery, rawMv)
             BatteryWidget.percentageColor(percent)
         }
+
+        val mappedRamHistory = ramHistory.map { sample ->
+            HistoryGraphView.Sample(
+                sample.timestampMs,
+                BatteryWidget.convertRam(sample.value, ramUnit)
+            )
+        }
+        val maxRam = BatteryWidget.convertRam(totalMb.toFloat(), ramUnit).coerceAtLeast(0.1f)
+        val ramSuffix = if (ramUnit == RamUnit.GB) " GB" else " MB"
+
         findViewById<HistoryGraphView>(R.id.ram_graph).setHistory(
-            ramHistory.toList(), 0f, totalMb.toFloat().coerceAtLeast(1f), " MB", sampleTime
-        ) { percent ->
-            val usedPercent = if (totalMb > 0) percent * 100f / totalMb else 0f
+            mappedRamHistory, 0f, maxRam, ramSuffix, sampleTime
+        ) { ramVal ->
+            val ramMb = BatteryWidget.convertToRamMb(ramVal, ramUnit)
+            val ramUsedPercent = if (totalMb > 0) ramMb * 100f / totalMb else 0f
             when {
-                usedPercent >= 90f -> Color.rgb(255, 82, 82)
-                usedPercent >= 80f -> Color.rgb(255, 179, 0)
+                ramUsedPercent >= 90f -> Color.rgb(255, 82, 82)
+                ramUsedPercent >= 80f -> Color.rgb(255, 179, 0)
                 else -> Color.rgb(0, 230, 118)
             }
         }
+        val tempUnit = BatteryWidget.getTemperatureUnit(this)
+        val mappedTempHistory = temperatureHistory.map { sample ->
+            HistoryGraphView.Sample(
+                sample.timestampMs,
+                BatteryWidget.convertTemperature(sample.value, tempUnit)
+            )
+        }
+        val (minTemp, maxTemp, tempSuffix) = when (tempUnit) {
+            TempUnit.CELSIUS -> Triple(0f, 60f, "°C")
+            TempUnit.FAHRENHEIT -> Triple(32f, 140f, "°F")
+            TempUnit.KELVIN -> Triple(273f, 333f, " K")
+        }
         findViewById<HistoryGraphView>(R.id.temperature_graph).setHistory(
-            temperatureHistory.toList(), 0f, 60f, "°C", sampleTime
-        ) { temperature -> BatteryDetailsWidget.temperatureColor(temperature) }
+            mappedTempHistory, minTemp, maxTemp, tempSuffix, sampleTime
+        ) { tempVal ->
+            val celsius = BatteryWidget.convertToCelsius(tempVal, tempUnit)
+            BatteryDetailsWidget.temperatureColor(celsius)
+        }
     }
 
     private fun updateNetworkStats() {
@@ -553,10 +945,15 @@ class MainActivity : AppCompatActivity() {
         private const val MAX_HISTORY_POINTS = 240
         private const val SETTINGS_PREFS = BatteryWidget.SETTINGS_PREFS
         private const val REFRESH_INTERVAL_KEY = "refresh_interval_ms"
-        private const val DEFAULT_REFRESH_INTERVAL_MS = 2_000L
+        private const val DEFAULT_REFRESH_INTERVAL_MS = 1_000L
         private const val NOTIFICATION_PERMISSION_REQUEST = 1001
         private const val KEY_SETTINGS_OPEN = "key_settings_open"
         private const val KEY_LANGUAGE_DROPDOWN_OPEN = "key_language_dropdown_open"
         private const val KEY_FREQUENCY_DROPDOWN_OPEN = "key_frequency_dropdown_open"
+        private const val APP_THEME_KEY = "app_theme"
+        private const val KEY_THEME_DROPDOWN_OPEN = "key_theme_dropdown_open"
+        private const val KEY_TEMP_UNIT_DROPDOWN_OPEN = "key_temp_unit_dropdown_open"
+        private const val KEY_VOLTAGE_UNIT_DROPDOWN_OPEN = "key_voltage_unit_dropdown_open"
+        private const val KEY_RAM_UNIT_DROPDOWN_OPEN = "key_ram_unit_dropdown_open"
     }
 }

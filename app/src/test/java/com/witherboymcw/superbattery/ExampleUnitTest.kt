@@ -30,4 +30,64 @@ class ExampleUnitTest {
         assertFalse(lunar2026.isLeapMonth)
         assertEquals("Bính Ngọ", VietnameseLunarCalendar.canChiYear(lunar2026.year))
     }
+
+    @Test
+    fun testTemperatureUnitConversions() {
+        val tempC = 35.0f
+
+        // Celsius
+        val celsiusVal = BatteryWidget.convertTemperature(tempC, TempUnit.CELSIUS)
+        assertEquals(35.0f, celsiusVal, 0.001f)
+        assertEquals(35.0f, BatteryWidget.convertToCelsius(celsiusVal, TempUnit.CELSIUS), 0.001f)
+
+        // Fahrenheit: 35 * 1.8 + 32 = 95
+        val fahrenheitVal = BatteryWidget.convertTemperature(tempC, TempUnit.FAHRENHEIT)
+        assertEquals(95.0f, fahrenheitVal, 0.001f)
+        assertEquals(35.0f, BatteryWidget.convertToCelsius(fahrenheitVal, TempUnit.FAHRENHEIT), 0.001f)
+
+        // Kelvin: 35 + 273.15 = 308.15
+        val kelvinVal = BatteryWidget.convertTemperature(tempC, TempUnit.KELVIN)
+        assertEquals(308.15f, kelvinVal, 0.001f)
+        assertEquals(35.0f, BatteryWidget.convertToCelsius(kelvinVal, TempUnit.KELVIN), 0.001f)
+    }
+
+    @Test
+    fun testTemperatureFormatting() {
+        val tempC = 35.0f
+        assertEquals("35ºC", BatteryWidget.formatWidgetTemperature(tempC, TempUnit.CELSIUS))
+        assertEquals("95ºF", BatteryWidget.formatWidgetTemperature(tempC, TempUnit.FAHRENHEIT))
+        assertEquals("308 K", BatteryWidget.formatWidgetTemperature(tempC, TempUnit.KELVIN))
+    }
+
+    @Test
+    fun testVoltageUnitConversionsAndFormatting() {
+        val voltageMv = 3850
+
+        // Millivolts
+        val mvVal = BatteryWidget.convertVoltage(voltageMv.toFloat(), VoltageUnit.MV)
+        assertEquals(3850.0f, mvVal, 0.001f)
+        assertEquals(3850.0f, BatteryWidget.convertToVoltageMv(mvVal, VoltageUnit.MV), 0.001f)
+        assertEquals("3850 mV", BatteryWidget.formatVoltage(voltageMv, VoltageUnit.MV))
+
+        // Volts
+        val vVal = BatteryWidget.convertVoltage(voltageMv.toFloat(), VoltageUnit.V)
+        assertEquals(3.85f, vVal, 0.001f)
+        assertEquals(3850.0f, BatteryWidget.convertToVoltageMv(vVal, VoltageUnit.V), 0.001f)
+        assertEquals("3.85 V", BatteryWidget.formatVoltage(voltageMv, VoltageUnit.V))
+    }
+
+    @Test
+    fun testRamUnitConversions() {
+        val ramMb = 2048.0f
+
+        // Megabytes
+        val mbVal = BatteryWidget.convertRam(ramMb, RamUnit.MB)
+        assertEquals(2048.0f, mbVal, 0.001f)
+        assertEquals(2048.0f, BatteryWidget.convertToRamMb(mbVal, RamUnit.MB), 0.001f)
+
+        // Gigabytes
+        val gbVal = BatteryWidget.convertRam(ramMb, RamUnit.GB)
+        assertEquals(2.0f, gbVal, 0.001f)
+        assertEquals(2048.0f, BatteryWidget.convertToRamMb(gbVal, RamUnit.GB), 0.001f)
+    }
 }
