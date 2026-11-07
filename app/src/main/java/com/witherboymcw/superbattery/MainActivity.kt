@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity() {
         val fromWidgetDoubleTap = intent.getBooleanExtra(BatteryWidget.EXTRA_CLOSE_SETTINGS, false)
         if (fromWidgetDoubleTap) {
             intent.removeExtra(BatteryWidget.EXTRA_CLOSE_SETTINGS)
-            closeSettingsScreen()
+            closeSettingsScreen(animate = false)
         }
     }
 
@@ -695,20 +695,26 @@ class MainActivity : AppCompatActivity() {
         settingsBackCallback.isEnabled = true
     }
 
-    private fun closeSettingsScreen() {
+    private fun closeSettingsScreen(animate: Boolean = true) {
         val container = findViewById<View>(R.id.settings_container) ?: return
         if (container.visibility != View.VISIBLE) return
         settingsBackCallback.isEnabled = false
-        val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
-        container.animate()
-            .translationX(width)
-            .setDuration(280L)
-            .setInterpolator(FastOutSlowInInterpolator())
-            .withLayer()
-            .withEndAction {
-                container.visibility = View.GONE
-            }
-            .start()
+        if (animate) {
+            val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
+            container.animate()
+                .translationX(width)
+                .setDuration(280L)
+                .setInterpolator(FastOutSlowInInterpolator())
+                .withLayer()
+                .withEndAction {
+                    container.visibility = View.GONE
+                }
+                .start()
+        } else {
+            container.animate().cancel()
+            container.visibility = View.GONE
+            container.translationX = 0f
+        }
     }
 
     private fun setupDashboardSwipeToOpen(dashboardView: View) {
