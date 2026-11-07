@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private var cardBatteryTitle: TextView? = null
     private var cardBatteryValue: TextView? = null
     private var cardBatteryDetail: TextView? = null
+    private val memoryInfo = ActivityManager.MemoryInfo()
 
     private val settingsBackCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -908,9 +909,10 @@ class MainActivity : AppCompatActivity() {
         val smoothedVoltageMv = BatteryWidget.getSmoothedVoltage(voltageMv, sampleTime)
         val isUseSystemBattery = BatteryWidget.isUseSystemBatteryCounter(this)
         val batteryPercent = if (voltageMv > 0 || isUseSystemBattery) {
-            BatteryWidget.getBatteryPercentage(this, battery, smoothedVoltageMv)
+            BatteryWidget.getBatteryPercentage(isUseSystemBattery, battery, smoothedVoltageMv)
         } else null
-        val batteryValue = batteryPercent?.let { "$it%" } ?: "—"
+        val dash = getString(R.string.placeholder_dash)
+        val batteryValue = batteryPercent?.let { "$it%" } ?: dash
         setBatteryCard(R.string.metric_battery, batteryValue)
 
         val voltageUnit = BatteryWidget.getVoltageUnit(this)
@@ -918,14 +920,13 @@ class MainActivity : AppCompatActivity() {
 
         tvVoltageCurrent?.text = if (voltageMv > 0) {
             BatteryWidget.formatVoltage(voltageMv, voltageUnit)
-        } else "—"
+        } else dash
         tvTemperatureCurrent?.text =
             BatteryWidget.formatDashboardTemperature(this, temperatureC)
         if (voltageMv > 0) addSample(voltageHistory, voltageMv.toFloat(), sampleTime)
         if (battery != null) addSample(temperatureHistory, temperatureC, sampleTime)
 
         val memory = getSystemService(ActivityManager::class.java)
-        val memoryInfo = ActivityManager.MemoryInfo()
         memory?.getMemoryInfo(memoryInfo)
         val totalMb = memoryInfo.totalMem / (1024L * 1024L)
         val availableMb = memoryInfo.availMem / (1024L * 1024L)
@@ -937,20 +938,20 @@ class MainActivity : AppCompatActivity() {
         updateNetworkStats()
 
         val (minVoltage, maxVoltage, voltageSuffix) = when (voltageUnit) {
-            VoltageUnit.MV -> Triple(3300f, 4300f, " mV")
-            VoltageUnit.V -> Triple(3.3f, 4.3f, " V")
+            VoltageUnit.MV -> Triple(3300f, 4300f, " " + getString(R.string.unit_mv))
+            VoltageUnit.V -> Triple(3.3f, 4.3f, " " + getString(R.string.unit_v))
         }
         voltageGraph?.setHistory(
             voltageHistory, minVoltage, maxVoltage, voltageSuffix, sampleTime,
             valueTransform = { rawMv -> BatteryWidget.convertVoltage(rawMv, voltageUnit) }
         ) { voltage ->
             val rawMv = BatteryWidget.convertToVoltageMv(voltage, voltageUnit).toInt()
-            val percent = BatteryWidget.getBatteryPercentage(this, battery, rawMv)
+            val percent = BatteryWidget.getBatteryPercentage(isUseSystemBattery, battery, rawMv)
             BatteryWidget.percentageColor(percent)
         }
 
         val maxRam = BatteryWidget.convertRam(totalMb.toFloat(), ramUnit).coerceAtLeast(0.1f)
-        val ramSuffix = if (ramUnit == RamUnit.GB) " GB" else " MB"
+        val ramSuffix = " " + getString(if (ramUnit == RamUnit.GB) R.string.unit_gb else R.string.unit_mb)
 
         ramGraph?.setHistory(
             ramHistory, 0f, maxRam, ramSuffix, sampleTime,
@@ -966,9 +967,9 @@ class MainActivity : AppCompatActivity() {
         }
         val tempUnit = BatteryWidget.getTemperatureUnit(this)
         val (minTemp, maxTemp, tempSuffix) = when (tempUnit) {
-            TempUnit.CELSIUS -> Triple(0f, 60f, "°C")
-            TempUnit.FAHRENHEIT -> Triple(32f, 140f, "°F")
-            TempUnit.KELVIN -> Triple(273f, 333f, " K")
+            TempUnit.CELSIUS -> Triple(0f, 60f, getString(R.string.unit_celsius))
+            TempUnit.FAHRENHEIT -> Triple(32f, 140f, getString(R.string.unit_fahrenheit))
+            TempUnit.KELVIN -> Triple(273f, 333f, " " + getString(R.string.unit_kelvin))
         }
         tempGraph?.setHistory(
             temperatureHistory, minTemp, maxTemp, tempSuffix, sampleTime,

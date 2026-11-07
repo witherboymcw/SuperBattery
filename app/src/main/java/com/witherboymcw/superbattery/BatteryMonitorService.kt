@@ -28,7 +28,7 @@ class BatteryMonitorService : Service() {
             this,
             batteryReceiver,
             IntentFilter(Intent.ACTION_BATTERY_CHANGED),
-            ContextCompat.RECEIVER_NOT_EXPORTED
+            ContextCompat.RECEIVER_EXPORTED
         )
     }
 

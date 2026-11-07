@@ -78,4 +78,13 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_oled" translatable="false">OLED</string>
+    <string name="unit_mv" translatable="false">mV</string>
+    <string name="unit_v" translatable="false">V</string>
+    <string name="unit_mb" translatable="false">MB</string>
+    <string name="unit_gb" translatable="false">GB</string>
+    <string name="unit_celsius" translatable="false">°C</string>
+    <string name="unit_fahrenheit" translatable="false">°F</string>
+    <string name="unit_kelvin" translatable="false">K</string>
+    <string name="unit_seconds_suffix" translatable="false">s</string>
+    <string name="placeholder_dash" translatable="false">—</string>
 </resources>

@@ -56,7 +56,7 @@ class HistoryGraphView @JvmOverloads constructor(
     private val fontMetrics = Paint.FontMetrics()
     private val yLabelTexts = Array(5) { "" }
     private var cachedLabelWidth = 0f
-    private val timeLabelCache = Array(61) { "${it}s" }
+    private val timeLabelCache = Array(61) { "${it}${context.getString(R.string.unit_seconds_suffix)}" }
     private val waitingForSamplesText = context.getString(R.string.waiting_for_samples)
 
     private var lowerBound = 0f

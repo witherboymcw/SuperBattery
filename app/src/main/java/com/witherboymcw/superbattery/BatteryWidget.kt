@@ -239,7 +239,11 @@ class BatteryWidget : AppWidgetProvider() {
         }
 
         internal fun getBatteryPercentage(context: Context, batteryIntent: Intent?, voltageMv: Int): Int {
-            return if (isUseSystemBatteryCounter(context)) {
+            return getBatteryPercentage(isUseSystemBatteryCounter(context), batteryIntent, voltageMv)
+        }
+
+        internal fun getBatteryPercentage(isSystemBattery: Boolean, batteryIntent: Intent?, voltageMv: Int): Int {
+            return if (isSystemBattery) {
                 getSystemBatteryPercentage(batteryIntent)
             } else {
                 if (voltageMv > 0) calculatePercentage(voltageMv) else 0

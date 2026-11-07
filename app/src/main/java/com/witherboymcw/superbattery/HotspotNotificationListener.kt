@@ -20,6 +20,8 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.content.ContextCompat
 
+import java.lang.ref.WeakReference
+
 class HotspotNotificationListener : NotificationListenerService() {
 
     private var stateReceiverRegistered = false
@@ -40,7 +42,7 @@ class HotspotNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         Log.d(LOG_TAG, "=== CONNECTED ===")
-        connectedListener = this
+        connectedListenerRef = WeakReference(this)
         registerStateChangeReceiver()
         registerDateFormatObserver()
         checkHotspotNotification()
@@ -70,8 +72,8 @@ class HotspotNotificationListener : NotificationListenerService() {
             } catch (_: Exception) { }
             dateFormatObserverRegistered = false
         }
-        if (connectedListener === this) {
-            connectedListener = null
+        if (connectedListenerRef?.get() === this) {
+            connectedListenerRef = null
         }
     }
 
@@ -107,7 +109,9 @@ class HotspotNotificationListener : NotificationListenerService() {
 
     private fun checkHotspotNotification(excludingKey: String? = null) {
         val activeNotifs = try { activeNotifications } catch (_: Exception) { return }
+        if (activeNotifs == null) return
         val newStatus = activeNotifs.asSequence()
+            .filterNotNull()
             .filterNot { it.key == excludingKey }
             .firstNotNullOfOrNull(::hotspotStatusFromNotification)
             ?: HotspotState.OFF
@@ -120,7 +124,8 @@ class HotspotNotificationListener : NotificationListenerService() {
     }
 
     private fun hotspotStatusFromNotification(sbn: StatusBarNotification): HotspotState? {
-        val extras = sbn.notification?.extras ?: return null
+        val notif = sbn.notification ?: return null
+        val extras = notif.extras ?: return null
         val titleAndText = buildList {
             add(extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty())
             add(extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString().orEmpty())
@@ -129,7 +134,7 @@ class HotspotNotificationListener : NotificationListenerService() {
             add(extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString().orEmpty())
             add(extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty())
             add(extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString().orEmpty())
-            add(sbn.notification.tickerText?.toString().orEmpty())
+            add(notif.tickerText?.toString().orEmpty())
             try {
                 extras.keySet().forEach { key ->
                     when (val value = extras.get(key)) {
@@ -238,10 +243,10 @@ class HotspotNotificationListener : NotificationListenerService() {
             private set
 
         @Volatile
-        private var connectedListener: HotspotNotificationListener? = null
+        private var connectedListenerRef: WeakReference<HotspotNotificationListener>? = null
 
         internal fun refreshFromWidgetTap() {
-            connectedListener?.refreshStatusFromWidgetTap()
+            connectedListenerRef?.get()?.refreshStatusFromWidgetTap()
         }
 
         @Synchronized
