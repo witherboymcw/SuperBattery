@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
+import androidx.core.content.ContextCompat
 
 class BatteryMonitorService : Service() {
 
@@ -23,11 +24,20 @@ class BatteryMonitorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        ContextCompat.registerReceiver(
+            this,
+            batteryReceiver,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     override fun onDestroy() {
-        unregisterReceiver(batteryReceiver)
+        try {
+            unregisterReceiver(batteryReceiver)
+        } catch (_: IllegalArgumentException) {
+            // Receiver was already unregistered or not registered
+        }
         super.onDestroy()
     }
 

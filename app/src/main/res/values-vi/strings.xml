@@ -11,6 +11,7 @@
     <string name="battery_details_widget_description">Nhiệt độ pin và thiết bị kết nối</string>
     <string name="calendar_widget_description">Lịch âm dương</string>
     <string name="super_widget_description">Nhiệt độ, lịch âm dương và trạng thái pin</string>
+    <string name="hotspot_radio_off">Đã tắt</string>
     <string name="hotspot_clients_count">Số TBKN: %1$d</string>
     <string name="low_voltage_channel">Điện áp pin thấp</string>
     <string name="low_voltage_title">Pin yếu</string>

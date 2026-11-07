@@ -62,6 +62,7 @@ class HistoryGraphView @JvmOverloads constructor(
     private var lowerBound = 0f
     private var upperBound = 100f
     private var axisSuffix = ""
+    private var valueTransform: ((Float) -> Float)? = null
     private var colorForValue: ((Float) -> Int)? = null
     private var nowMs = SystemClock.elapsedRealtime()
 
@@ -78,6 +79,7 @@ class HistoryGraphView @JvmOverloads constructor(
         maxValue: Float,
         suffix: String = "",
         currentTimeMs: Long = SystemClock.elapsedRealtime(),
+        valueTransform: ((Float) -> Float)? = null,
         valueColor: ((Float) -> Int)? = null
     ) {
         points.clear()
@@ -95,6 +97,7 @@ class HistoryGraphView @JvmOverloads constructor(
         upperBound = max(minValue + 1f, maxValue)
         axisSuffix = suffix
         nowMs = currentTimeMs
+        this.valueTransform = valueTransform
         colorForValue = valueColor
 
         val range = upperBound - lowerBound
@@ -198,13 +201,15 @@ class HistoryGraphView @JvmOverloads constructor(
 
         val boundDiff = upperBound - lowerBound
         val valueColor = colorForValue
+        val transform = valueTransform
 
         if (visibleCount == 1) {
             val sample = points[startIndex]
+            val transformedValue = transform?.invoke(sample.value) ?: sample.value
             val x = left + ((sample.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
-            val norm = ((sample.value - lowerBound) / boundDiff).coerceIn(0f, 1f)
+            val norm = ((transformedValue - lowerBound) / boundDiff).coerceIn(0f, 1f)
             val y = bottom - norm * plotHeight
-            pointPaint.color = valueColor?.invoke(sample.value) ?: linePaint.color
+            pointPaint.color = valueColor?.invoke(transformedValue) ?: linePaint.color
             canvas.drawCircle(x, y, linePaint.strokeWidth, pointPaint)
         } else {
             if (valueColor == null) {
@@ -212,8 +217,9 @@ class HistoryGraphView @JvmOverloads constructor(
                 var i = startIndex
                 while (i <= endIndex) {
                     val sample = points[i]
+                    val transformedValue = transform?.invoke(sample.value) ?: sample.value
                     val x = left + ((sample.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
-                    val norm = ((sample.value - lowerBound) / boundDiff).coerceIn(0f, 1f)
+                    val norm = ((transformedValue - lowerBound) / boundDiff).coerceIn(0f, 1f)
                     val y = bottom - norm * plotHeight
                     if (i == startIndex) {
                         renderPath.moveTo(x, y)
@@ -228,12 +234,14 @@ class HistoryGraphView @JvmOverloads constructor(
                 while (i <= endIndex) {
                     val prevS = points[i - 1]
                     val currS = points[i]
+                    val prevTransformed = transform?.invoke(prevS.value) ?: prevS.value
+                    val currTransformed = transform?.invoke(currS.value) ?: currS.value
                     val prevX = left + ((prevS.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
-                    val prevY = bottom - (((prevS.value - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
+                    val prevY = bottom - (((prevTransformed - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
                     val currX = left + ((currS.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
-                    val currY = bottom - (((currS.value - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
+                    val currY = bottom - (((currTransformed - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
 
-                    linePaint.color = valueColor.invoke(currS.value)
+                    linePaint.color = valueColor.invoke(currTransformed)
                     canvas.drawLine(prevX, prevY, currX, currY, linePaint)
                     i++
                 }
@@ -241,9 +249,10 @@ class HistoryGraphView @JvmOverloads constructor(
 
             // Single dot on newest sample
             val lastSample = points[endIndex]
+            val lastTransformed = transform?.invoke(lastSample.value) ?: lastSample.value
             val lastX = left + ((lastSample.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
-            val lastY = bottom - (((lastSample.value - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
-            pointPaint.color = valueColor?.invoke(lastSample.value) ?: linePaint.color
+            val lastY = bottom - (((lastTransformed - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
+            pointPaint.color = valueColor?.invoke(lastTransformed) ?: linePaint.color
             canvas.drawCircle(lastX, lastY, linePaint.strokeWidth * 1.5f, pointPaint)
         }
     }

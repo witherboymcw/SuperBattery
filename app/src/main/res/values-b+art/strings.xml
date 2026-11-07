@@ -11,6 +11,7 @@
     <string name="battery_details_widget_description">How cooked the battery is and who is leeching your hotspot</string>
 
     <string name="super_widget_description">Vibe check, moon lore, and remaining battery aura AIO</string>
+    <string name="hotspot_radio_off">Sleepin\'</string>
     <string name="hotspot_clients_count">Leeches: %1$d</string>
     <string name="low_voltage_channel">Dangerously low aura</string>
     <string name="low_voltage_title">Bro you are cooked</string>

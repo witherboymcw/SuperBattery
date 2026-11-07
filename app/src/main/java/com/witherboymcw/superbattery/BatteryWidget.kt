@@ -11,7 +11,6 @@ import android.os.BatteryManager
 import android.os.SystemClock
 import android.widget.RemoteViews
 import android.graphics.Color
-import java.util.LinkedList
 import java.util.Locale
 
 enum class TempUnit(val code: String, val symbol: String) {
@@ -196,12 +195,6 @@ class BatteryWidget : AppWidgetProvider() {
             }
         }
 
-        private const val VOLTAGE_SAMPLE_LIMIT = 15
-        private const val VOLTAGE_SAMPLE_INTERVAL_MS = 500L
-        private const val VOLTAGE_SAMPLE_RESET_GAP_MS = 60_000L
-        private val voltageSamples = LinkedList<Int>()
-        private var lastVoltageSampleTimeMs = Long.MIN_VALUE
-
         internal fun getSystemPrimaryLanguage(): String {
             val locales = android.content.res.Resources.getSystem().configuration.locales
             return if (!locales.isEmpty) {
@@ -253,109 +246,28 @@ class BatteryWidget : AppWidgetProvider() {
             }
         }
         // Single conservative voltage-to-charge curve, compressed to 3550–4140 mV.
-        private val dischargeTable = listOf(
-            4140 to 100,
-            4133 to 99,
-            4126 to 98,
-            4118 to 97,
-            4111 to 96,
-            4104 to 95,
-            4097 to 94,
-            4090 to 93,
-            4083 to 92,
-            4076 to 91,
-            4069 to 90,
-            4062 to 89,
-            4055 to 88,
-            4048 to 87,
-            4041 to 86,
-            4034 to 85,
-            4028 to 84,
-            4021 to 83,
-            4014 to 82,
-            4007 to 81,
-            4000 to 80,
-            3993 to 79,
-            3986 to 78,
-            3979 to 77,
-            3971 to 76,
-            3964 to 75,
-            3957 to 74,
-            3950 to 73,
-            3943 to 72,
-            3936 to 71,
-            3930 to 70,
-            3924 to 69,
-            3918 to 68,
-            3912 to 67,
-            3906 to 66,
-            3900 to 65,
-            3894 to 64,
-            3889 to 63,
-            3884 to 62,
-            3879 to 61,
-            3875 to 60,
-            3871 to 59,
-            3867 to 58,
-            3863 to 57,
-            3860 to 56,
-            3857 to 55,
-            3853 to 54,
-            3850 to 53,
-            3847 to 52,
-            3844 to 51,
-            3841 to 50,
-            3838 to 49,
-            3835 to 48,
-            3832 to 47,
-            3829 to 46,
-            3827 to 45,
-            3824 to 44,
-            3821 to 43,
-            3818 to 42,
-            3816 to 41,
-            3813 to 40,
-            3810 to 39,
-            3808 to 38,
-            3805 to 37,
-            3802 to 36,
-            3800 to 35,
-            3797 to 34,
-            3794 to 33,
-            3791 to 32,
-            3789 to 31,
-            3786 to 30,
-            3783 to 29,
-            3781 to 28,
-            3778 to 27,
-            3776 to 26,
-            3774 to 25,
-            3771 to 24,
-            3768 to 23,
-            3765 to 22,
-            3762 to 21,
-            3758 to 20,
-            3754 to 19,
-            3749 to 18,
-            3743 to 17,
-            3737 to 16,
-            3731 to 15,
-            3723 to 14,
-            3716 to 13,
-            3707 to 12,
-            3698 to 11,
-            3689 to 10,
-            3678 to 9,
-            3664 to 8,
-            3649 to 7,
-            3634 to 6,
-            3619 to 5,
-            3605 to 4,
-            3591 to 3,
-            3577 to 2,
-            3564 to 1,
-            3550 to 0
+        private val DISCHARGE_VOLTAGES = intArrayOf(
+            4140, 4133, 4126, 4118, 4111, 4104, 4097, 4090, 4083, 4076,
+            4069, 4062, 4055, 4048, 4041, 4034, 4028, 4021, 4014, 4007,
+            4000, 3993, 3986, 3979, 3971, 3964, 3957, 3950, 3943, 3936,
+            3930, 3924, 3918, 3912, 3906, 3900, 3894, 3889, 3884, 3879,
+            3875, 3871, 3867, 3863, 3860, 3857, 3853, 3850, 3847, 3844,
+            3841, 3838, 3835, 3832, 3829, 3827, 3824, 3821, 3818, 3816,
+            3813, 3810, 3808, 3805, 3802, 3800, 3797, 3794, 3791, 3789,
+            3786, 3783, 3781, 3778, 3776, 3774, 3771, 3768, 3765, 3762,
+            3758, 3754, 3749, 3743, 3737, 3731, 3723, 3716, 3707, 3698,
+            3689, 3678, 3664, 3649, 3634, 3619, 3605, 3591, 3577, 3564,
+            3550
         )
+
+        private const val VOLTAGE_SAMPLE_LIMIT = 15
+        private const val VOLTAGE_SAMPLE_INTERVAL_MS = 500L
+        private const val VOLTAGE_SAMPLE_RESET_GAP_MS = 60_000L
+        private val voltageBuffer = IntArray(VOLTAGE_SAMPLE_LIMIT)
+        private var voltageSampleCount = 0
+        private var voltageSampleHead = 0
+        private var voltageRunningSum = 0L
+        private var lastVoltageSampleTimeMs = Long.MIN_VALUE
 
         @Synchronized
         internal fun getSmoothedVoltage(rawMv: Int, sampleTimeMs: Long = SystemClock.elapsedRealtime()): Int {
@@ -363,32 +275,51 @@ class BatteryWidget : AppWidgetProvider() {
             if (lastVoltageSampleTimeMs != Long.MIN_VALUE &&
                 sampleTimeMs - lastVoltageSampleTimeMs >= VOLTAGE_SAMPLE_RESET_GAP_MS
             ) {
-                voltageSamples.clear()
+                voltageSampleCount = 0
+                voltageSampleHead = 0
+                voltageRunningSum = 0L
                 lastVoltageSampleTimeMs = Long.MIN_VALUE
             }
             val shouldAddSample = lastVoltageSampleTimeMs == Long.MIN_VALUE ||
                 sampleTimeMs - lastVoltageSampleTimeMs >= VOLTAGE_SAMPLE_INTERVAL_MS
             if (shouldAddSample) {
-                if (voltageSamples.size >= VOLTAGE_SAMPLE_LIMIT) {
-                    voltageSamples.removeFirst()
+                if (voltageSampleCount < VOLTAGE_SAMPLE_LIMIT) {
+                    voltageBuffer[voltageSampleHead] = rawMv
+                    voltageRunningSum += rawMv
+                    voltageSampleCount++
+                } else {
+                    voltageRunningSum -= voltageBuffer[voltageSampleHead]
+                    voltageBuffer[voltageSampleHead] = rawMv
+                    voltageRunningSum += rawMv
                 }
-                voltageSamples.add(rawMv)
+                voltageSampleHead = (voltageSampleHead + 1) % VOLTAGE_SAMPLE_LIMIT
                 lastVoltageSampleTimeMs = sampleTimeMs
             }
-            return if (voltageSamples.isEmpty()) rawMv else voltageSamples.average().toInt()
+            return if (voltageSampleCount == 0) rawMv else (voltageRunningSum / voltageSampleCount).toInt()
         }
 
         internal fun calculatePercentage(voltageMv: Int): Int {
             if (voltageMv <= 0) return 0
-            if (voltageMv >= dischargeTable.first().first) return 100
-            if (voltageMv <= dischargeTable.last().first) return 0
+            val maxV = DISCHARGE_VOLTAGES[0]
+            val minV = DISCHARGE_VOLTAGES[DISCHARGE_VOLTAGES.lastIndex]
+            if (voltageMv >= maxV) return 100
+            if (voltageMv <= minV) return 0
 
-            for (i in 0 until dischargeTable.size - 1) {
-                val (vHigh, pHigh) = dischargeTable[i]
-                val (vLow, pLow) = dischargeTable[i + 1]
+            var low = 0
+            var high = DISCHARGE_VOLTAGES.lastIndex - 1
+            while (low <= high) {
+                val mid = (low + high) ushr 1
+                val vHigh = DISCHARGE_VOLTAGES[mid]
+                val vLow = DISCHARGE_VOLTAGES[mid + 1]
                 if (voltageMv in vLow..vHigh) {
+                    val pHigh = 100 - mid
+                    val pLow = pHigh - 1
                     val ratio = (voltageMv - vLow).toFloat() / (vHigh - vLow)
                     return (pLow + ratio * (pHigh - pLow)).toInt()
+                } else if (voltageMv > vHigh) {
+                    high = mid - 1
+                } else {
+                    low = mid + 1
                 }
             }
             return 0
@@ -425,7 +356,7 @@ class BatteryWidget : AppWidgetProvider() {
                 context,
                 appWidgetId,
                 refreshIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widget_root, refreshPendingIntent)
 

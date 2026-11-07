@@ -53,13 +53,14 @@ internal object VietnameseLunarCalendar {
         return LunarDate(lunarDay, lunarMonth, lunarYear, isLeapMonth)
     }
 
+    private val BRANCHES = arrayOf(
+        "Thân", "Dậu", "Tuất", "Hợi", "Tý", "Sửu",
+        "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi"
+    )
+    private val STEMS = arrayOf("Canh", "Tân", "Nhâm", "Quý", "Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ")
+
     fun canChiYear(year: Int): String {
-        val branches = arrayOf(
-            "Thân", "Dậu", "Tuất", "Hợi", "Tý", "Sửu",
-            "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi"
-        )
-        val stems = arrayOf("Canh", "Tân", "Nhâm", "Quý", "Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ")
-        return "${stems[Math.floorMod(year, stems.size)]} ${branches[Math.floorMod(year, branches.size)]}"
+        return "${STEMS[Math.floorMod(year, STEMS.size)]} ${BRANCHES[Math.floorMod(year, BRANCHES.size)]}"
     }
 
     private fun julianDay(day: Int, month: Int, year: Int): Int {

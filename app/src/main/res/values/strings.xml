@@ -10,6 +10,7 @@
     <string name="battery_details_widget_description">Battery temperature and connected devices</string>
     <string name="calendar_widget_description">Gregorian and Vietnamese lunar dates</string>
     <string name="super_widget_description">Temperature, Gregorian and lunar dates, and battery status</string>
+    <string name="hotspot_radio_off">Radio Off</string>
     <string name="hotspot_clients_count">Clients: %1$d</string>
     <string name="low_voltage_channel">Low battery voltage</string>
     <string name="low_voltage_title">Low battery</string>

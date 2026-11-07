@@ -11,7 +11,6 @@ import android.content.IntentFilter
 import android.database.ContentObserver
 import android.media.AudioManager
 import android.net.wifi.WifiManager
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -19,6 +18,7 @@ import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import androidx.core.content.ContextCompat
 
 class HotspotNotificationListener : NotificationListenerService() {
 
@@ -48,16 +48,31 @@ class HotspotNotificationListener : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         Log.d(LOG_TAG, "=== DISCONNECTED ===")
+        cleanup()
+        super.onListenerDisconnected()
+    }
+
+    override fun onDestroy() {
+        cleanup()
+        super.onDestroy()
+    }
+
+    private fun cleanup() {
         if (stateReceiverRegistered) {
-            unregisterReceiver(stateChangeReceiver)
+            try {
+                unregisterReceiver(stateChangeReceiver)
+            } catch (_: Exception) { }
             stateReceiverRegistered = false
         }
         if (dateFormatObserverRegistered) {
-            contentResolver.unregisterContentObserver(dateFormatObserver)
+            try {
+                contentResolver.unregisterContentObserver(dateFormatObserver)
+            } catch (_: Exception) { }
             dateFormatObserverRegistered = false
         }
-        if (connectedListener === this) connectedListener = null
-        super.onListenerDisconnected()
+        if (connectedListener === this) {
+            connectedListener = null
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -70,8 +85,6 @@ class HotspotNotificationListener : NotificationListenerService() {
             "New notification -> Package: ${sbn?.packageName} | Title: '$title' | Text: '$text'"
         )
 
-        // Use the notification delivered by the callback itself. activeNotifications can
-        // briefly lag behind a newly posted notification on some Android builds.
         val notification = sbn ?: return
         val newStatus = hotspotStatusFromNotification(notification)
         if (newStatus == null) {
@@ -107,7 +120,7 @@ class HotspotNotificationListener : NotificationListenerService() {
     }
 
     private fun hotspotStatusFromNotification(sbn: StatusBarNotification): HotspotState? {
-        val extras = sbn.notification.extras
+        val extras = sbn.notification?.extras ?: return null
         val titleAndText = buildList {
             add(extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty())
             add(extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString().orEmpty())
@@ -117,21 +130,30 @@ class HotspotNotificationListener : NotificationListenerService() {
             add(extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty())
             add(extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString().orEmpty())
             add(sbn.notification.tickerText?.toString().orEmpty())
-            extras.keySet().forEach { key ->
-                when (val value = extras.get(key)) {
-                    is CharSequence -> add(value.toString())
-                    is Array<*> -> value.filterIsInstance<CharSequence>().forEach { add(it.toString()) }
-                    is Iterable<*> -> value.filterIsInstance<CharSequence>().forEach { add(it.toString()) }
+            try {
+                extras.keySet().forEach { key ->
+                    when (val value = extras.get(key)) {
+                        is CharSequence -> add(value.toString())
+                        is Array<*> -> value.filterIsInstance<CharSequence>().forEach { add(it.toString()) }
+                        is Iterable<*> -> value.filterIsInstance<CharSequence>().forEach { add(it.toString()) }
+                    }
                 }
+            } catch (_: Exception) {
+                // Ignore BadParcelableException if notification contains unknown 3rd party parcelables
             }
-        }.map { it.replace(Regex("\\s+"), " ").trim() }
+        }.asSequence()
+            .map { it.replace(WHITESPACE_REGEX, " ").trim() }
             .filter { it.isNotEmpty() }
+            .toList()
 
         val notificationTitle = listOf(
             extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
             extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString().orEmpty()
-        ).joinToString(" ").replace(Regex("\\s+"), " ").trim()
-        if (!notificationTitle.contains(HOTSPOT_NOTIFICATION_TITLE, ignoreCase = true)) return null
+        ).joinToString(" ").replace(WHITESPACE_REGEX, " ").trim()
+
+        val isHotspotTitle = notificationTitle.contains(HOTSPOT_NOTIFICATION_TITLE, ignoreCase = true) ||
+            notificationTitle.contains(HOTSPOT_NOTIFICATION_TITLE_VI, ignoreCase = true)
+        if (!isHotspotTitle) return null
 
         val notificationContent = titleAndText.joinToString(" ")
 
@@ -165,12 +187,12 @@ class HotspotNotificationListener : NotificationListenerService() {
             addAction(Intent.ACTION_TIMEZONE_CHANGED)
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(stateChangeReceiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            @Suppress("DEPRECATION")
-            registerReceiver(stateChangeReceiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            this,
+            stateChangeReceiver,
+            filter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
         stateReceiverRegistered = true
     }
 
@@ -201,12 +223,14 @@ class HotspotNotificationListener : NotificationListenerService() {
         private const val KEY_STATE = "state"
         private const val KEY_CLIENTS = "clients"
         private const val HOTSPOT_NOTIFICATION_TITLE = "Tethering or hotspot active"
-        private val NO_CONNECTED_DEVICE = Regex("\\bno\\s+connected\\s+devices?\\b", RegexOption.IGNORE_CASE)
-        private val CONNECTED_DEVICES = Regex("\\b(\\d+)\\s+connected\\s+devices?\\b", RegexOption.IGNORE_CASE)
+        private const val HOTSPOT_NOTIFICATION_TITLE_VI = "Điểm phát sóng"
+        private val WHITESPACE_REGEX = Regex("\\s+")
+        private val NO_CONNECTED_DEVICE = Regex("\\b(no\\s+connected\\s+devices?|không\\s+có\\s+thiết\\s+bị)\\b", RegexOption.IGNORE_CASE)
+        private val CONNECTED_DEVICES = Regex("\\b(\\d+)\\s+(connected\\s+devices?|thiết\\s+bị\\s+đã\\s+kết\\s+nối|thiết\\s+bị\\s+kết\\s+nối)\\b", RegexOption.IGNORE_CASE)
 
         sealed class HotspotState {
-            object OFF : HotspotState()
-            object ON_EMPTY : HotspotState()
+            data object OFF : HotspotState()
+            data object ON_EMPTY : HotspotState()
             data class ON_CONNECTED(val clients: Int) : HotspotState()
         }
 

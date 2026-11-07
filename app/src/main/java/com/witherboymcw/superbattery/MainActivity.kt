@@ -4,7 +4,6 @@ import android.app.ActivityManager
 import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.TrafficStats
@@ -17,6 +16,7 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.widget.ImageView
 import android.widget.RadioButton
 import android.widget.RadioGroup
@@ -43,6 +43,18 @@ class MainActivity : AppCompatActivity() {
     private var previousTx = -1L
     private var previousNetworkTime = 0L
     private var refreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS
+
+    private var tvVoltageCurrent: TextView? = null
+    private var tvTemperatureCurrent: TextView? = null
+    private var tvRamCurrent: TextView? = null
+    private var tvNetworkRx: TextView? = null
+    private var tvNetworkTx: TextView? = null
+    private var voltageGraph: HistoryGraphView? = null
+    private var ramGraph: HistoryGraphView? = null
+    private var tempGraph: HistoryGraphView? = null
+    private var cardBatteryTitle: TextView? = null
+    private var cardBatteryValue: TextView? = null
+    private var cardBatteryDetail: TextView? = null
 
     private val settingsBackCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -77,9 +89,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
-        startService(Intent(this, BatteryMonitorService::class.java))
+        try {
+            startService(Intent(this, BatteryMonitorService::class.java))
+        } catch (_: Exception) {
+            // Guard against background service execution limits on Android 8.0+
+        }
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        initDashboardViews()
         applyGraphBackgrounds(savedTheme)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -176,6 +193,12 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         handler.removeCallbacks(refreshDashboard)
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        findViewById<SwipeBackFrameLayout>(R.id.settings_container)?.swipeListener = null
+        super.onDestroy()
     }
 
     private fun setupSettingsScreen(savedInstanceState: Bundle? = null) {
@@ -644,7 +667,7 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
         val currentLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
         if (currentLang != langCode) {
-            prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, langCode).commit()
+            prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, langCode).apply()
 
             val appLocales = if (langCode == "system") {
                 LocaleListCompat.getEmptyLocaleList()
@@ -691,7 +714,7 @@ class MainActivity : AppCompatActivity() {
         var startX = 0f
         var startY = 0f
         var isSwipingLeft = false
-        val touchSlop = 20f
+        val touchSlop = ViewConfiguration.get(this).scaledTouchSlop.toFloat()
 
         dashboardView.setOnTouchListener { _, event ->
             val container = findViewById<View>(R.id.settings_container) ?: return@setOnTouchListener false
@@ -745,6 +768,9 @@ class MainActivity : AppCompatActivity() {
                         }
                         isSwipingLeft = false
                         true
+                    } else if (event.action == MotionEvent.ACTION_UP) {
+                        dashboardView.performClick()
+                        false
                     } else false
                 }
                 else -> false
@@ -753,7 +779,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeMetricCards() {
-        setCard(R.id.card_battery, R.string.metric_battery, "—", "")
+        setBatteryCard(R.string.metric_battery, "—", "")
     }
 
     private fun applyGraphBackgrounds(theme: String) {
@@ -843,6 +869,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun initDashboardViews() {
+        tvVoltageCurrent = findViewById(R.id.voltage_current)
+        tvTemperatureCurrent = findViewById(R.id.temperature_current)
+        tvRamCurrent = findViewById(R.id.ram_current)
+        tvNetworkRx = findViewById(R.id.network_rx)
+        tvNetworkTx = findViewById(R.id.network_tx)
+        voltageGraph = findViewById(R.id.voltage_graph)
+        ramGraph = findViewById(R.id.ram_graph)
+        tempGraph = findViewById(R.id.temperature_graph)
+        val cardBattery = findViewById<View>(R.id.card_battery)
+        cardBatteryTitle = cardBattery?.findViewById(R.id.metric_title)
+        cardBatteryValue = cardBattery?.findViewById(R.id.metric_value)
+        cardBatteryDetail = cardBattery?.findViewById(R.id.metric_detail)
+    }
+
+    private fun setBatteryCard(titleId: Int, value: String, detail: String = "") {
+        cardBatteryTitle?.text = getString(titleId)
+        cardBatteryValue?.text = value
+        cardBatteryDetail?.text = detail
+    }
+
     private fun refreshWidgets() {
         BatteryWidget.updateAllWidgets(this, android.appwidget.AppWidgetManager.getInstance(this))
     }
@@ -864,64 +911,50 @@ class MainActivity : AppCompatActivity() {
             BatteryWidget.getBatteryPercentage(this, battery, smoothedVoltageMv)
         } else null
         val batteryValue = batteryPercent?.let { "$it%" } ?: "—"
-        setCard(
-            R.id.card_battery,
-            R.string.metric_battery,
-            batteryValue,
-            ""
-        )
+        setBatteryCard(R.string.metric_battery, batteryValue)
+
         val voltageUnit = BatteryWidget.getVoltageUnit(this)
         val ramUnit = BatteryWidget.getRamUnit(this)
 
-        findViewById<TextView>(R.id.voltage_current).text = if (voltageMv > 0) {
+        tvVoltageCurrent?.text = if (voltageMv > 0) {
             BatteryWidget.formatVoltage(voltageMv, voltageUnit)
         } else "—"
-        findViewById<TextView>(R.id.temperature_current).text =
+        tvTemperatureCurrent?.text =
             BatteryWidget.formatDashboardTemperature(this, temperatureC)
         if (voltageMv > 0) addSample(voltageHistory, voltageMv.toFloat(), sampleTime)
         if (battery != null) addSample(temperatureHistory, temperatureC, sampleTime)
 
-        val memory = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memory = getSystemService(ActivityManager::class.java)
         val memoryInfo = ActivityManager.MemoryInfo()
-        memory.getMemoryInfo(memoryInfo)
+        memory?.getMemoryInfo(memoryInfo)
         val totalMb = memoryInfo.totalMem / (1024L * 1024L)
         val availableMb = memoryInfo.availMem / (1024L * 1024L)
         val usedMb = (totalMb - availableMb).coerceAtLeast(0L)
         val usedPercent = if (totalMb > 0) (usedMb * 100 / totalMb).toInt() else 0
         addSample(ramHistory, usedMb.toFloat(), sampleTime)
-        findViewById<TextView>(R.id.ram_current).text = getString(R.string.current_ram_format, usedPercent)
+        tvRamCurrent?.text = getString(R.string.current_ram_format, usedPercent)
 
         updateNetworkStats()
 
-        val mappedVoltageHistory = voltageHistory.map { sample ->
-            HistoryGraphView.Sample(
-                sample.timestampMs,
-                BatteryWidget.convertVoltage(sample.value, voltageUnit)
-            )
-        }
         val (minVoltage, maxVoltage, voltageSuffix) = when (voltageUnit) {
             VoltageUnit.MV -> Triple(3300f, 4300f, " mV")
             VoltageUnit.V -> Triple(3.3f, 4.3f, " V")
         }
-        findViewById<HistoryGraphView>(R.id.voltage_graph).setHistory(
-            mappedVoltageHistory, minVoltage, maxVoltage, voltageSuffix, sampleTime
+        voltageGraph?.setHistory(
+            voltageHistory, minVoltage, maxVoltage, voltageSuffix, sampleTime,
+            valueTransform = { rawMv -> BatteryWidget.convertVoltage(rawMv, voltageUnit) }
         ) { voltage ->
             val rawMv = BatteryWidget.convertToVoltageMv(voltage, voltageUnit).toInt()
             val percent = BatteryWidget.getBatteryPercentage(this, battery, rawMv)
             BatteryWidget.percentageColor(percent)
         }
 
-        val mappedRamHistory = ramHistory.map { sample ->
-            HistoryGraphView.Sample(
-                sample.timestampMs,
-                BatteryWidget.convertRam(sample.value, ramUnit)
-            )
-        }
         val maxRam = BatteryWidget.convertRam(totalMb.toFloat(), ramUnit).coerceAtLeast(0.1f)
         val ramSuffix = if (ramUnit == RamUnit.GB) " GB" else " MB"
 
-        findViewById<HistoryGraphView>(R.id.ram_graph).setHistory(
-            mappedRamHistory, 0f, maxRam, ramSuffix, sampleTime
+        ramGraph?.setHistory(
+            ramHistory, 0f, maxRam, ramSuffix, sampleTime,
+            valueTransform = { rawMb -> BatteryWidget.convertRam(rawMb, ramUnit) }
         ) { ramVal ->
             val ramMb = BatteryWidget.convertToRamMb(ramVal, ramUnit)
             val ramUsedPercent = if (totalMb > 0) ramMb * 100f / totalMb else 0f
@@ -932,19 +965,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val tempUnit = BatteryWidget.getTemperatureUnit(this)
-        val mappedTempHistory = temperatureHistory.map { sample ->
-            HistoryGraphView.Sample(
-                sample.timestampMs,
-                BatteryWidget.convertTemperature(sample.value, tempUnit)
-            )
-        }
         val (minTemp, maxTemp, tempSuffix) = when (tempUnit) {
             TempUnit.CELSIUS -> Triple(0f, 60f, "°C")
             TempUnit.FAHRENHEIT -> Triple(32f, 140f, "°F")
             TempUnit.KELVIN -> Triple(273f, 333f, " K")
         }
-        findViewById<HistoryGraphView>(R.id.temperature_graph).setHistory(
-            mappedTempHistory, minTemp, maxTemp, tempSuffix, sampleTime
+        tempGraph?.setHistory(
+            temperatureHistory, minTemp, maxTemp, tempSuffix, sampleTime,
+            valueTransform = { rawC -> BatteryWidget.convertTemperature(rawC, tempUnit) }
         ) { tempVal ->
             val celsius = BatteryWidget.convertToCelsius(tempVal, tempUnit)
             BatteryDetailsWidget.temperatureColor(celsius)
@@ -961,19 +989,12 @@ class MainActivity : AppCompatActivity() {
         previousRx = rx
         previousTx = tx
         previousNetworkTime = now
-        findViewById<TextView>(R.id.network_rx).text = if (rx == TrafficStats.UNSUPPORTED.toLong()) {
+        tvNetworkRx?.text = if (rx == TrafficStats.UNSUPPORTED.toLong()) {
             getString(R.string.network_unavailable)
         } else getString(R.string.network_receiving_format, formatBytes(rx), formatBytes(rxRate))
-        findViewById<TextView>(R.id.network_tx).text = if (tx == TrafficStats.UNSUPPORTED.toLong()) {
+        tvNetworkTx?.text = if (tx == TrafficStats.UNSUPPORTED.toLong()) {
             getString(R.string.network_unavailable)
         } else getString(R.string.network_sending_format, formatBytes(tx), formatBytes(txRate))
-    }
-
-    private fun setCard(cardId: Int, titleId: Int, value: String, detail: String) {
-        val card = findViewById<View>(cardId)
-        card.findViewById<TextView>(R.id.metric_title).text = getString(titleId)
-        card.findViewById<TextView>(R.id.metric_value).text = value
-        card.findViewById<TextView>(R.id.metric_detail).text = detail
     }
 
     private fun addSample(history: ArrayDeque<HistoryGraphView.Sample>, value: Float, timestampMs: Long) {
@@ -985,14 +1006,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun formatBytes(bytes: Long): String {
         if (bytes < 1024) return "$bytes B"
-        val units = arrayOf("KB", "MB", "GB", "TB")
         var value = bytes.toDouble()
         var unit = -1
-        while (value >= 1024 && unit < units.lastIndex) {
+        while (value >= 1024 && unit < BYTE_UNITS.lastIndex) {
             value /= 1024
             unit++
         }
-        return String.format(Locale.getDefault(), "%.1f %s", value, units[unit])
+        return String.format(Locale.getDefault(), "%.1f %s", value, BYTE_UNITS[unit])
     }
 
     private fun openNotificationAccessSettings() {
@@ -1011,6 +1031,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
+        private val BYTE_UNITS = arrayOf("KB", "MB", "GB", "TB")
         private const val HISTORY_WINDOW_MS = 60_000L
         private const val MAX_HISTORY_POINTS = 240
         private const val SETTINGS_PREFS = BatteryWidget.SETTINGS_PREFS
