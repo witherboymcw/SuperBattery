@@ -23,6 +23,7 @@ class BatteryDetailsWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == BatteryWidget.ACTION_MANUAL_REFRESH) {
+            BatteryWidget.handleWidgetTap(context)
             BatteryWidget.updateAllWidgets(context, AppWidgetManager.getInstance(context))
         }
     }

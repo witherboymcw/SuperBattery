@@ -3,7 +3,7 @@
 
     <string name="battery_widget_name">Trạng thái pin</string>
     <string name="battery_details_widget_name">Chi tiết pin</string>
-    <string name="calendar_widget_name">Lịch âm dương</string>
+    <string name="calendar_widget_name">Lịch</string>
 
     <string name="appwidget_text">VÍ DỤ</string>
     <string name="add_widget">Thêm tiện ích</string>
@@ -24,7 +24,7 @@
     <string name="notification_access_disabled">Cho phép Super Battery đọc thông báo điểm phát sóng để hiển thị số thiết bị kết nối.</string>
     <string name="notification_access_enabled">Đã bật quyền đọc thông báo. Bộ đếm sẽ cập nhật từ thông báo hệ thống.</string>
     <string name="grant_notification_access">Cấp quyền đọc thông báo</string>
-    <string name="manage_notification_access">🔑Truy cập thông báo</string>
+    <string name="manage_notification_access">🔑 Đọc thông báo</string>
     <string name="notification_access_settings_unavailable">Không thể mở cài đặt truy cập thông báo trên thiết bị này.</string>
     <string name="notification_listener_label">Số thiết bị kết nối Internet</string>
     <string name="dashboard_title">Bảng điều khiển</string>
@@ -43,22 +43,27 @@
 
     <string name="waiting_for_samples">Đang thu thập dữ liệu…</string>
     <string name="settings">Cài đặt</string>
-    <string name="allow_notifications">🔔 Cho phép thông báo</string>
+    <string name="language_subtitle">Chọn ngôn ngữ hiển thị của ứng dụng</string>
+    <string name="allow_notifications">🔔 Gửi thông báo</string>
+    <string name="allow_notifications_subtitle">Được cập nhật trạng thái hệ thống và cảnh báo</string>
+    <string name="manage_notification_access_subtitle">Cần thiết để đếm số lượng thiết bị kết nối Wi-Fi</string>
     <string name="update_frequency">⏱️ Tần suất cập nhật</string>
+    <string name="update_frequency_subtitle">Chỉnh tần suất làm mới dữ liệu hệ thống</string>
     <string name="update_every_half_second">Mỗi 0,5 giây</string>
     <string name="update_every_second">Mỗi 1 giây</string>
     <string name="update_every_two_seconds">Mỗi 2 giây</string>
     <string name="use_system_battery_counter">🔋 Sử dụng bộ đếm pin hệ thống</string>
+    <string name="use_system_battery_counter_subtitle">Dùng % pin từ HĐH thay vì tính từ điện áp thực tế</string>
     <string name="voltage_unit_header">⚡ Đơn vị điện áp</string>
-
+    <string name="voltage_unit_subtitle">Hiển thị điện áp pin theo Millivolt hoặc Volt</string>
 
     <string name="voltage_unit_mv">mV (Millivolts)</string>
     <string name="ram_unit_header">💾 Đơn vị RAM</string>
+    <string name="ram_unit_subtitle">Hiển thị dung lượng RAM theo MB hoặc GB</string>
     <string name="ram_unit_mb">MB (Megabyte)</string>
     <string name="ram_unit_gb">GB (Gigabyte)</string>
     <string name="temp_unit_header">🌡️ Đơn vị nhiệt độ</string>
-
-
+    <string name="temp_unit_subtitle">Chọn đơn vị hiển thị độ C, độ F hoặc Kelvin</string>
 
     <string name="language">🌐 Ngôn ngữ</string>
     <string name="at_system">Theo hệ thống</string>
@@ -67,6 +72,7 @@
     <string name="language_brainrot">Tiếng Anh Brainrot</string>
     <string name="theme">Giao diện</string>
     <string name="theme_header">🎨 Giao diện</string>
+    <string name="theme_subtitle">Chỉnh giao diện và chế độ màu sắc ứng dụng</string>
     <string name="theme_light">Sáng</string>
     <string name="theme_dark">Tối</string>
 

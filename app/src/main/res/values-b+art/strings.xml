@@ -3,13 +3,13 @@
 
     <string name="battery_widget_name">Juice Aura Check</string>
     <string name="battery_details_widget_name">Battery Lore &amp; Heat Check</string>
-    <string name="calendar_widget_name">Moon Rizz Calendar</string>
+
 
     <string name="appwidget_text">SKIBIDI</string>
     <string name="add_widget">Drop that widget on the screen</string>
     <string name="app_widget_description">Juice level and raw voltage flexing</string>
     <string name="battery_details_widget_description">How cooked the battery is and who is leeching your hotspot</string>
-    <string name="calendar_widget_description">Solar date and ancient Vietnamese moon vibes</string>
+
     <string name="super_widget_description">Vibe check, moon lore, and remaining battery aura AIO</string>
     <string name="hotspot_clients_count">Leeches: %1$d</string>
     <string name="low_voltage_channel">Dangerously low aura</string>
@@ -43,19 +43,27 @@
 
     <string name="waiting_for_samples">Let me cook… (gathering stats)</string>
     <string name="settings">Tweaks &amp; Rizz</string>
+    <string name="language_subtitle">Pick your preferred</string>
     <string name="allow_notifications">🔔 Enable yapping</string>
-    <string name="update_frequency">⏱️ Yap speed</string>
+    <string name="allow_notifications_subtitle">Get pinged when your battery is cooked</string>
+    <string name="manage_notification_access_subtitle">How many are leeching your aura</string>
+    <string name="update_frequency">⏱️ Ping speed</string>
+    <string name="update_frequency_subtitle">How fast telemetry stats dish out</string>
     <string name="update_every_half_second">Sweaty mode (0.5s)</string>
     <string name="update_every_second">Locked in (1s)</string>
     <string name="update_every_two_seconds">Chilling in Ohio (2s)</string>
     <string name="use_system_battery_counter">🔋 Trust OEM scam counter</string>
+    <string name="use_system_battery_counter_subtitle">Use OEM percentage instead of raw voltage math</string>
     <string name="voltage_unit_header">⚡ Voltage drip</string>
+    <string name="voltage_unit_subtitle">Measure voltage in raw mV or standard V</string>
     <string name="voltage_unit_mv">mV (Micro flexing)</string>
 
     <string name="ram_unit_header">💾 Wam flex unit</string>
+    <string name="ram_unit_subtitle">Display dedotated WAM in MB or GB</string>
     <string name="ram_unit_mb">MB (Baby gronk tier)</string>
     <string name="ram_unit_gb">GB (GigaChad tier)</string>
     <string name="temp_unit_header">🌡️ Cookedness</string>
+    <string name="temp_unit_subtitle">Choose how hot your phone feels</string>
 
 
 
@@ -66,6 +74,7 @@
     <string name="language_brainrot">Brainrot English (Sigma Rizz)</string>
     <string name="theme">Vibe</string>
     <string name="theme_header">🎨 Vibe</string>
+    <string name="theme_subtitle">Flex your favorite dark or light aesthetic</string>
     <string name="theme_light">Flashbang (Light)</string>
     <string name="theme_dark">Nocturnal (Dark)</string>
 

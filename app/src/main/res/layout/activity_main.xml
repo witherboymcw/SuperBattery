@@ -23,16 +23,19 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <LinearLayout
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:minHeight="48dp">
 
                 <TextView
-                    android:layout_width="0dp"
+                    android:id="@+id/dashboard_title"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_gravity="center"
+                    android:layout_marginStart="48dp"
+                    android:layout_marginEnd="48dp"
+                    android:gravity="center"
                     android:text="@string/dashboard_title"
                     android:textSize="26sp"
                     android:textStyle="bold" />
@@ -41,12 +44,13 @@
                     android:id="@+id/settings_button"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
+                    android:layout_gravity="end|center_vertical"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/settings"
                     android:padding="12dp"
                     android:src="@android:drawable/ic_menu_preferences"
                     app:tint="?attr/colorControlNormal" />
-            </LinearLayout>
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -62,6 +66,7 @@
                     android:tag="battery" />
 
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_network"
                     android:layout_width="0dp"
                     android:layout_height="104dp"
                     android:layout_marginStart="10dp"

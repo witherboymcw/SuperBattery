@@ -106,6 +106,26 @@ class MainActivity : AppCompatActivity() {
                 settingsBackCallback.isEnabled = true
             }
         }
+
+        if (savedInstanceState == null) {
+            handleWidgetIntent(intent)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleWidgetIntent(intent)
+        updateDashboard()
+    }
+
+    private fun handleWidgetIntent(intent: Intent?) {
+        if (intent == null) return
+        val fromWidgetDoubleTap = intent.getBooleanExtra(BatteryWidget.EXTRA_CLOSE_SETTINGS, false)
+        if (fromWidgetDoubleTap) {
+            intent.removeExtra(BatteryWidget.EXTRA_CLOSE_SETTINGS)
+            closeSettingsScreen()
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -160,6 +180,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupSettingsScreen(savedInstanceState: Bundle? = null) {
         val swipeContainer = findViewById<SwipeBackFrameLayout>(R.id.settings_container) ?: return
+        swipeContainer.isClickable = true
+        swipeContainer.isFocusable = true
 
         // Top-left back button
         findViewById<View>(R.id.settings_back_button)?.setOnClickListener {
@@ -606,16 +628,15 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, "system").apply()
         }
 
-        val effectiveTag = if (savedLang == "system") {
-            if (BatteryWidget.getSystemPrimaryLanguage() == "vi") "vi" else "en"
+        val targetLocales = if (savedLang == "system") {
+            LocaleListCompat.getEmptyLocaleList()
         } else {
-            savedLang
+            LocaleListCompat.forLanguageTags(savedLang)
         }
 
         val currentLocales = AppCompatDelegate.getApplicationLocales()
-        val currentTag = currentLocales.toLanguageTags()
-        if (currentTag != effectiveTag) {
-            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(effectiveTag))
+        if (currentLocales.toLanguageTags() != targetLocales.toLanguageTags()) {
+            AppCompatDelegate.setApplicationLocales(targetLocales)
         }
     }
 
@@ -625,13 +646,12 @@ class MainActivity : AppCompatActivity() {
         if (currentLang != langCode) {
             prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, langCode).commit()
 
-            val effectiveTag = if (langCode == "system") {
-                if (BatteryWidget.getSystemPrimaryLanguage() == "vi") "vi" else "en"
+            val appLocales = if (langCode == "system") {
+                LocaleListCompat.getEmptyLocaleList()
             } else {
-                langCode
+                LocaleListCompat.forLanguageTags(langCode)
             }
 
-            val appLocales = LocaleListCompat.forLanguageTags(effectiveTag)
             AppCompatDelegate.setApplicationLocales(appLocales)
             refreshWidgets()
         }
@@ -675,6 +695,9 @@ class MainActivity : AppCompatActivity() {
 
         dashboardView.setOnTouchListener { _, event ->
             val container = findViewById<View>(R.id.settings_container) ?: return@setOnTouchListener false
+            if (container.visibility == View.VISIBLE && container.translationX == 0f) {
+                return@setOnTouchListener false
+            }
             val screenWidth = dashboardView.width.toFloat().takeIf { it > 0 } ?: 1080f
 
             when (event.action) {
@@ -749,27 +772,74 @@ class MainActivity : AppCompatActivity() {
         ramGraph?.setPlotBackgroundColor(plotBg)
         tempGraph?.setPlotBackgroundColor(plotBg)
 
+        val cardBattery = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_battery)
+        val cardNetwork = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_network)
         val cardVoltage = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_voltage_graph)
         val cardRam = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_ram_graph)
         val cardTemp = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_temperature_graph)
 
+        val strokeWidthPx = (resources.displayMetrics.density * 1f).toInt()
+        val defaultSurface = com.google.android.material.color.MaterialColors.getColor(
+            this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT
+        )
+        val outlineColor = com.google.android.material.color.MaterialColors.getColor(
+            this, com.google.android.material.R.attr.colorOutline, Color.GRAY
+        )
+
+        val dashboardCards = arrayOf(cardBattery, cardNetwork, cardVoltage, cardRam, cardTemp)
+        dashboardCards.forEach { card ->
+            card?.strokeColor = outlineColor
+        }
+
         if (isOled) {
+            cardBattery?.setCardBackgroundColor(Color.TRANSPARENT)
+            cardNetwork?.setCardBackgroundColor(Color.TRANSPARENT)
             cardVoltage?.setCardBackgroundColor(Color.BLACK)
             cardRam?.setCardBackgroundColor(Color.BLACK)
             cardTemp?.setCardBackgroundColor(Color.BLACK)
-            cardVoltage?.strokeWidth = (resources.displayMetrics.density * 1f).toInt()
-            cardRam?.strokeWidth = (resources.displayMetrics.density * 1f).toInt()
-            cardTemp?.strokeWidth = (resources.displayMetrics.density * 1f).toInt()
+
+            cardBattery?.strokeWidth = strokeWidthPx
+            cardNetwork?.strokeWidth = strokeWidthPx
+            cardVoltage?.strokeWidth = strokeWidthPx
+            cardRam?.strokeWidth = strokeWidthPx
+            cardTemp?.strokeWidth = strokeWidthPx
         } else {
-            val defaultSurface = com.google.android.material.color.MaterialColors.getColor(
-                this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT
-            )
+            cardBattery?.setCardBackgroundColor(defaultSurface)
+            cardNetwork?.setCardBackgroundColor(defaultSurface)
             cardVoltage?.setCardBackgroundColor(defaultSurface)
             cardRam?.setCardBackgroundColor(defaultSurface)
             cardTemp?.setCardBackgroundColor(defaultSurface)
+
+            cardBattery?.strokeWidth = 0
+            cardNetwork?.strokeWidth = 0
             cardVoltage?.strokeWidth = 0
             cardRam?.strokeWidth = 0
             cardTemp?.strokeWidth = 0
+        }
+
+        val settingsCardIds = intArrayOf(
+            R.id.card_language,
+            R.id.card_allow_notifications,
+            R.id.card_notification_access,
+            R.id.card_update_frequency,
+            R.id.card_theme,
+            R.id.card_use_system_battery,
+            R.id.card_voltage_unit,
+            R.id.card_ram_unit,
+            R.id.card_temp_unit
+        )
+
+        settingsCardIds.forEach { cardId ->
+            findViewById<com.google.android.material.card.MaterialCardView>(cardId)?.let { card ->
+                card.strokeColor = outlineColor
+                if (isOled) {
+                    card.setCardBackgroundColor(Color.TRANSPARENT)
+                    card.strokeWidth = strokeWidthPx
+                } else {
+                    card.setCardBackgroundColor(defaultSurface)
+                    card.strokeWidth = 0
+                }
+            }
         }
     }
 

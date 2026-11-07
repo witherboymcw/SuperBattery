@@ -72,7 +72,7 @@ class BatteryWidget : AppWidgetProvider() {
             action == Intent.ACTION_SCREEN_ON) {
 
             if (action == ACTION_MANUAL_REFRESH) {
-                HotspotNotificationListener.refreshFromWidgetTap()
+                handleWidgetTap(context)
             }
             
             val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -82,12 +82,31 @@ class BatteryWidget : AppWidgetProvider() {
 
     companion object {
         const val ACTION_MANUAL_REFRESH = "com.witherboymcw.superbattery.ACTION_MANUAL_REFRESH"
+        const val EXTRA_CLOSE_SETTINGS = "com.witherboymcw.superbattery.EXTRA_CLOSE_SETTINGS"
         const val SETTINGS_PREFS = "dashboard_settings"
         const val USE_SYSTEM_BATTERY_KEY = "use_system_battery_counter"
         const val APP_LANGUAGE_KEY = "app_language"
         const val TEMP_UNIT_KEY = "temp_unit"
         const val VOLTAGE_UNIT_KEY = "voltage_unit"
         const val RAM_UNIT_KEY = "ram_unit"
+
+        private var lastWidgetTapTimestampMs: Long = 0L
+
+        internal fun handleWidgetTap(context: Context) {
+            val now = SystemClock.elapsedRealtime()
+            val interval = now - lastWidgetTapTimestampMs
+            if (interval in 50..400) {
+                lastWidgetTapTimestampMs = 0L
+                val mainIntent = Intent(context, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    putExtra(EXTRA_CLOSE_SETTINGS, true)
+                }
+                context.startActivity(mainIntent)
+            } else {
+                lastWidgetTapTimestampMs = now
+            }
+            HotspotNotificationListener.refreshFromWidgetTap()
+        }
 
         internal fun getVoltageUnit(context: Context): VoltageUnit {
             val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
