@@ -5,11 +5,13 @@
     <string name="battery_details_widget_name">Battery Lore &amp; Heat Check</string>
 
 
+    <string name="calendar_widget_name">Calendar</string>
     <string name="appwidget_text">SKIBIDI</string>
     <string name="add_widget">Drop that widget on the screen</string>
     <string name="app_widget_description">Juice level and raw voltage flexing</string>
     <string name="battery_details_widget_description">How cooked the battery is and who is leeching your hotspot</string>
 
+    <string name="calendar_widget_description">Gregorian and Vietnamese lunar dates</string>
     <string name="super_widget_description">Vibe check, moon lore, and remaining battery aura AIO</string>
     <string name="hotspot_radio_off">Sleepin\'</string>
     <string name="hotspot_clients_count">Leeches: %1$d</string>
@@ -28,19 +30,22 @@
     <string name="manage_notification_access">🔑 Bro is listening in 4K</string>
     <string name="notification_access_settings_unavailable">Device settings completely ghosted, massive L.</string>
     <string name="notification_listener_label">Super Battery Fanum Tax detector</string>
-    <string name="dashboard_title">The Sigma Telemetry</string>
+    <string name="dashboard_title">Telemetry</string>
     <string name="metric_battery">Juice</string>
-    <string name="network_stats">Data burned since boot (Fanum Taxed)</string>
+    <string name="network_stats">Fanum Tax</string>
 
 
 
 
     <string name="network_unavailable">Caught in Ohio (No signal)</string>
-    <string name="voltage_title">Raw potential</string>
+    <string name="voltage_title">Potential</string>
     <string name="ram_title">Dedotated WAM</string>
 
 
     <string name="temperature_title">Thermal cook level</string>
+    <string name="temp_status_nominal">Chillin</string>
+    <string name="temp_status_hot">Cookin</string>
+    <string name="temp_status_critical">Fried</string>
 
     <string name="waiting_for_samples">Let me cook… (gathering stats)</string>
     <string name="settings">Tweaks &amp; Rizz</string>
@@ -79,4 +84,17 @@
     <string name="theme_light">Flashbang (Light)</string>
     <string name="theme_dark">Nocturnal (Dark)</string>
 
+    <string name="thick_chin_header">📱 Mow mewing chin</string>
+    <string name="thick_chin_subtitle">Reduce Ohio bottom gap for gigachad chins</string>
+    <string name="thick_chin_default">Default (16 dp)</string>
+    <string name="thick_chin_min_label">Level 0 (16 dp)</string>
+    <string name="thick_chin_max_label">Level 256 (0 dp)</string>
+    <string name="thick_chin_summary">Level %1$d/256 (Reduced: %2$s | Bottom: %3$s)</string>
+    <string name="thick_chin_summary_edge">Level %1$d/256 (Reduced: %2$s | Bottom: 0 dp - edge maxxing)</string>
+    <string name="thick_chin_edge">-%1$s (Edge maxxing)</string>
+    <string name="assume_oled_header">🖥️ Assume OLED</string>
+    <string name="assume_oled_subtitle">Automatic OLED screen detection</string>
+    <string name="assume_oled_opt_none">Auto (Default Rizz)</string>
+    <string name="assume_oled_opt_oled">Force OLED (Pitch Black)</string>
+    <string name="assume_oled_opt_not_oled">Force LCD</string>
 </resources>

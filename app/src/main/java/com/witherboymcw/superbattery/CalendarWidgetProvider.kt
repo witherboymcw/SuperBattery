@@ -75,7 +75,7 @@ class CalendarWidgetProvider : AppWidgetProvider() {
             val day = now.get(Calendar.DAY_OF_MONTH)
             val month = now.get(Calendar.MONTH) + 1
             val year = now.get(Calendar.YEAR)
-            val appLocale = BatteryWidget.getAppLocale(context)
+            val appLocale = SettingsHelper.getAppLocale(context)
             val solarFormat = SimpleDateFormat(solarPattern, appLocale).apply {
                 timeZone = now.timeZone
             }

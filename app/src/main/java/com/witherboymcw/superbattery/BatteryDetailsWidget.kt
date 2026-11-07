@@ -41,9 +41,9 @@ class BatteryDetailsWidget : AppWidgetProvider() {
             val tempTenths = batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             val tempCelsius = tempTenths / 10.0f
 
-            val localizedContext = BatteryWidget.getLocalizedContext(context)
+            val localizedContext = SettingsHelper.getLocalizedContext(context)
             val views = RemoteViews(context.packageName, R.layout.battery_details_widget)
-            val formattedTemp = BatteryWidget.formatWidgetTemperature(context, tempCelsius)
+            val formattedTemp = SettingsHelper.formatWidgetTemperature(context, tempCelsius)
             views.setTextViewText(R.id.appwidget_temperature, formattedTemp)
             val temperatureColor = temperatureColor(tempCelsius)
             views.setTextColor(R.id.appwidget_temperature, temperatureColor)

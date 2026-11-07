@@ -14,7 +14,7 @@ class BatteryMonitorService : Service() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_BATTERY_CHANGED) {
                 val refreshIntent = Intent(context, BatteryWidget::class.java).apply {
-                    action = BatteryWidget.ACTION_MANUAL_REFRESH
+                    action = BatteryWidget.ACTION_AUTO_UPDATE
                     setPackage(context.packageName)
                 }
                 context.sendBroadcast(refreshIntent)

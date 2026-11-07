@@ -2,10 +2,21 @@ package com.witherboymcw.superbattery
 
 import android.app.ActivityManager
 import android.app.NotificationManager
+import android.bluetooth.BluetoothAdapter
 import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Color
+import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.TrafficStats
 import android.os.BatteryManager
 import android.os.Build
@@ -14,12 +25,15 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
+import android.telephony.TelephonyManager
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.RadioButton
 import android.widget.RadioGroup
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -28,34 +42,86 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import com.google.android.material.checkbox.MaterialCheckBox
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
-    private val handler = Handler(Looper.getMainLooper())
+    private val settingsViewController = SettingsViewController()
+    internal val handler = Handler(Looper.getMainLooper())
     private val voltageHistory = ArrayDeque<HistoryGraphView.Sample>()
     private val ramHistory = ArrayDeque<HistoryGraphView.Sample>()
     private val temperatureHistory = ArrayDeque<HistoryGraphView.Sample>()
     private var previousRx = -1L
     private var previousTx = -1L
     private var previousNetworkTime = 0L
-    private var refreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS
+    internal var refreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS
 
     private var tvVoltageCurrent: TextView? = null
     private var tvTemperatureCurrent: TextView? = null
     private var tvRamCurrent: TextView? = null
-    private var tvNetworkRx: TextView? = null
-    private var tvNetworkTx: TextView? = null
+    private var tvVoltagePower: TextView? = null
+    private var tvRamUsageDetail: TextView? = null
+    private var tvTemperatureStatus: TextView? = null
+    private var tvNetTxTotal: TextView? = null
+    private var tvNetTxSpeed: TextView? = null
+    private var tvNetRxTotal: TextView? = null
+    private var tvNetRxSpeed: TextView? = null
     private var voltageGraph: HistoryGraphView? = null
     private var ramGraph: HistoryGraphView? = null
     private var tempGraph: HistoryGraphView? = null
     private var cardBatteryTitle: TextView? = null
     private var cardBatteryValue: TextView? = null
     private var cardBatteryDetail: TextView? = null
+    private var batteryRing: BatteryRingView? = null
+    internal var btnSettings: View? = null
     private val memoryInfo = ActivityManager.MemoryInfo()
+    private var isSettingsOpen = false
+
+    private var tvHeaderClock: TextView? = null
+    private var btnRingerModeToggle: ImageButton? = null
+    private var ivNetworkWifi: ImageView? = null
+    private var ivNetworkBluetooth: ImageView? = null
+    private var ivNetworkSim1: ImageView? = null
+
+    private var lastNonZeroTxRate: Long? = null
+    private var lastNonZeroRxRate: Long? = null
+    private var isVoltageShiftedHigh = false
+
+    private var audioManager: AudioManager? = null
+    private var connectivityManager: ConnectivityManager? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
+    private val clockFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+    private val clockRunnable = object : Runnable {
+        override fun run() {
+            tvHeaderClock?.text = clockFormat.format(Date())
+            handler.postDelayed(this, 1_000L)
+        }
+    }
+
+    private val ringerModeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == AudioManager.RINGER_MODE_CHANGED_ACTION) {
+                updateRingerModeIcon()
+            }
+        }
+    }
+
+    private val bluetoothReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == BluetoothAdapter.ACTION_STATE_CHANGED) {
+                updateBluetoothStatus()
+            }
+        }
+    }
 
     private val settingsBackCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -63,7 +129,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val refreshDashboard = object : Runnable {
+    internal val refreshDashboard = object : Runnable {
         override fun run() {
             updateDashboard()
             handler.postDelayed(this, refreshIntervalMs)
@@ -73,20 +139,50 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         ensureInitialLanguage()
 
-        val savedTheme = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
-            .getString(APP_THEME_KEY, "system") ?: "system"
-        val targetNightMode = if (savedTheme == "oled") {
+        val prefs = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
+        val assumeOled = prefs.getString(ASSUME_OLED_KEY, "none") ?: "none"
+        val isEffectiveOled = when (assumeOled) {
+            "oled" -> true
+            "not_oled" -> false
+            else -> OledDetector.isGuaranteedOled(this)
+        }
+
+        if (prefs.getBoolean(IS_FIRST_LAUNCH_KEY, true)) {
+            if (isEffectiveOled) {
+                prefs.edit()
+                    .putString(APP_THEME_KEY, "oled")
+                    .putBoolean(IS_FIRST_LAUNCH_KEY, false)
+                    .apply()
+            } else {
+                prefs.edit()
+                    .putBoolean(IS_FIRST_LAUNCH_KEY, false)
+                    .apply()
+            }
+        }
+
+        val savedTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
+        if (savedTheme == "oled") {
             setTheme(R.style.Theme_SuperBattery_Oled)
-            AppCompatDelegate.MODE_NIGHT_YES
+            if (AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_YES) {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+            }
+        } else if (savedTheme == "system" && isEffectiveOled) {
+            val isNight = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            if (isNight) {
+                setTheme(R.style.Theme_SuperBattery_Oled)
+            }
+            if (AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM) {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+            }
         } else {
-            when (savedTheme) {
+            val targetNightMode = when (savedTheme) {
                 "light" -> AppCompatDelegate.MODE_NIGHT_NO
                 "dark" -> AppCompatDelegate.MODE_NIGHT_YES
                 else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
             }
-        }
-        if (AppCompatDelegate.getDefaultNightMode() != targetNightMode) {
-            AppCompatDelegate.setDefaultNightMode(targetNightMode)
+            if (AppCompatDelegate.getDefaultNightMode() != targetNightMode) {
+                AppCompatDelegate.setDefaultNightMode(targetNightMode)
+            }
         }
 
         super.onCreate(savedInstanceState)
@@ -98,10 +194,27 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         initDashboardViews()
-        applyGraphBackgrounds(savedTheme)
+        applyThickChinPadding()
+        val effectiveThemeForGraph = if (savedTheme == "oled" || (savedTheme == "system" && isEffectiveOled && ((resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES))) {
+            "oled"
+        } else {
+            savedTheme
+        }
+        applyGraphBackgrounds(effectiveThemeForGraph)
+
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val displayCutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            val left = maxOf(navBars.left, displayCutout.left)
+            val top = displayCutout.top
+            val right = maxOf(navBars.right, displayCutout.right)
+            val bottom = maxOf(navBars.bottom, displayCutout.bottom)
+            view.setPadding(left, top, right, bottom)
+            applyThickChinPadding()
             insets
         }
         onBackPressedDispatcher.addCallback(this, settingsBackCallback)
@@ -109,7 +222,8 @@ class MainActivity : AppCompatActivity() {
         initializeMetricCards()
         setupSettingsScreen(savedInstanceState)
 
-        findViewById<View>(R.id.settings_button).setOnClickListener {
+        btnSettings = findViewById(R.id.settings_button)
+        btnSettings?.setOnClickListener {
             openSettingsScreen()
         }
 
@@ -122,6 +236,8 @@ class MainActivity : AppCompatActivity() {
                 container.visibility = View.VISIBLE
                 container.translationX = 0f
                 settingsBackCallback.isEnabled = true
+                isSettingsOpen = true
+                btnSettings?.rotation = 90f
             }
         }
 
@@ -176,6 +292,23 @@ class MainActivity : AppCompatActivity() {
         if (dropdownRamUnit?.visibility == View.VISIBLE) {
             outState.putBoolean(KEY_RAM_UNIT_DROPDOWN_OPEN, true)
         }
+        val dropdownThickChin = findViewById<View>(R.id.dropdown_thick_chin)
+        if (dropdownThickChin?.visibility == View.VISIBLE) {
+            outState.putBoolean(KEY_THICK_CHIN_DROPDOWN_OPEN, true)
+        }
+        val dropdownAssumeOled = findViewById<View>(R.id.dropdown_assume_oled)
+        if (dropdownAssumeOled?.visibility == View.VISIBLE) {
+            outState.putBoolean(KEY_ASSUME_OLED_DROPDOWN_OPEN, true)
+        }
+        val scrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_view)
+            ?: findViewById<android.widget.ScrollView>(R.id.settings_scroll_left)
+        scrollView?.let {
+            outState.putInt(KEY_SETTINGS_SCROLL_Y, it.scrollY)
+        }
+        val rightScrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_right)
+        rightScrollView?.let {
+            outState.putInt(KEY_SETTINGS_SCROLL_RIGHT_Y, it.scrollY)
+        }
     }
 
     override fun onResume() {
@@ -184,6 +317,30 @@ class MainActivity : AppCompatActivity() {
         updateNotificationPermissionStatuses()
         handler.removeCallbacks(refreshDashboard)
         handler.post(refreshDashboard)
+        handler.removeCallbacks(clockRunnable)
+        handler.post(clockRunnable)
+
+        try {
+            androidx.core.content.ContextCompat.registerReceiver(
+                this,
+                ringerModeReceiver,
+                IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION),
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+            )
+        } catch (_: Exception) {}
+
+        try {
+            androidx.core.content.ContextCompat.registerReceiver(
+                this,
+                bluetoothReceiver,
+                IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+            )
+        } catch (_: Exception) {}
+
+        updateRingerModeIcon()
+        updateBluetoothStatus()
+        updateSimSignalStatus()
     }
 
     override fun onUserLeaveHint() {
@@ -193,430 +350,32 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         handler.removeCallbacks(refreshDashboard)
+        handler.removeCallbacks(clockRunnable)
+        try {
+            unregisterReceiver(ringerModeReceiver)
+        } catch (_: Exception) {}
+        try {
+            unregisterReceiver(bluetoothReceiver)
+        } catch (_: Exception) {}
         super.onPause()
     }
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
+        networkCallback?.let { callback ->
+            try {
+                connectivityManager?.unregisterNetworkCallback(callback)
+            } catch (_: Exception) {}
+        }
         findViewById<SwipeBackFrameLayout>(R.id.settings_container)?.swipeListener = null
         super.onDestroy()
     }
 
     private fun setupSettingsScreen(savedInstanceState: Bundle? = null) {
-        val swipeContainer = findViewById<SwipeBackFrameLayout>(R.id.settings_container) ?: return
-        swipeContainer.isClickable = true
-        swipeContainer.isFocusable = true
-
-        // Top-left back button
-        findViewById<View>(R.id.settings_back_button)?.setOnClickListener {
-            closeSettingsScreen()
-        }
-
-        // Swipe right callback from SwipeBackFrameLayout
-        swipeContainer.swipeListener = object : SwipeBackFrameLayout.SwipeListener {
-            override fun onSwipeProgress(translationX: Float) {
-                swipeContainer.translationX = translationX
-            }
-
-            override fun onSwipeEnd(shouldClose: Boolean) {
-                if (shouldClose) {
-                    closeSettingsScreen()
-                } else {
-                    swipeContainer.animate()
-                        .translationX(0f)
-                        .setDuration(200L)
-                        .setInterpolator(FastOutSlowInInterpolator())
-                        .withLayer()
-                        .start()
-                }
-            }
-        }
-
-        // 1. Language selector dropdown
-        val headerLanguage = findViewById<View>(R.id.header_language)
-        val dropdownLanguage = findViewById<View>(R.id.dropdown_language)
-        val arrowLanguage = findViewById<ImageView>(R.id.arrow_language)
-        val selectedLanguageText = findViewById<TextView>(R.id.selected_language_text)
-
-        headerLanguage?.setOnClickListener {
-            val isExpanded = dropdownLanguage?.visibility == View.VISIBLE
-            dropdownLanguage?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowLanguage?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_LANGUAGE_DROPDOWN_OPEN) == true) {
-            dropdownLanguage?.visibility = View.VISIBLE
-            arrowLanguage?.rotation = 180f
-        }
-
-        val langGroup = findViewById<RadioGroup>(R.id.language_radio_group)
-        val rbLangSystem = findViewById<RadioButton>(R.id.lang_system)
-        val rbVietnamese = findViewById<RadioButton>(R.id.lang_vietnamese)
-        val rbEnglish = findViewById<RadioButton>(R.id.lang_english)
-        val rbBrainrot = findViewById<RadioButton>(R.id.lang_brainrot)
-
-        val savedLang = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
-            .getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-
-        when (savedLang) {
-            "vi" -> {
-                rbVietnamese?.isChecked = true
-                selectedLanguageText?.text = getString(R.string.language_vietnamese)
-            }
-            "en" -> {
-                rbEnglish?.isChecked = true
-                selectedLanguageText?.text = getString(R.string.language_english)
-            }
-            "art", "en-0rot", "en-x-brainrot", "en-brainrot", "en-BR" -> {
-                rbBrainrot?.isChecked = true
-                selectedLanguageText?.text = getString(R.string.language_brainrot)
-            }
-            else -> {
-                rbLangSystem?.isChecked = true
-                selectedLanguageText?.text = getString(R.string.at_system)
-            }
-        }
-
-        langGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetLang = when (checkedId) {
-                R.id.lang_vietnamese -> "vi"
-                R.id.lang_english -> "en"
-                R.id.lang_brainrot -> "art"
-                else -> "system"
-            }
-            selectedLanguageText?.text = when (targetLang) {
-                "vi" -> getString(R.string.language_vietnamese)
-                "en" -> getString(R.string.language_english)
-                "art" -> getString(R.string.language_brainrot)
-                else -> getString(R.string.at_system)
-            }
-            setAppLanguage(targetLang)
-        }
-
-        // 2. Allow notifications
-        findViewById<View>(R.id.card_allow_notifications)?.setOnClickListener {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_REQUEST)
-            } else {
-                Toast.makeText(this, R.string.notification_access_enabled, Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        // 3. Manage notification access
-        findViewById<View>(R.id.card_notification_access)?.setOnClickListener {
-            openNotificationAccessSettings()
-        }
-
-        // 4. Update frequency dropdown
-        val headerFrequency = findViewById<View>(R.id.header_update_frequency)
-        val dropdownFrequency = findViewById<View>(R.id.dropdown_update_frequency)
-        val arrowFrequency = findViewById<ImageView>(R.id.arrow_update_frequency)
-        val selectedFrequencyText = findViewById<TextView>(R.id.selected_frequency_text)
-
-        headerFrequency?.setOnClickListener {
-            val isExpanded = dropdownFrequency?.visibility == View.VISIBLE
-            dropdownFrequency?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowFrequency?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_FREQUENCY_DROPDOWN_OPEN) == true) {
-            dropdownFrequency?.visibility = View.VISIBLE
-            arrowFrequency?.rotation = 180f
-        }
-
-        val freqGroup = findViewById<RadioGroup>(R.id.frequency_radio_group)
-        val initialFreqRes = when (refreshIntervalMs) {
-            500L -> {
-                findViewById<RadioButton>(R.id.freq_500)?.isChecked = true
-                R.string.update_every_half_second
-            }
-            1_000L -> {
-                findViewById<RadioButton>(R.id.freq_1000)?.isChecked = true
-                R.string.update_every_second
-            }
-            else -> {
-                findViewById<RadioButton>(R.id.freq_2000)?.isChecked = true
-                R.string.update_every_two_seconds
-            }
-        }
-        selectedFrequencyText?.text = getString(initialFreqRes)
-
-        freqGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val selectedMs = when (checkedId) {
-                R.id.freq_500 -> 500L
-                R.id.freq_1000 -> 1_000L
-                R.id.freq_2000 -> 2_000L
-                else -> 2_000L
-            }
-            val textRes = when (selectedMs) {
-                500L -> R.string.update_every_half_second
-                1_000L -> R.string.update_every_second
-                else -> R.string.update_every_two_seconds
-            }
-            selectedFrequencyText?.text = getString(textRes)
-            refreshIntervalMs = selectedMs
-            getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
-                .putLong(REFRESH_INTERVAL_KEY, selectedMs)
-                .apply()
-            handler.removeCallbacks(refreshDashboard)
-            handler.post(refreshDashboard)
-        }
-
-        // 5. Theme dropdown
-        val headerTheme = findViewById<View>(R.id.header_theme)
-        val dropdownTheme = findViewById<View>(R.id.dropdown_theme)
-        val arrowTheme = findViewById<ImageView>(R.id.arrow_theme)
-        val selectedThemeText = findViewById<TextView>(R.id.selected_theme_text)
-
-        headerTheme?.setOnClickListener {
-            val isExpanded = dropdownTheme?.visibility == View.VISIBLE
-            dropdownTheme?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowTheme?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_THEME_DROPDOWN_OPEN) == true) {
-            dropdownTheme?.visibility = View.VISIBLE
-            arrowTheme?.rotation = 180f
-        }
-
-        val themeGroup = findViewById<RadioGroup>(R.id.theme_radio_group)
-        val rbThemeSystem = findViewById<RadioButton>(R.id.theme_system)
-        val rbLight = findViewById<RadioButton>(R.id.theme_light)
-        val rbDark = findViewById<RadioButton>(R.id.theme_dark)
-        val rbOled = findViewById<RadioButton>(R.id.theme_oled)
-
-        val prefs = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
-        val currentTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
-
-        when (currentTheme) {
-            "light" -> {
-                rbLight?.isChecked = true
-                selectedThemeText?.text = getString(R.string.theme_light)
-            }
-            "dark" -> {
-                rbDark?.isChecked = true
-                selectedThemeText?.text = getString(R.string.theme_dark)
-            }
-            "oled" -> {
-                rbOled?.isChecked = true
-                selectedThemeText?.text = getString(R.string.theme_oled)
-            }
-            else -> {
-                rbThemeSystem?.isChecked = true
-                selectedThemeText?.text = getString(R.string.at_system)
-            }
-        }
-
-        themeGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetTheme = when (checkedId) {
-                R.id.theme_light -> "light"
-                R.id.theme_dark -> "dark"
-                R.id.theme_oled -> "oled"
-                else -> "system"
-            }
-            val textRes = when (targetTheme) {
-                "light" -> R.string.theme_light
-                "dark" -> R.string.theme_dark
-                "oled" -> R.string.theme_oled
-                else -> R.string.at_system
-            }
-            selectedThemeText?.text = getString(textRes)
-
-            val activeTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
-            if (activeTheme != targetTheme) {
-                prefs.edit().putString(APP_THEME_KEY, targetTheme).apply()
-                val mode = when (targetTheme) {
-                    "light" -> AppCompatDelegate.MODE_NIGHT_NO
-                    "dark", "oled" -> AppCompatDelegate.MODE_NIGHT_YES
-                    else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                }
-                AppCompatDelegate.setDefaultNightMode(mode)
-                recreate()
-            }
-        }
-
-        // 6. Use system battery counter
-        val checkboxSystemBattery = findViewById<MaterialCheckBox>(R.id.checkbox_use_system_battery)
-        val cardSystemBattery = findViewById<View>(R.id.card_use_system_battery)
-
-        checkboxSystemBattery?.isChecked = BatteryWidget.isUseSystemBatteryCounter(this)
-
-        cardSystemBattery?.setOnClickListener {
-            val newValue = !(checkboxSystemBattery?.isChecked ?: false)
-            checkboxSystemBattery?.isChecked = newValue
-            getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
-                .putBoolean(BatteryWidget.USE_SYSTEM_BATTERY_KEY, newValue)
-                .apply()
-            updateDashboard()
-            refreshWidgets()
-        }
-
-        // 7. Voltage unit dropdown
-        val headerVoltageUnit = findViewById<View>(R.id.header_voltage_unit)
-        val dropdownVoltageUnit = findViewById<View>(R.id.dropdown_voltage_unit)
-        val arrowVoltageUnit = findViewById<ImageView>(R.id.arrow_voltage_unit)
-        val selectedVoltageUnitText = findViewById<TextView>(R.id.selected_voltage_unit_text)
-
-        headerVoltageUnit?.setOnClickListener {
-            val isExpanded = dropdownVoltageUnit?.visibility == View.VISIBLE
-            dropdownVoltageUnit?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowVoltageUnit?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_VOLTAGE_UNIT_DROPDOWN_OPEN) == true) {
-            dropdownVoltageUnit?.visibility = View.VISIBLE
-            arrowVoltageUnit?.rotation = 180f
-        }
-
-        val voltageUnitGroup = findViewById<RadioGroup>(R.id.voltage_unit_radio_group)
-        val rbVoltageMv = findViewById<RadioButton>(R.id.voltage_unit_mv)
-        val rbVoltageV = findViewById<RadioButton>(R.id.voltage_unit_v)
-
-        val currentVoltageUnit = BatteryWidget.getVoltageUnit(this)
-        when (currentVoltageUnit) {
-            VoltageUnit.V -> {
-                rbVoltageV?.isChecked = true
-                selectedVoltageUnitText?.text = getString(R.string.voltage_unit_v)
-            }
-            else -> {
-                rbVoltageMv?.isChecked = true
-                selectedVoltageUnitText?.text = getString(R.string.voltage_unit_mv)
-            }
-        }
-
-        voltageUnitGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetUnit = when (checkedId) {
-                R.id.voltage_unit_v -> VoltageUnit.V
-                else -> VoltageUnit.MV
-            }
-            val textRes = when (targetUnit) {
-                VoltageUnit.V -> R.string.voltage_unit_v
-                else -> R.string.voltage_unit_mv
-            }
-            selectedVoltageUnitText?.text = getString(textRes)
-
-            getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
-                .putString(BatteryWidget.VOLTAGE_UNIT_KEY, targetUnit.code)
-                .apply()
-            updateDashboard()
-            refreshWidgets()
-        }
-
-        // 8. RAM unit dropdown
-        val headerRamUnit = findViewById<View>(R.id.header_ram_unit)
-        val dropdownRamUnit = findViewById<View>(R.id.dropdown_ram_unit)
-        val arrowRamUnit = findViewById<ImageView>(R.id.arrow_ram_unit)
-        val selectedRamUnitText = findViewById<TextView>(R.id.selected_ram_unit_text)
-
-        headerRamUnit?.setOnClickListener {
-            val isExpanded = dropdownRamUnit?.visibility == View.VISIBLE
-            dropdownRamUnit?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowRamUnit?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_RAM_UNIT_DROPDOWN_OPEN) == true) {
-            dropdownRamUnit?.visibility = View.VISIBLE
-            arrowRamUnit?.rotation = 180f
-        }
-
-        val ramUnitGroup = findViewById<RadioGroup>(R.id.ram_unit_radio_group)
-        val rbRamMb = findViewById<RadioButton>(R.id.ram_unit_mb)
-        val rbRamGb = findViewById<RadioButton>(R.id.ram_unit_gb)
-
-        val currentRamUnit = BatteryWidget.getRamUnit(this)
-        when (currentRamUnit) {
-            RamUnit.GB -> {
-                rbRamGb?.isChecked = true
-                selectedRamUnitText?.text = getString(R.string.ram_unit_gb)
-            }
-            else -> {
-                rbRamMb?.isChecked = true
-                selectedRamUnitText?.text = getString(R.string.ram_unit_mb)
-            }
-        }
-
-        ramUnitGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetUnit = when (checkedId) {
-                R.id.ram_unit_gb -> RamUnit.GB
-                else -> RamUnit.MB
-            }
-            val textRes = when (targetUnit) {
-                RamUnit.GB -> R.string.ram_unit_gb
-                else -> R.string.ram_unit_mb
-            }
-            selectedRamUnitText?.text = getString(textRes)
-
-            getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
-                .putString(BatteryWidget.RAM_UNIT_KEY, targetUnit.code)
-                .apply()
-            updateDashboard()
-            refreshWidgets()
-        }
-
-        // 9. Temperature unit dropdown
-        val headerTempUnit = findViewById<View>(R.id.header_temp_unit)
-        val dropdownTempUnit = findViewById<View>(R.id.dropdown_temp_unit)
-        val arrowTempUnit = findViewById<ImageView>(R.id.arrow_temp_unit)
-        val selectedTempUnitText = findViewById<TextView>(R.id.selected_temp_unit_text)
-
-        headerTempUnit?.setOnClickListener {
-            val isExpanded = dropdownTempUnit?.visibility == View.VISIBLE
-            dropdownTempUnit?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowTempUnit?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_TEMP_UNIT_DROPDOWN_OPEN) == true) {
-            dropdownTempUnit?.visibility = View.VISIBLE
-            arrowTempUnit?.rotation = 180f
-        }
-
-        val tempUnitGroup = findViewById<RadioGroup>(R.id.temp_unit_radio_group)
-        val rbCelsius = findViewById<RadioButton>(R.id.temp_unit_celsius)
-        val rbFahrenheit = findViewById<RadioButton>(R.id.temp_unit_fahrenheit)
-        val rbKelvin = findViewById<RadioButton>(R.id.temp_unit_kelvin)
-
-        val currentTempUnit = BatteryWidget.getTemperatureUnit(this)
-        when (currentTempUnit) {
-            TempUnit.FAHRENHEIT -> {
-                rbFahrenheit?.isChecked = true
-                selectedTempUnitText?.text = getString(R.string.temp_unit_fahrenheit)
-            }
-            TempUnit.KELVIN -> {
-                rbKelvin?.isChecked = true
-                selectedTempUnitText?.text = getString(R.string.temp_unit_kelvin)
-            }
-            else -> {
-                rbCelsius?.isChecked = true
-                selectedTempUnitText?.text = getString(R.string.temp_unit_celsius)
-            }
-        }
-
-        tempUnitGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetUnit = when (checkedId) {
-                R.id.temp_unit_fahrenheit -> TempUnit.FAHRENHEIT
-                R.id.temp_unit_kelvin -> TempUnit.KELVIN
-                else -> TempUnit.CELSIUS
-            }
-            val textRes = when (targetUnit) {
-                TempUnit.FAHRENHEIT -> R.string.temp_unit_fahrenheit
-                TempUnit.KELVIN -> R.string.temp_unit_kelvin
-                else -> R.string.temp_unit_celsius
-            }
-            selectedTempUnitText?.text = getString(textRes)
-
-            getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE).edit()
-                .putString(BatteryWidget.TEMP_UNIT_KEY, targetUnit.code)
-                .apply()
-            updateDashboard()
-            refreshWidgets()
-        }
-
-        updateNotificationPermissionStatuses()
+        settingsViewController.bind(this, savedInstanceState)
     }
 
-    private fun updateNotificationPermissionStatuses() {
+    internal fun updateNotificationPermissionStatuses() {
         val statusAllowNotifications = findViewById<TextView>(R.id.status_allow_notifications)
         val statusNotificationAccess = findViewById<TextView>(R.id.status_notification_access)
 
@@ -664,7 +423,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setAppLanguage(langCode: String) {
+    internal fun setAppLanguage(langCode: String) {
         val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
         val currentLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
         if (currentLang != langCode) {
@@ -683,6 +442,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun openSettingsScreen() {
         val container = findViewById<View>(R.id.settings_container) ?: return
+        isSettingsOpen = true
         container.visibility = View.VISIBLE
         val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
         container.translationX = width
@@ -692,12 +452,18 @@ class MainActivity : AppCompatActivity() {
             .setInterpolator(FastOutSlowInInterpolator())
             .withLayer()
             .start()
+        btnSettings?.animate()
+            ?.rotation(90f)
+            ?.setDuration(280L)
+            ?.setInterpolator(FastOutSlowInInterpolator())
+            ?.start()
         settingsBackCallback.isEnabled = true
     }
 
-    private fun closeSettingsScreen(animate: Boolean = true) {
+    internal fun closeSettingsScreen(animate: Boolean = true) {
         val container = findViewById<View>(R.id.settings_container) ?: return
         if (container.visibility != View.VISIBLE) return
+        isSettingsOpen = false
         settingsBackCallback.isEnabled = false
         if (animate) {
             val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
@@ -710,22 +476,86 @@ class MainActivity : AppCompatActivity() {
                     container.visibility = View.GONE
                 }
                 .start()
+            btnSettings?.animate()
+                ?.rotation(0f)
+                ?.setDuration(280L)
+                ?.setInterpolator(FastOutSlowInInterpolator())
+                ?.start()
         } else {
             container.animate().cancel()
             container.visibility = View.GONE
             container.translationX = 0f
+            btnSettings?.animate()?.cancel()
+            btnSettings?.rotation = 0f
         }
     }
 
     private fun setupDashboardSwipeToOpen(dashboardView: View) {
+        val container = findViewById<View>(R.id.settings_container) ?: return
+        val dashboard = dashboardView as? DashboardLayout
+
+        if (dashboard != null) {
+            dashboard.swipeSensitivity = 1f
+            dashboard.canSwipe = { !isSettingsOpen }
+            dashboard.swipeListener = object : DashboardLayout.SwipeListener {
+                override fun onSwipeStart() {
+                    val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: 1080f
+                    container.visibility = View.VISIBLE
+                    container.translationX = screenWidth
+                    btnSettings?.rotation = 0f
+                }
+
+                override fun onSwipeProgress(dx: Float, targetX: Float) {
+                    container.visibility = View.VISIBLE
+                    container.translationX = targetX
+                    val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: 1080f
+                    val progress = (1f - (targetX / screenWidth)).coerceIn(0f, 1f)
+                    btnSettings?.rotation = progress * 90f
+                }
+
+                override fun onSwipeEnd(shouldOpen: Boolean) {
+                    val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: 1080f
+                    if (shouldOpen) {
+                        isSettingsOpen = true
+                        container.animate()
+                            .translationX(0f)
+                            .setDuration(200L)
+                            .setInterpolator(FastOutSlowInInterpolator())
+                            .withLayer()
+                            .start()
+                        btnSettings?.animate()
+                            ?.rotation(90f)
+                            ?.setDuration(200L)
+                            ?.setInterpolator(FastOutSlowInInterpolator())
+                            ?.start()
+                        settingsBackCallback.isEnabled = true
+                    } else {
+                        isSettingsOpen = false
+                        container.animate()
+                            .translationX(screenWidth)
+                            .setDuration(200L)
+                            .setInterpolator(FastOutSlowInInterpolator())
+                            .withLayer()
+                            .withEndAction { container.visibility = View.GONE }
+                            .start()
+                        btnSettings?.animate()
+                            ?.rotation(0f)
+                            ?.setDuration(200L)
+                            ?.setInterpolator(FastOutSlowInInterpolator())
+                            ?.start()
+                    }
+                }
+            }
+            return
+        }
+
         var startX = 0f
         var startY = 0f
         var isSwipingLeft = false
         val touchSlop = ViewConfiguration.get(this).scaledTouchSlop.toFloat()
 
         dashboardView.setOnTouchListener { _, event ->
-            val container = findViewById<View>(R.id.settings_container) ?: return@setOnTouchListener false
-            if (container.visibility == View.VISIBLE && container.translationX == 0f) {
+            if (isSettingsOpen || (container.visibility == View.VISIBLE && container.translationX == 0f)) {
                 return@setOnTouchListener false
             }
             val screenWidth = dashboardView.width.toFloat().takeIf { it > 0 } ?: 1080f
@@ -750,19 +580,29 @@ class MainActivity : AppCompatActivity() {
                     if (isSwipingLeft) {
                         val targetX = (screenWidth + dx).coerceIn(0f, screenWidth)
                         container.translationX = targetX
+                        val progress = (1f - (targetX / screenWidth)).coerceIn(0f, 1f)
+                        btnSettings?.rotation = progress * 90f
                         true
                     } else false
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     if (isSwipingLeft) {
                         val currentX = container.translationX
-                        if (currentX < screenWidth * 0.75f) {
+                        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                        val threshold = if (isLandscape) 0.09f else 0.20f
+                        val shouldOpen = currentX < screenWidth * (1f - threshold)
+                        if (shouldOpen) {
                             container.animate()
                                 .translationX(0f)
                                 .setDuration(200L)
                                 .setInterpolator(FastOutSlowInInterpolator())
                                 .withLayer()
                                 .start()
+                            btnSettings?.animate()
+                                ?.rotation(90f)
+                                ?.setDuration(200L)
+                                ?.setInterpolator(FastOutSlowInInterpolator())
+                                ?.start()
                             settingsBackCallback.isEnabled = true
                         } else {
                             container.animate()
@@ -772,6 +612,11 @@ class MainActivity : AppCompatActivity() {
                                 .withLayer()
                                 .withEndAction { container.visibility = View.GONE }
                                 .start()
+                            btnSettings?.animate()
+                                ?.rotation(0f)
+                                ?.setDuration(200L)
+                                ?.setInterpolator(FastOutSlowInInterpolator())
+                                ?.start()
                         }
                         isSwipingLeft = false
                         true
@@ -786,7 +631,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeMetricCards() {
-        setBatteryCard(R.string.metric_battery, "—", "")
+        setBatteryCard(R.string.metric_battery, "—", 0)
     }
 
     private fun applyGraphBackgrounds(theme: String) {
@@ -859,7 +704,10 @@ class MainActivity : AppCompatActivity() {
             R.id.card_use_system_battery,
             R.id.card_voltage_unit,
             R.id.card_ram_unit,
-            R.id.card_temp_unit
+            R.id.card_temp_unit,
+            R.id.card_thick_chin,
+            R.id.card_assume_oled,
+            R.id.settings_detail_card
         )
 
         settingsCardIds.forEach { cardId ->
@@ -880,24 +728,243 @@ class MainActivity : AppCompatActivity() {
         tvVoltageCurrent = findViewById(R.id.voltage_current)
         tvTemperatureCurrent = findViewById(R.id.temperature_current)
         tvRamCurrent = findViewById(R.id.ram_current)
-        tvNetworkRx = findViewById(R.id.network_rx)
-        tvNetworkTx = findViewById(R.id.network_tx)
+        tvNetTxTotal = findViewById(R.id.net_tx_total)
+        tvNetTxSpeed = findViewById(R.id.net_tx_speed)
+        tvNetRxTotal = findViewById(R.id.net_rx_total)
+        tvNetRxSpeed = findViewById(R.id.net_rx_speed)
         voltageGraph = findViewById(R.id.voltage_graph)
         ramGraph = findViewById(R.id.ram_graph)
         tempGraph = findViewById(R.id.temperature_graph)
+        ramGraph?.suppressMinYLabel = true
+        tempGraph?.suppressMinYLabel = true
         val cardBattery = findViewById<View>(R.id.card_battery)
         cardBatteryTitle = cardBattery?.findViewById(R.id.metric_title)
         cardBatteryValue = cardBattery?.findViewById(R.id.metric_value)
         cardBatteryDetail = cardBattery?.findViewById(R.id.metric_detail)
+        batteryRing = cardBattery?.findViewById(R.id.battery_ring)
+        updateBatteryRingGeometry()
+
+        tvHeaderClock = findViewById(R.id.tv_header_clock)
+        btnRingerModeToggle = findViewById(R.id.btn_ringer_mode_toggle)
+        ivNetworkWifi = findViewById(R.id.iv_network_wifi)
+        ivNetworkBluetooth = findViewById(R.id.iv_network_bluetooth)
+        ivNetworkSim1 = findViewById(R.id.iv_network_sim_1)
+
+        tvVoltagePower = findViewById(R.id.tv_voltage_power)
+        tvRamUsageDetail = findViewById(R.id.tv_ram_usage_detail)
+        tvTemperatureStatus = findViewById(R.id.tv_temperature_status)
+
+        setupRingerModeControls()
+        setupNetworkCardIndicators()
+
+        val headerVoltage: View? = findViewById(R.id.header_voltage_graph)
+        voltageGraph?.onAxisOffsetsChanged = { leftOffset, rightOffset, plotWidth ->
+            headerVoltage?.setPaddingRelative(
+                leftOffset.toInt(),
+                headerVoltage.paddingTop,
+                rightOffset.toInt(),
+                headerVoltage.paddingBottom
+            )
+            val margin20s = (plotWidth / 3f).toInt()
+            (tvVoltagePower?.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
+                if (lp.marginEnd != margin20s) {
+                    lp.marginEnd = margin20s
+                    tvVoltagePower?.layoutParams = lp
+                }
+            }
+        }
+
+        val headerRam: View? = findViewById(R.id.header_ram_graph)
+        ramGraph?.onAxisOffsetsChanged = { leftOffset, rightOffset, plotWidth ->
+            headerRam?.setPaddingRelative(
+                leftOffset.toInt(),
+                headerRam.paddingTop,
+                rightOffset.toInt(),
+                headerRam.paddingBottom
+            )
+            val margin20s = (plotWidth / 3f).toInt()
+            (tvRamCurrent?.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
+                if (lp.marginEnd != margin20s) {
+                    lp.marginEnd = margin20s
+                    tvRamCurrent?.layoutParams = lp
+                }
+            }
+        }
+
+        val headerTemp: View? = findViewById(R.id.header_temperature_graph)
+        tempGraph?.onAxisOffsetsChanged = { leftOffset, rightOffset, plotWidth ->
+            headerTemp?.setPaddingRelative(
+                leftOffset.toInt(),
+                headerTemp.paddingTop,
+                rightOffset.toInt(),
+                headerTemp.paddingBottom
+            )
+            val margin20s = (plotWidth / 3f).toInt()
+            (tvTemperatureStatus?.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
+                if (lp.marginEnd != margin20s) {
+                    lp.marginEnd = margin20s
+                    tvTemperatureStatus?.layoutParams = lp
+                }
+            }
+        }
     }
 
-    private fun setBatteryCard(titleId: Int, value: String, detail: String = "") {
+    private fun setupRingerModeControls() {
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        btnRingerModeToggle?.setOnClickListener {
+            toggleRingerMode()
+        }
+        updateRingerModeIcon()
+    }
+
+    private fun updateRingerModeIcon() {
+        val mode = audioManager?.ringerMode ?: AudioManager.RINGER_MODE_NORMAL
+        when (mode) {
+            AudioManager.RINGER_MODE_NORMAL -> {
+                btnRingerModeToggle?.setImageResource(R.drawable.ic_ringer_sound)
+                btnRingerModeToggle?.alpha = 1.0f
+            }
+            AudioManager.RINGER_MODE_VIBRATE -> {
+                btnRingerModeToggle?.setImageResource(R.drawable.ic_ringer_vibrate)
+                btnRingerModeToggle?.alpha = 1.0f
+            }
+            AudioManager.RINGER_MODE_SILENT -> {
+                btnRingerModeToggle?.setImageResource(R.drawable.ic_ringer_silent)
+                btnRingerModeToggle?.alpha = 1.0f
+            }
+            else -> {
+                btnRingerModeToggle?.setImageResource(R.drawable.ic_ringer_sound)
+                btnRingerModeToggle?.alpha = 1.0f
+            }
+        }
+    }
+
+    private fun toggleRingerMode() {
+        val am = audioManager ?: return
+        val currentMode = am.ringerMode
+        val nextMode = when (currentMode) {
+            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+            AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
+            else -> AudioManager.RINGER_MODE_NORMAL
+        }
+
+        if (nextMode == AudioManager.RINGER_MODE_SILENT && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            if (notificationManager?.isNotificationPolicyAccessGranted == false) {
+                Toast.makeText(this, R.string.grant_notification_access, Toast.LENGTH_SHORT).show()
+                try {
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                } catch (_: Exception) {}
+                am.ringerMode = AudioManager.RINGER_MODE_NORMAL
+                updateRingerModeIcon()
+                return
+            }
+        }
+
+        try {
+            am.ringerMode = nextMode
+        } catch (_: Exception) {
+            // Guard against missing permissions
+        }
+        updateRingerModeIcon()
+    }
+
+    private fun setupNetworkCardIndicators() {
+        setupWifiMonitoring()
+        updateBluetoothStatus()
+        updateSimSignalStatus()
+    }
+
+    @Suppress("MissingPermission")
+    private fun setupWifiMonitoring() {
+        try {
+            if (networkCallback != null) return
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+            connectivityManager = cm
+            val request = NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .build()
+
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    runOnUiThread { ivNetworkWifi?.alpha = 1.0f }
+                }
+
+                override fun onLost(network: Network) {
+                    runOnUiThread { ivNetworkWifi?.alpha = 0.3f }
+                }
+            }
+            networkCallback = callback
+            cm.registerNetworkCallback(request, callback)
+        } catch (_: Exception) {
+            ivNetworkWifi?.alpha = 0.3f
+        }
+    }
+
+    private fun updateBluetoothStatus() {
+        try {
+            val adapter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val bm = getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
+                bm?.adapter
+            } else {
+                @Suppress("DEPRECATION")
+                BluetoothAdapter.getDefaultAdapter()
+            }
+            if (adapter != null && adapter.isEnabled) {
+                ivNetworkBluetooth?.alpha = 1.0f
+            } else {
+                ivNetworkBluetooth?.alpha = 0.3f
+            }
+        } catch (_: Exception) {
+            ivNetworkBluetooth?.alpha = 0.3f
+        }
+    }
+
+    private fun updateSimSignalStatus() {
+        try {
+            val tm = getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+            } else true
+
+            if (tm != null && hasPermission) {
+                val state = tm.simState
+                if (state == TelephonyManager.SIM_STATE_READY) {
+                    ivNetworkSim1?.alpha = 1.0f
+                } else {
+                    ivNetworkSim1?.alpha = 0.3f
+                }
+            } else {
+                ivNetworkSim1?.alpha = 0.3f
+            }
+        } catch (_: Exception) {
+            ivNetworkSim1?.alpha = 0.3f
+        }
+    }
+
+    private fun setBatteryCard(titleId: Int, value: String, percent: Int = 0, color: Int = Color.rgb(0, 230, 118)) {
         cardBatteryTitle?.text = getString(titleId)
         cardBatteryValue?.text = value
-        cardBatteryDetail?.text = detail
+        batteryRing?.setProgressAndColor(percent, color)
     }
 
-    private fun refreshWidgets() {
+    private fun updateBatteryRingGeometry() {
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val lang = SettingsHelper.getAppLocale(this).language
+
+        if (isLandscape && (lang == "vi" || lang == "art")) {
+            batteryRing?.startAngle = 270f
+            batteryRing?.maxSweep = 360f
+        } else if (isLandscape) {
+            batteryRing?.startAngle = 270f
+            batteryRing?.maxSweep = 300f
+        } else {
+            batteryRing?.startAngle = 210f
+            batteryRing?.maxSweep = -240f
+        }
+    }
+
+    internal fun refreshWidgets() {
         BatteryWidget.updateAllWidgets(this, android.appwidget.AppWidgetManager.getInstance(this))
     }
 
@@ -907,28 +974,35 @@ class MainActivity : AppCompatActivity() {
             .isNotificationListenerAccessGranted(component)
     }
 
-    private fun updateDashboard() {
+    internal fun updateDashboard() {
+        updateBatteryRingGeometry()
         val battery = registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val voltageMv = battery?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
         val temperatureC = (battery?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
         val sampleTime = SystemClock.elapsedRealtime()
-        val smoothedVoltageMv = BatteryWidget.getSmoothedVoltage(voltageMv, sampleTime)
-        val isUseSystemBattery = BatteryWidget.isUseSystemBatteryCounter(this)
+        val smoothedVoltageMv = BatteryMath.getSmoothedVoltage(voltageMv, sampleTime)
+        val isUseSystemBattery = SettingsHelper.isUseSystemBatteryCounter(this)
         val batteryPercent = if (voltageMv > 0 || isUseSystemBattery) {
-            BatteryWidget.getBatteryPercentage(isUseSystemBattery, battery, smoothedVoltageMv)
+            BatteryMath.getBatteryPercentage(isUseSystemBattery, battery, smoothedVoltageMv)
         } else null
         val dash = getString(R.string.placeholder_dash)
         val batteryValue = batteryPercent?.let { "$it%" } ?: dash
-        setBatteryCard(R.string.metric_battery, batteryValue)
+        val batteryColor = BatteryMath.percentageColor(batteryPercent ?: 0)
+        setBatteryCard(R.string.metric_battery, batteryValue, batteryPercent ?: 0, batteryColor)
 
-        val voltageUnit = BatteryWidget.getVoltageUnit(this)
-        val ramUnit = BatteryWidget.getRamUnit(this)
+        val voltageUnit = SettingsHelper.getVoltageUnit(this)
+        val ramUnit = SettingsHelper.getRamUnit(this)
 
         tvVoltageCurrent?.text = if (voltageMv > 0) {
-            BatteryWidget.formatVoltage(voltageMv, voltageUnit)
+            SettingsHelper.formatVoltage(voltageMv, voltageUnit)
         } else dash
         tvTemperatureCurrent?.text =
-            BatteryWidget.formatDashboardTemperature(this, temperatureC)
+            SettingsHelper.formatDashboardTemperature(this, temperatureC)
+
+        // 1. Voltage power
+        val powerInfo = getBatteryPowerInfo(this)
+        tvVoltagePower?.text = powerInfo?.getCurrentPowerString(this) ?: dash
+
         if (voltageMv > 0) addSample(voltageHistory, voltageMv.toFloat(), sampleTime)
         if (battery != null) addSample(temperatureHistory, temperatureC, sampleTime)
 
@@ -941,29 +1015,66 @@ class MainActivity : AppCompatActivity() {
         addSample(ramHistory, usedMb.toFloat(), sampleTime)
         tvRamCurrent?.text = getString(R.string.current_ram_format, usedPercent)
 
+        // 2. RAM usage detail according to Settings unit
+        val locale = SettingsHelper.getAppLocale(this)
+        val ramValConverted = SettingsHelper.convertRam(usedMb.toFloat(), ramUnit)
+        val ramSuffixStr = getString(if (ramUnit == RamUnit.GB) R.string.unit_gb else R.string.unit_mb)
+        tvRamUsageDetail?.text = if (ramUnit == RamUnit.GB) {
+            String.format(locale, "%.1f %s", ramValConverted, ramSuffixStr)
+        } else {
+            String.format(locale, "%.0f %s", ramValConverted, ramSuffixStr)
+        }
+
+        // 3. Temperature status
+        val statusRes = when {
+            temperatureC <= 40f -> R.string.temp_status_nominal
+            temperatureC < 45f -> R.string.temp_status_hot
+            else -> R.string.temp_status_critical
+        }
+        tvTemperatureStatus?.text = getString(statusRes)
+
         updateNetworkStats()
 
-        val (minVoltage, maxVoltage, voltageSuffix) = when (voltageUnit) {
-            VoltageUnit.MV -> Triple(3300f, 4300f, " " + getString(R.string.unit_mv))
-            VoltageUnit.V -> Triple(3.3f, 4.3f, " " + getString(R.string.unit_v))
-        }
-        voltageGraph?.setHistory(
-            voltageHistory, minVoltage, maxVoltage, voltageSuffix, sampleTime,
-            valueTransform = { rawMv -> BatteryWidget.convertVoltage(rawMv, voltageUnit) }
-        ) { voltage ->
-            val rawMv = BatteryWidget.convertToVoltageMv(voltage, voltageUnit).toInt()
-            val percent = BatteryWidget.getBatteryPercentage(isUseSystemBattery, battery, rawMv)
-            BatteryWidget.percentageColor(percent)
+        val hasPointAbove4250 = voltageHistory.any { it.value > 4250f }
+        val hasPointAbove4000 = voltageHistory.any { it.value > 4000f }
+
+        if (!isVoltageShiftedHigh && hasPointAbove4250) {
+            isVoltageShiftedHigh = true
+        } else if (isVoltageShiftedHigh && !hasPointAbove4000) {
+            isVoltageShiftedHigh = false
         }
 
-        val maxRam = BatteryWidget.convertRam(totalMb.toFloat(), ramUnit).coerceAtLeast(0.1f)
+        val (minVoltageMv, maxVoltageMv) = if (isVoltageShiftedHigh) {
+            Pair(3550f, 4550f)
+        } else {
+            Pair(3300f, 4300f)
+        }
+
+        val (minVoltage, maxVoltage, voltageSuffix) = when (voltageUnit) {
+            VoltageUnit.MV -> Triple(minVoltageMv, maxVoltageMv, " " + getString(R.string.unit_mv))
+            VoltageUnit.V -> Triple(minVoltageMv / 1000f, maxVoltageMv / 1000f, " " + getString(R.string.unit_v))
+        }
+        val voltageDecimalPlaces = if (voltageUnit == VoltageUnit.V) 2 else 0
+        voltageGraph?.setHistory(
+            voltageHistory, minVoltage, maxVoltage, voltageSuffix, sampleTime,
+            decimalPlaces = voltageDecimalPlaces,
+            valueTransform = { rawMv -> SettingsHelper.convertVoltage(rawMv, voltageUnit) }
+        ) { voltage ->
+            val rawMv = SettingsHelper.convertToVoltageMv(voltage, voltageUnit).toInt()
+            val percent = BatteryMath.getBatteryPercentage(isUseSystemBattery, battery, rawMv)
+            BatteryMath.percentageColor(percent)
+        }
+
+        val maxRam = SettingsHelper.convertRam(totalMb.toFloat(), ramUnit).coerceAtLeast(0.1f)
         val ramSuffix = " " + getString(if (ramUnit == RamUnit.GB) R.string.unit_gb else R.string.unit_mb)
+        val ramDecimalPlaces = if (ramUnit == RamUnit.GB) 1 else 0
 
         ramGraph?.setHistory(
             ramHistory, 0f, maxRam, ramSuffix, sampleTime,
-            valueTransform = { rawMb -> BatteryWidget.convertRam(rawMb, ramUnit) }
+            decimalPlaces = ramDecimalPlaces,
+            valueTransform = { rawMb -> SettingsHelper.convertRam(rawMb, ramUnit) }
         ) { ramVal ->
-            val ramMb = BatteryWidget.convertToRamMb(ramVal, ramUnit)
+            val ramMb = SettingsHelper.convertToRamMb(ramVal, ramUnit)
             val ramUsedPercent = if (totalMb > 0) ramMb * 100f / totalMb else 0f
             when {
                 ramUsedPercent >= 90f -> Color.rgb(255, 82, 82)
@@ -971,7 +1082,7 @@ class MainActivity : AppCompatActivity() {
                 else -> Color.rgb(0, 230, 118)
             }
         }
-        val tempUnit = BatteryWidget.getTemperatureUnit(this)
+        val tempUnit = SettingsHelper.getTemperatureUnit(this)
         val (minTemp, maxTemp, tempSuffix) = when (tempUnit) {
             TempUnit.CELSIUS -> Triple(0f, 60f, getString(R.string.unit_celsius))
             TempUnit.FAHRENHEIT -> Triple(32f, 140f, getString(R.string.unit_fahrenheit))
@@ -979,9 +1090,10 @@ class MainActivity : AppCompatActivity() {
         }
         tempGraph?.setHistory(
             temperatureHistory, minTemp, maxTemp, tempSuffix, sampleTime,
-            valueTransform = { rawC -> BatteryWidget.convertTemperature(rawC, tempUnit) }
+            decimalPlaces = 0,
+            valueTransform = { rawC -> SettingsHelper.convertTemperature(rawC, tempUnit) }
         ) { tempVal ->
-            val celsius = BatteryWidget.convertToCelsius(tempVal, tempUnit)
+            val celsius = SettingsHelper.convertToCelsius(tempVal, tempUnit)
             BatteryDetailsWidget.temperatureColor(celsius)
         }
     }
@@ -996,12 +1108,33 @@ class MainActivity : AppCompatActivity() {
         previousRx = rx
         previousTx = tx
         previousNetworkTime = now
-        tvNetworkRx?.text = if (rx == TrafficStats.UNSUPPORTED.toLong()) {
-            getString(R.string.network_unavailable)
-        } else getString(R.string.network_receiving_format, formatBytes(rx), formatBytes(rxRate))
-        tvNetworkTx?.text = if (tx == TrafficStats.UNSUPPORTED.toLong()) {
-            getString(R.string.network_unavailable)
-        } else getString(R.string.network_sending_format, formatBytes(tx), formatBytes(txRate))
+
+        if (rx == TrafficStats.UNSUPPORTED.toLong() || tx == TrafficStats.UNSUPPORTED.toLong()) {
+            val unavail = getString(R.string.network_unavailable)
+            tvNetTxTotal?.text = unavail
+            tvNetTxSpeed?.text = "—"
+            tvNetRxTotal?.text = unavail
+            tvNetRxSpeed?.text = "—"
+        } else {
+            val displayedTxRate = if (txRate > 0L) {
+                lastNonZeroTxRate = txRate
+                txRate
+            } else {
+                lastNonZeroTxRate ?: 0L
+            }
+
+            val displayedRxRate = if (rxRate > 0L) {
+                lastNonZeroRxRate = rxRate
+                rxRate
+            } else {
+                lastNonZeroRxRate ?: 0L
+            }
+
+            tvNetTxTotal?.text = formatBytes(tx)
+            tvNetTxSpeed?.text = formatBytes(displayedTxRate) + "/s"
+            tvNetRxTotal?.text = formatBytes(rx)
+            tvNetRxSpeed?.text = formatBytes(displayedRxRate) + "/s"
+        }
     }
 
     private fun addSample(history: ArrayDeque<HistoryGraphView.Sample>, value: Float, timestampMs: Long) {
@@ -1022,12 +1155,25 @@ class MainActivity : AppCompatActivity() {
         return String.format(Locale.getDefault(), "%.1f %s", value, BYTE_UNITS[unit])
     }
 
-    private fun openNotificationAccessSettings() {
+    internal fun openNotificationAccessSettings() {
         try {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         } catch (_: ActivityNotFoundException) {
             Toast.makeText(this, R.string.notification_access_settings_unavailable, Toast.LENGTH_LONG).show()
         }
+    }
+
+    internal fun applyThickChinPadding() {
+        val dashboard = findViewById<View>(R.id.dashboard) ?: return
+        val prefs = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
+        val level = prefs.getInt(THICK_CHIN_LEVEL_KEY, 0).coerceIn(0, 256)
+        val density = resources.displayMetrics.density
+        val reductionDp = level * (1f / 16f)
+        val effectivePaddingDp = (16f - reductionDp).coerceAtLeast(0f)
+        val bottomPx = (effectivePaddingDp * density).roundToInt()
+        val topPx = (12f * density).roundToInt()
+        val sidePx = (16f * density).roundToInt()
+        dashboard.setPaddingRelative(sidePx, topPx, sidePx, bottomPx)
     }
 
     private fun loadRefreshInterval() {
@@ -1036,6 +1182,7 @@ class MainActivity : AppCompatActivity() {
         refreshIntervalMs = saved.takeIf { it == 500L || it == 1_000L || it == 2_000L }
             ?: DEFAULT_REFRESH_INTERVAL_MS
     }
+
 
     companion object {
         private val BYTE_UNITS = arrayOf("KB", "MB", "GB", "TB")
@@ -1049,9 +1196,16 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_LANGUAGE_DROPDOWN_OPEN = "key_language_dropdown_open"
         private const val KEY_FREQUENCY_DROPDOWN_OPEN = "key_frequency_dropdown_open"
         private const val APP_THEME_KEY = "app_theme"
+        private const val ASSUME_OLED_KEY = "assume_oled"
+        private const val IS_FIRST_LAUNCH_KEY = "is_first_launch"
         private const val KEY_THEME_DROPDOWN_OPEN = "key_theme_dropdown_open"
         private const val KEY_TEMP_UNIT_DROPDOWN_OPEN = "key_temp_unit_dropdown_open"
         private const val KEY_VOLTAGE_UNIT_DROPDOWN_OPEN = "key_voltage_unit_dropdown_open"
         private const val KEY_RAM_UNIT_DROPDOWN_OPEN = "key_ram_unit_dropdown_open"
+        private const val KEY_THICK_CHIN_DROPDOWN_OPEN = "key_thick_chin_dropdown_open"
+        private const val THICK_CHIN_LEVEL_KEY = "thick_chin_level"
+        private const val KEY_ASSUME_OLED_DROPDOWN_OPEN = "key_assume_oled_dropdown_open"
+        private const val KEY_SETTINGS_SCROLL_Y = "key_settings_scroll_y"
+        private const val KEY_SETTINGS_SCROLL_RIGHT_Y = "key_settings_scroll_right_y"
     }
 }

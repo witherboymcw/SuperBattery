@@ -30,17 +30,20 @@
     <string name="notification_listener_label">Số thiết bị kết nối Internet</string>
     <string name="dashboard_title">Bảng điều khiển</string>
     <string name="metric_battery">Pin</string>
-    <string name="network_stats">Thống kê mạng (từ khi khởi động)</string>
+    <string name="network_stats">Mạng</string>
 
 
 
 
     <string name="network_unavailable">Không khả dụng</string>
-    <string name="voltage_title">Điện áp pin</string>
+    <string name="voltage_title">Điện áp</string>
     <string name="ram_title">RAM đã sử dụng</string>
 
 
     <string name="temperature_title">Nhiệt độ pin</string>
+    <string name="temp_status_nominal">Bình thường</string>
+    <string name="temp_status_hot">Nóng</string>
+    <string name="temp_status_critical">Báo động</string>
 
     <string name="waiting_for_samples">Đang thu thập dữ liệu…</string>
     <string name="settings">Cài đặt</string>
@@ -77,4 +80,17 @@
     <string name="theme_light">Sáng</string>
     <string name="theme_dark">Tối</string>
 
+    <string name="thick_chin_header">📱 Khắc phục cằm dày</string>
+    <string name="thick_chin_subtitle">Giảm bớt padding đáy cho màn hình có viền cằm dày</string>
+    <string name="thick_chin_default">Mặc định (16 dp)</string>
+    <string name="thick_chin_min_label">Mức 0 (16 dp)</string>
+    <string name="thick_chin_max_label">Mức 256 (0 dp)</string>
+    <string name="thick_chin_summary">Mức %1$d/256 (Bớt: %2$s | Đáy: %3$s)</string>
+    <string name="thick_chin_summary_edge">Mức %1$d/256 (Bớt: %2$s | Đáy: 0 dp - dính cạnh)</string>
+    <string name="thick_chin_edge">-%1$s (Dính cạnh)</string>
+    <string name="assume_oled_header">🖥️ Ép kiểu OLED</string>
+    <string name="assume_oled_subtitle">Tự động phát hiện màn hình OLED</string>
+    <string name="assume_oled_opt_none">Mặc định (Tự động)</string>
+    <string name="assume_oled_opt_oled">Ép bật OLED</string>
+    <string name="assume_oled_opt_not_oled">Tắt OLED (Ép LCD)</string>
 </resources>

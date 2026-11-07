@@ -1,6 +1,7 @@
 package com.witherboymcw.superbattery
 
 import android.content.Context
+import android.content.res.Configuration
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ViewConfiguration
@@ -19,6 +20,7 @@ class SwipeBackFrameLayout @JvmOverloads constructor(
     }
 
     var swipeListener: SwipeListener? = null
+    var swipeSensitivity: Float = 1f
     private var startX = 0f
     private var startY = 0f
     private var isSwipingRight = false
@@ -34,7 +36,8 @@ class SwipeBackFrameLayout @JvmOverloads constructor(
             MotionEvent.ACTION_MOVE -> {
                 val dx = ev.rawX - startX
                 val dy = ev.rawY - startY
-                if (!isSwipingRight && dx > touchSlop && abs(dx) > abs(dy)) {
+                val effectiveDx = dx * swipeSensitivity
+                if (!isSwipingRight && effectiveDx > touchSlop && abs(dx) > abs(dy)) {
                     isSwipingRight = true
                     parent?.requestDisallowInterceptTouchEvent(true)
                     return true
@@ -47,7 +50,7 @@ class SwipeBackFrameLayout @JvmOverloads constructor(
     override fun onTouchEvent(ev: MotionEvent): Boolean {
         when (ev.action) {
             MotionEvent.ACTION_MOVE -> {
-                val dx = (ev.rawX - startX).coerceAtLeast(0f)
+                val dx = ((ev.rawX - startX) * swipeSensitivity).coerceAtLeast(0f)
                 if (isSwipingRight) {
                     swipeListener?.onSwipeProgress(dx)
                     return true
@@ -55,9 +58,11 @@ class SwipeBackFrameLayout @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (isSwipingRight) {
-                    val dx = (ev.rawX - startX).coerceAtLeast(0f)
+                    val dx = ((ev.rawX - startX) * swipeSensitivity).coerceAtLeast(0f)
                     val widthVal = width.toFloat().takeIf { it > 0 } ?: 1080f
-                    swipeListener?.onSwipeEnd(dx > widthVal * 0.25f)
+                    val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                    val threshold = if (isLandscape) 0.09f else 0.20f
+                    swipeListener?.onSwipeEnd(dx > widthVal * threshold)
                     isSwipingRight = false
                     return true
                 } else if (ev.action == MotionEvent.ACTION_UP) {

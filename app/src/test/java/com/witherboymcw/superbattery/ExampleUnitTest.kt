@@ -36,27 +36,27 @@ class ExampleUnitTest {
         val tempC = 35.0f
 
         // Celsius
-        val celsiusVal = BatteryWidget.convertTemperature(tempC, TempUnit.CELSIUS)
+        val celsiusVal = SettingsHelper.convertTemperature(tempC, TempUnit.CELSIUS)
         assertEquals(35.0f, celsiusVal, 0.001f)
-        assertEquals(35.0f, BatteryWidget.convertToCelsius(celsiusVal, TempUnit.CELSIUS), 0.001f)
+        assertEquals(35.0f, SettingsHelper.convertToCelsius(celsiusVal, TempUnit.CELSIUS), 0.001f)
 
         // Fahrenheit: 35 * 1.8 + 32 = 95
-        val fahrenheitVal = BatteryWidget.convertTemperature(tempC, TempUnit.FAHRENHEIT)
+        val fahrenheitVal = SettingsHelper.convertTemperature(tempC, TempUnit.FAHRENHEIT)
         assertEquals(95.0f, fahrenheitVal, 0.001f)
-        assertEquals(35.0f, BatteryWidget.convertToCelsius(fahrenheitVal, TempUnit.FAHRENHEIT), 0.001f)
+        assertEquals(35.0f, SettingsHelper.convertToCelsius(fahrenheitVal, TempUnit.FAHRENHEIT), 0.001f)
 
         // Kelvin: 35 + 273.15 = 308.15
-        val kelvinVal = BatteryWidget.convertTemperature(tempC, TempUnit.KELVIN)
+        val kelvinVal = SettingsHelper.convertTemperature(tempC, TempUnit.KELVIN)
         assertEquals(308.15f, kelvinVal, 0.001f)
-        assertEquals(35.0f, BatteryWidget.convertToCelsius(kelvinVal, TempUnit.KELVIN), 0.001f)
+        assertEquals(35.0f, SettingsHelper.convertToCelsius(kelvinVal, TempUnit.KELVIN), 0.001f)
     }
 
     @Test
     fun testTemperatureFormatting() {
         val tempC = 35.0f
-        assertEquals("35ºC", BatteryWidget.formatWidgetTemperature(tempC, TempUnit.CELSIUS))
-        assertEquals("95ºF", BatteryWidget.formatWidgetTemperature(tempC, TempUnit.FAHRENHEIT))
-        assertEquals("308 K", BatteryWidget.formatWidgetTemperature(tempC, TempUnit.KELVIN))
+        assertEquals("35ºC", SettingsHelper.formatWidgetTemperature(tempC, TempUnit.CELSIUS))
+        assertEquals("95ºF", SettingsHelper.formatWidgetTemperature(tempC, TempUnit.FAHRENHEIT))
+        assertEquals("308 K", SettingsHelper.formatWidgetTemperature(tempC, TempUnit.KELVIN))
     }
 
     @Test
@@ -64,16 +64,20 @@ class ExampleUnitTest {
         val voltageMv = 3850
 
         // Millivolts
-        val mvVal = BatteryWidget.convertVoltage(voltageMv.toFloat(), VoltageUnit.MV)
+        val mvVal = SettingsHelper.convertVoltage(voltageMv.toFloat(), VoltageUnit.MV)
         assertEquals(3850.0f, mvVal, 0.001f)
-        assertEquals(3850.0f, BatteryWidget.convertToVoltageMv(mvVal, VoltageUnit.MV), 0.001f)
-        assertEquals("3850 mV", BatteryWidget.formatVoltage(voltageMv, VoltageUnit.MV))
+        assertEquals(3850.0f, SettingsHelper.convertToVoltageMv(mvVal, VoltageUnit.MV), 0.001f)
+        assertEquals("3850 mV", SettingsHelper.formatVoltage(voltageMv, VoltageUnit.MV))
 
-        // Volts
-        val vVal = BatteryWidget.convertVoltage(voltageMv.toFloat(), VoltageUnit.V)
+        // Volts (US Locale)
+        val vVal = SettingsHelper.convertVoltage(voltageMv.toFloat(), VoltageUnit.V)
         assertEquals(3.85f, vVal, 0.001f)
-        assertEquals(3850.0f, BatteryWidget.convertToVoltageMv(vVal, VoltageUnit.V), 0.001f)
-        assertEquals("3.85 V", BatteryWidget.formatVoltage(voltageMv, VoltageUnit.V))
+        assertEquals(3850.0f, SettingsHelper.convertToVoltageMv(vVal, VoltageUnit.V), 0.001f)
+
+        // Volts Decimal Formatting in Vietnamese
+        val viLocale = java.util.Locale.forLanguageTag("vi")
+        val formattedVi = String.format(viLocale, "%.1f %s", 4.3f, VoltageUnit.V.symbol)
+        assertEquals("4,3 V", formattedVi)
     }
 
     @Test
@@ -81,13 +85,94 @@ class ExampleUnitTest {
         val ramMb = 2048.0f
 
         // Megabytes
-        val mbVal = BatteryWidget.convertRam(ramMb, RamUnit.MB)
+        val mbVal = SettingsHelper.convertRam(ramMb, RamUnit.MB)
         assertEquals(2048.0f, mbVal, 0.001f)
-        assertEquals(2048.0f, BatteryWidget.convertToRamMb(mbVal, RamUnit.MB), 0.001f)
+        assertEquals(2048.0f, SettingsHelper.convertToRamMb(ramMb, RamUnit.MB), 0.001f)
 
         // Gigabytes
-        val gbVal = BatteryWidget.convertRam(ramMb, RamUnit.GB)
+        val gbVal = SettingsHelper.convertRam(ramMb, RamUnit.GB)
         assertEquals(2.0f, gbVal, 0.001f)
-        assertEquals(2048.0f, BatteryWidget.convertToRamMb(gbVal, RamUnit.GB), 0.001f)
+        assertEquals(2048.0f, SettingsHelper.convertToRamMb(gbVal, RamUnit.GB), 0.001f)
+    }
+
+    @Test
+    fun testOledDetectionUnderDisplayFingerprint() {
+        // Guaranteed OLED if under-display fingerprint sensor is present
+        assertTrue(
+            checkGuaranteedOledConditions(
+                hasFingerprint = true,
+                hasUdfps = true,
+                isWideColorGamut = false,
+                desiredMinLuminance = null,
+                supportedHdrTypesCount = 0,
+                isAodSupported = false
+            )
+        )
+    }
+
+    @Test
+    fun testOledDetectionDisplayParametersAllMet() {
+        // Guaranteed OLED if all 4 display criteria are satisfied
+        assertTrue(
+            checkGuaranteedOledConditions(
+                hasFingerprint = false,
+                hasUdfps = false,
+                isWideColorGamut = true,
+                desiredMinLuminance = 0.0f,
+                supportedHdrTypesCount = 2,
+                isAodSupported = true
+            )
+        )
+    }
+
+    @Test
+    fun testOledDetectionLcdFailsStrictCriteria() {
+        // LCD with non-zero min luminance -> false
+        assertFalse(
+            checkGuaranteedOledConditions(
+                hasFingerprint = false,
+                hasUdfps = false,
+                isWideColorGamut = true,
+                desiredMinLuminance = 0.02f,
+                supportedHdrTypesCount = 2,
+                isAodSupported = true
+            )
+        )
+
+        // LCD without wide color gamut -> false
+        assertFalse(
+            checkGuaranteedOledConditions(
+                hasFingerprint = false,
+                hasUdfps = false,
+                isWideColorGamut = false,
+                desiredMinLuminance = 0.0f,
+                supportedHdrTypesCount = 2,
+                isAodSupported = true
+            )
+        )
+
+        // LCD with insufficient HDR types -> false
+        assertFalse(
+            checkGuaranteedOledConditions(
+                hasFingerprint = false,
+                hasUdfps = false,
+                isWideColorGamut = true,
+                desiredMinLuminance = 0.0f,
+                supportedHdrTypesCount = 1,
+                isAodSupported = true
+            )
+        )
+
+        // LCD without AOD support -> false
+        assertFalse(
+            checkGuaranteedOledConditions(
+                hasFingerprint = false,
+                hasUdfps = false,
+                isWideColorGamut = true,
+                desiredMinLuminance = 0.0f,
+                supportedHdrTypesCount = 2,
+                isAodSupported = false
+            )
+        )
     }
 }

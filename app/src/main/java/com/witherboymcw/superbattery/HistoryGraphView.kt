@@ -17,6 +17,9 @@ class HistoryGraphView @JvmOverloads constructor(
     data class Sample(val timestampMs: Long, val value: Float)
 
     private val points = ArrayList<Sample>()
+    private val transformedValues = FloatArray(MAX_CAPACITY)
+    private val sampleColors = IntArray(MAX_CAPACITY)
+
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1.5f * resources.displayMetrics.density
@@ -57,14 +60,15 @@ class HistoryGraphView @JvmOverloads constructor(
     private val yLabelTexts = Array(5) { "" }
     private var cachedLabelWidth = 0f
     private val timeLabelCache = Array(61) { "${it}${context.getString(R.string.unit_seconds_suffix)}" }
+    private val timeLabelWidthCache = FloatArray(61) { textPaint.measureText(timeLabelCache[it]) }
     private val waitingForSamplesText = context.getString(R.string.waiting_for_samples)
+    private val waitingForSamplesTextWidth = textPaint.measureText(waitingForSamplesText)
 
     private var lowerBound = 0f
     private var upperBound = 100f
     private var axisSuffix = ""
-    private var valueTransform: ((Float) -> Float)? = null
-    private var colorForValue: ((Float) -> Int)? = null
     private var nowMs = SystemClock.elapsedRealtime()
+    private var hasCustomColors = false
 
     fun setPlotBackgroundColor(color: Int) {
         if (plotBgPaint.color != color) {
@@ -79,12 +83,13 @@ class HistoryGraphView @JvmOverloads constructor(
         maxValue: Float,
         suffix: String = "",
         currentTimeMs: Long = SystemClock.elapsedRealtime(),
+        decimalPlaces: Int = 0,
         valueTransform: ((Float) -> Float)? = null,
         valueColor: ((Float) -> Int)? = null
     ) {
         points.clear()
-        if (samples.size > 240) {
-            val skipCount = samples.size - 240
+        if (samples.size > MAX_CAPACITY) {
+            val skipCount = samples.size - MAX_CAPACITY
             var count = 0
             for (s in samples) {
                 if (count++ >= skipCount) points.add(s)
@@ -97,15 +102,29 @@ class HistoryGraphView @JvmOverloads constructor(
         upperBound = max(minValue + 1f, maxValue)
         axisSuffix = suffix
         nowMs = currentTimeMs
-        this.valueTransform = valueTransform
-        colorForValue = valueColor
+        hasCustomColors = valueColor != null
+
+        // Pre-compute transformed values and colors outside of onDraw
+        val numPoints = points.size
+        var idx = 0
+        while (idx < numPoints) {
+            val s = points[idx]
+            val transformed = valueTransform?.invoke(s.value) ?: s.value
+            transformedValues[idx] = transformed
+            if (valueColor != null) {
+                sampleColors[idx] = valueColor.invoke(transformed)
+            }
+            idx++
+        }
 
         val range = upperBound - lowerBound
-        yLabelTexts[0] = "${upperBound.toInt()}$axisSuffix"
-        yLabelTexts[1] = "${(upperBound - range * 0.25f).toInt()}$axisSuffix"
-        yLabelTexts[2] = "${(upperBound - range * 0.5f).toInt()}$axisSuffix"
-        yLabelTexts[3] = "${(upperBound - range * 0.75f).toInt()}$axisSuffix"
-        yLabelTexts[4] = "${lowerBound.toInt()}$axisSuffix"
+        val formatStr = if (decimalPlaces > 0) "%.${decimalPlaces}f" else "%.0f"
+        val locale = SettingsHelper.getAppLocale(context)
+        yLabelTexts[0] = String.format(locale, formatStr, upperBound) + axisSuffix
+        yLabelTexts[1] = String.format(locale, formatStr, upperBound - range * 0.25f) + axisSuffix
+        yLabelTexts[2] = String.format(locale, formatStr, upperBound - range * 0.5f) + axisSuffix
+        yLabelTexts[3] = String.format(locale, formatStr, upperBound - range * 0.75f) + axisSuffix
+        yLabelTexts[4] = String.format(locale, formatStr, lowerBound) + axisSuffix
 
         var maxW = 0f
         for (i in 0..4) {
@@ -116,6 +135,12 @@ class HistoryGraphView @JvmOverloads constructor(
 
         invalidate()
     }
+
+    var onAxisOffsetsChanged: ((leftOffset: Float, rightOffset: Float, plotWidth: Float) -> Unit)? = null
+    private var lastReportedLeft = -1f
+    private var lastReportedRightOffset = -1f
+
+    var suppressMinYLabel: Boolean = false
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -131,15 +156,27 @@ class HistoryGraphView @JvmOverloads constructor(
         val bottom = height - paddingBottom - labelHeight * 2f - strokeInset - 4f * density
         if (right <= left || bottom <= top) return
 
+        val rightOffset = width - right
+        val plotWidth = right - left
+        if (left != lastReportedLeft || rightOffset != lastReportedRightOffset) {
+            lastReportedLeft = left
+            lastReportedRightOffset = rightOffset
+            val listener = onAxisOffsetsChanged
+            if (listener != null) {
+                post { listener.invoke(left, rightOffset, plotWidth) }
+            }
+        }
+
         if (plotBgPaint.color != Color.TRANSPARENT) {
             canvas.drawRect(left, top, right, bottom, plotBgPaint)
         }
 
-        val labelX = paddingLeft.toFloat()
+        val labelX = left - 6f * density
         val secondsPerWindow = TIME_WINDOW_MS / 1_000L
         val windowStart = nowMs - TIME_WINDOW_MS
 
-        // Y-axis grid lines and labels
+        // Y-axis grid lines and labels (Right-aligned at labelX)
+        textPaint.textAlign = Paint.Align.RIGHT
         for (i in 0..4) {
             val fraction = i / 4f
             val y = top + (bottom - top) * fraction
@@ -152,11 +189,13 @@ class HistoryGraphView @JvmOverloads constructor(
         val maxLabelBaseline = paddingTop - fontMetrics.ascent
         val minLabelBaseline = bottom - (fontMetrics.ascent + fontMetrics.descent) / 2f
         canvas.drawText(yLabelTexts[0], labelX, maxLabelBaseline, textPaint)
-        canvas.drawText(yLabelTexts[4], labelX, minLabelBaseline, textPaint)
+        if (!suppressMinYLabel) {
+            canvas.drawText(yLabelTexts[4], labelX, minLabelBaseline, textPaint)
+        }
+        textPaint.textAlign = Paint.Align.LEFT
 
         // X-axis ruler ticks and labels (every 20s)
         val timeLabelBaseline = height - paddingBottom - fontMetrics.descent
-        val plotWidth = right - left
         val plotHeight = bottom - top
 
         var secondsAgo = 0L
@@ -166,10 +205,13 @@ class HistoryGraphView @JvmOverloads constructor(
             if (isMajor) {
                 canvas.drawLine(x, top, x, bottom, majorGridPaint)
                 canvas.drawLine(x, bottom, x, bottom + 7f * density, tickPaint)
-                val label = timeLabelCache[secondsAgo.toInt()]
-                val labelW = textPaint.measureText(label)
-                val textLabelX = (x - labelW / 2f).coerceIn(left, right - labelW)
-                canvas.drawText(label, textLabelX, timeLabelBaseline, textPaint)
+                if (secondsAgo != 0L) {
+                    val secIdx = secondsAgo.toInt()
+                    val label = timeLabelCache[secIdx]
+                    val labelW = timeLabelWidthCache[secIdx]
+                    val textLabelX = (x - labelW / 2f).coerceIn(left, right - labelW)
+                    canvas.drawText(label, textLabelX, timeLabelBaseline, textPaint)
+                }
             } else {
                 canvas.drawLine(x, bottom, x, bottom + 3f * density, tickPaint)
             }
@@ -192,32 +234,29 @@ class HistoryGraphView @JvmOverloads constructor(
         val visibleCount = if (startIndex != -1) (endIndex - startIndex + 1) else 0
 
         if (visibleCount == 0) {
-            val textWidth = textPaint.measureText(waitingForSamplesText)
-            val textX = left + (plotWidth - textWidth) / 2f
+            val textX = left + (plotWidth - waitingForSamplesTextWidth) / 2f
             val textY = top + plotHeight / 2f - (fontMetrics.ascent + fontMetrics.descent) / 2f
             canvas.drawText(waitingForSamplesText, textX, textY, textPaint)
             return
         }
 
         val boundDiff = upperBound - lowerBound
-        val valueColor = colorForValue
-        val transform = valueTransform
 
         if (visibleCount == 1) {
             val sample = points[startIndex]
-            val transformedValue = transform?.invoke(sample.value) ?: sample.value
+            val transformedValue = transformedValues[startIndex]
             val x = left + ((sample.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
             val norm = ((transformedValue - lowerBound) / boundDiff).coerceIn(0f, 1f)
             val y = bottom - norm * plotHeight
-            pointPaint.color = valueColor?.invoke(transformedValue) ?: linePaint.color
+            pointPaint.color = if (hasCustomColors) sampleColors[startIndex] else linePaint.color
             canvas.drawCircle(x, y, linePaint.strokeWidth, pointPaint)
         } else {
-            if (valueColor == null) {
+            if (!hasCustomColors) {
                 renderPath.reset()
                 var i = startIndex
                 while (i <= endIndex) {
                     val sample = points[i]
-                    val transformedValue = transform?.invoke(sample.value) ?: sample.value
+                    val transformedValue = transformedValues[i]
                     val x = left + ((sample.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
                     val norm = ((transformedValue - lowerBound) / boundDiff).coerceIn(0f, 1f)
                     val y = bottom - norm * plotHeight
@@ -234,14 +273,14 @@ class HistoryGraphView @JvmOverloads constructor(
                 while (i <= endIndex) {
                     val prevS = points[i - 1]
                     val currS = points[i]
-                    val prevTransformed = transform?.invoke(prevS.value) ?: prevS.value
-                    val currTransformed = transform?.invoke(currS.value) ?: currS.value
+                    val prevTransformed = transformedValues[i - 1]
+                    val currTransformed = transformedValues[i]
                     val prevX = left + ((prevS.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
                     val prevY = bottom - (((prevTransformed - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
                     val currX = left + ((currS.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
                     val currY = bottom - (((currTransformed - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
 
-                    linePaint.color = valueColor.invoke(currTransformed)
+                    linePaint.color = sampleColors[i]
                     canvas.drawLine(prevX, prevY, currX, currY, linePaint)
                     i++
                 }
@@ -249,15 +288,16 @@ class HistoryGraphView @JvmOverloads constructor(
 
             // Single dot on newest sample
             val lastSample = points[endIndex]
-            val lastTransformed = transform?.invoke(lastSample.value) ?: lastSample.value
+            val lastTransformed = transformedValues[endIndex]
             val lastX = left + ((lastSample.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
             val lastY = bottom - (((lastTransformed - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
-            pointPaint.color = valueColor?.invoke(lastTransformed) ?: linePaint.color
+            pointPaint.color = if (hasCustomColors) sampleColors[endIndex] else linePaint.color
             canvas.drawCircle(lastX, lastY, linePaint.strokeWidth * 1.5f, pointPaint)
         }
     }
 
     companion object {
         private const val TIME_WINDOW_MS = 60_000L
+        private const val MAX_CAPACITY = 240
     }
 }

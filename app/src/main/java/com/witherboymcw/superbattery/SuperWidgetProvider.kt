@@ -45,13 +45,13 @@ class SuperWidgetProvider : AppWidgetProvider() {
                 IntentFilter(Intent.ACTION_BATTERY_CHANGED)
             )
             val rawVoltage = batteryStatus?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
-            val voltage = if (rawVoltage > 0) BatteryWidget.getSmoothedVoltage(rawVoltage) else 0
+            val voltage = if (rawVoltage > 0) BatteryMath.getSmoothedVoltage(rawVoltage) else 0
             val temperatureC =
                 (batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
-            val percent = BatteryWidget.getBatteryPercentage(context, batteryStatus, voltage)
+            val percent = BatteryMath.getBatteryPercentage(context, batteryStatus, voltage)
 
-            val localizedContext = BatteryWidget.getLocalizedContext(context)
-            val formattedTemp = BatteryWidget.formatWidgetTemperature(context, temperatureC)
+            val localizedContext = SettingsHelper.getLocalizedContext(context)
+            val formattedTemp = SettingsHelper.formatWidgetTemperature(context, temperatureC)
             BatteryWidget.updateCriticalEvent(
                 context,
                 "temperature",
@@ -72,9 +72,9 @@ class SuperWidgetProvider : AppWidgetProvider() {
                     "EEE, dd - MM"
                 )
                 setTextViewText(R.id.super_battery_percent, "$percent%")
-                setTextColor(R.id.super_battery_percent, BatteryWidget.percentageColor(percent))
-                val voltageUnit = BatteryWidget.getVoltageUnit(context)
-                setTextViewText(R.id.super_voltage, if (voltage > 0) BatteryWidget.formatVoltage(voltage, voltageUnit) else "—")
+                setTextColor(R.id.super_battery_percent, BatteryMath.percentageColor(percent))
+                val voltageUnit = SettingsHelper.getVoltageUnit(context)
+                setTextViewText(R.id.super_voltage, if (voltage > 0) SettingsHelper.formatVoltage(voltage, voltageUnit) else "—")
             }
             val refreshIntent = Intent(context, BatteryWidget::class.java).apply {
                 action = BatteryWidget.ACTION_MANUAL_REFRESH

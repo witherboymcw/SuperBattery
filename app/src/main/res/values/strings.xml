@@ -27,19 +27,22 @@
     <string name="manage_notification_access">🔑 Notification access</string>
     <string name="notification_access_settings_unavailable">Could not open notification access settings on this device.</string>
     <string name="notification_listener_label">Super Battery client counter</string>
-    <string name="dashboard_title">Device dashboard</string>
+    <string name="dashboard_title">Dashboard</string>
     <string name="metric_battery">Battery</string>
-    <string name="network_stats">Network stats (since boot)</string>
+    <string name="network_stats">Network</string>
     <string name="network_receiving_placeholder" translatable="false">↓ —</string>
     <string name="network_sending_placeholder" translatable="false">↑ —</string>
     <string name="network_receiving_format" translatable="false">↓ %1$s · %2$s/s</string>
     <string name="network_sending_format" translatable="false">↑ %1$s · %2$s/s</string>
     <string name="network_unavailable">Unavailable</string>
-    <string name="voltage_title">Battery voltage</string>
+    <string name="voltage_title">Voltage</string>
     <string name="ram_title">RAM usage</string>
     <string name="current_voltage_format" translatable="false">%1$d mV</string>
     <string name="current_ram_format" translatable="false">%1$d%%</string>
     <string name="temperature_title">Battery temperature</string>
+    <string name="temp_status_nominal">Nominal</string>
+    <string name="temp_status_hot">Hot</string>
+    <string name="temp_status_critical">Critical</string>
     <string name="current_temperature_format" translatable="false">%1$.1f°C</string>
     <string name="waiting_for_samples">Collecting samples…</string>
     <string name="settings">Settings</string>
@@ -87,4 +90,24 @@
     <string name="unit_kelvin" translatable="false">K</string>
     <string name="unit_seconds_suffix" translatable="false">s</string>
     <string name="placeholder_dash" translatable="false">—</string>
+
+    <string name="thick_chin_header">📱 Thick chin fix</string>
+    <string name="thick_chin_subtitle">Reduce bottom padding for devices with thick chins</string>
+    <string name="thick_chin_default">Default (16 dp)</string>
+    <string name="thick_chin_min_label">Level 0 (16 dp)</string>
+    <string name="thick_chin_max_label">Level 256 (0 dp)</string>
+    <string name="thick_chin_summary">Level %1$d/256 (Reduced: %2$s | Bottom: %3$s)</string>
+    <string name="thick_chin_summary_edge">Level %1$d/256 (Reduced: %2$s | Bottom: 0 dp - touching edge)</string>
+    <string name="thick_chin_edge">-%1$s (Edge)</string>
+    <string name="thick_chin_minus_10" translatable="false">≪</string>
+    <string name="thick_chin_minus_1" translatable="false">&lt;</string>
+    <string name="thick_chin_plus_1" translatable="false">&gt;</string>
+    <string name="thick_chin_plus_10" translatable="false">≫</string>
+    <string name="thick_chin_val_min" translatable="false">0</string>
+    <string name="thick_chin_val_max" translatable="false">256</string>
+    <string name="assume_oled_header">🖥️ Assume OLED</string>
+    <string name="assume_oled_subtitle">Automatic OLED screen detection</string>
+    <string name="assume_oled_opt_none">Default (Auto)</string>
+    <string name="assume_oled_opt_oled">Force OLED</string>
+    <string name="assume_oled_opt_not_oled">Force Non-OLED</string>
 </resources>

@@ -4,7 +4,7 @@ import android.content.Context
 
 internal object DeviceConnectionCounter {
     fun displayText(context: Context): String {
-        val localizedContext = BatteryWidget.getLocalizedContext(context)
+        val localizedContext = SettingsHelper.getLocalizedContext(context)
         return when (val status = HotspotNotificationListener.loadCurrentStatus(context)) {
             is HotspotNotificationListener.Companion.HotspotState.OFF ->
                 localizedContext.getString(R.string.hotspot_radio_off)

@@ -63,14 +63,18 @@ class HotspotNotificationListener : NotificationListenerService() {
         if (stateReceiverRegistered) {
             try {
                 unregisterReceiver(stateChangeReceiver)
-            } catch (_: Exception) { }
-            stateReceiverRegistered = false
+            } catch (_: Exception) {
+            } finally {
+                stateReceiverRegistered = false
+            }
         }
         if (dateFormatObserverRegistered) {
             try {
                 contentResolver.unregisterContentObserver(dateFormatObserver)
-            } catch (_: Exception) { }
-            dateFormatObserverRegistered = false
+            } catch (_: Exception) {
+            } finally {
+                dateFormatObserverRegistered = false
+            }
         }
         if (connectedListenerRef?.get() === this) {
             connectedListenerRef = null
@@ -127,16 +131,16 @@ class HotspotNotificationListener : NotificationListenerService() {
         val notif = sbn.notification ?: return null
         val extras = notif.extras ?: return null
         val titleAndText = buildList {
-            add(extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty())
-            add(extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString().orEmpty())
-            add(extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty())
-            add(extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty())
-            add(extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString().orEmpty())
-            add(extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty())
-            add(extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString().orEmpty())
-            add(notif.tickerText?.toString().orEmpty())
             try {
-                extras.keySet().forEach { key ->
+                add(extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty())
+                add(extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString().orEmpty())
+                add(extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty())
+                add(extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty())
+                add(extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString().orEmpty())
+                add(extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty())
+                add(extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString().orEmpty())
+                add(notif.tickerText?.toString().orEmpty())
+                extras.keySet()?.forEach { key ->
                     when (val value = extras.get(key)) {
                         is CharSequence -> add(value.toString())
                         is Array<*> -> value.filterIsInstance<CharSequence>().forEach { add(it.toString()) }
