@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="1dp"
+    app:strokeColor="?attr/colorOutline"
+    app:strokeWidth="0dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="4dp">
+
+        <TextView
+            android:id="@+id/metric_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start|top"
+            android:gravity="start"
+            android:textAlignment="viewStart"
+            android:includeFontPadding="false"
+            android:layout_marginTop="2dp"
+            android:layout_marginStart="4dp"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="6dp">
+
+            <com.witherboymcw.superbattery.BatteryRingView
+                android:id="@+id/battery_ring"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_gravity="center"
+                app:ringStartAngle="270"
+                app:ringMaxSweep="300" />
+
+            <TextView
+                android:id="@+id/metric_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:text="@string/placeholder_dash"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/metric_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:gravity="center"
+            android:visibility="gone"
+            android:textSize="11sp" />
+    </FrameLayout>
+</com.google.android.material.card.MaterialCardView>

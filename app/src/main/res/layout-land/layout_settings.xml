@@ -1,0 +1,1334 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.witherboymcw.superbattery.SwipeBackFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/settings_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Header / Toolbar -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:minHeight="56dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginStart="48dp"
+                android:layout_marginEnd="48dp"
+                android:gravity="center"
+                android:text="@string/settings"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="26sp"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/settings_back_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="start|center_vertical"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/settings"
+                android:padding="12dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="?attr/colorControlNormal" />
+        </FrameLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:alpha="0.2"
+            android:background="?attr/colorOutline" />
+
+        <!-- Bố cục 2 cột chia đôi cho chế độ xoay ngang -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <!-- Cột thứ 1 (Bên trái): Danh sách các thẻ cài đặt -->
+            <ScrollView
+                android:id="@+id/settings_scroll_left"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:paddingStart="16dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="20dp"
+                    android:orientation="vertical">
+
+                    <!-- 1. Language Selector -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_language"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:id="@+id/header_language"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/language"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/language_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/selected_language_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="#888888"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/arrow_language"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@string/language"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 2. Allow Notifications -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_allow_notifications"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/allow_notifications"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/allow_notifications_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/status_allow_notifications"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 3. Manage Notification Access -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_notification_access"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/manage_notification_access"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/manage_notification_access_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/status_notification_access"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 4. Update Frequency -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_update_frequency"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:id="@+id/header_update_frequency"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/update_frequency"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/update_frequency_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/selected_frequency_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="#888888"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/arrow_update_frequency"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@string/update_frequency"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 5. Theme -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_theme"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:id="@+id/header_theme"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/theme_header"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/theme_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/selected_theme_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="#888888"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/arrow_theme"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@string/theme"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 6. Use System Battery Counter -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_use_system_battery"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/use_system_battery_counter"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/use_system_battery_counter_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <com.google.android.material.checkbox.MaterialCheckBox
+                                android:id="@+id/checkbox_use_system_battery"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minWidth="0dp"
+                                android:minHeight="0dp"
+                                android:clickable="false"
+                                android:focusable="false" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 7. Voltage Unit -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_voltage_unit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:id="@+id/header_voltage_unit"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/voltage_unit_header"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/voltage_unit_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/selected_voltage_unit_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="#888888"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/arrow_voltage_unit"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@string/voltage_unit_header"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 8. RAM Unit -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_ram_unit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:id="@+id/header_ram_unit"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ram_unit_header"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/ram_unit_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/selected_ram_unit_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="#888888"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/arrow_ram_unit"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@string/ram_unit_header"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 9. Temperature Unit -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_temp_unit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:id="@+id/header_temp_unit"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/temp_unit_header"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/temp_unit_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/selected_temp_unit_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="#888888"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/arrow_temp_unit"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@string/temp_unit_header"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 10. Thick Chin Mode -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_thick_chin"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:id="@+id/header_thick_chin"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/thick_chin_header"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/thick_chin_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/selected_thick_chin_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="#888888"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/arrow_thick_chin"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@string/thick_chin_header"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 12. Assume OLED Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_assume_oled"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:id="@+id/header_assume_oled"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/assume_oled_header"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/assume_oled_subtitle"
+                                    android:textColor="?android:attr/textColorSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/selected_assume_oled_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="#888888"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/arrow_assume_oled"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@string/assume_oled_header"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- Cột thứ 2 (Bên phải): Hiển thị các lựa chọn của thẻ được chọn -->
+            <ScrollView
+                android:id="@+id/settings_scroll_right"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:paddingStart="8dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="24dp">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/settings_detail_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="?attr/colorSurface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="?attr/colorOutline"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/settings_detail_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="16dp"
+                            android:paddingTop="14dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="10dp"
+                            android:text="@string/language"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:alpha="0.2"
+                            android:background="?attr/colorOutline" />
+
+                        <FrameLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingTop="8dp">
+
+                            <!-- 1. Language Options -->
+                            <LinearLayout
+                                android:id="@+id/dropdown_language"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:paddingBottom="12dp"
+                                android:visibility="gone">
+
+                                <RadioGroup
+                                    android:id="@+id/language_radio_group"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+
+                                    <RadioButton
+                                        android:id="@+id/lang_system"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/at_system"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/lang_vietnamese"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/language_vietnamese"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/lang_english"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/language_english"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/lang_brainrot"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/language_brainrot"
+                                        android:textSize="14sp" />
+                                </RadioGroup>
+                            </LinearLayout>
+
+                            <!-- 4. Update Frequency Options -->
+                            <LinearLayout
+                                android:id="@+id/dropdown_update_frequency"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:paddingBottom="12dp"
+                                android:visibility="gone">
+
+                                <RadioGroup
+                                    android:id="@+id/frequency_radio_group"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+
+                                    <RadioButton
+                                        android:id="@+id/freq_500"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/update_every_half_second"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/freq_1000"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/update_every_second"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/freq_2000"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/update_every_two_seconds"
+                                        android:textSize="14sp" />
+                                </RadioGroup>
+                            </LinearLayout>
+
+                            <!-- 5. Theme Options -->
+                            <LinearLayout
+                                android:id="@+id/dropdown_theme"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:paddingBottom="12dp"
+                                android:visibility="gone">
+
+                                <RadioGroup
+                                    android:id="@+id/theme_radio_group"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+
+                                    <RadioButton
+                                        android:id="@+id/theme_system"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/at_system"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/theme_light"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/theme_light"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/theme_dark"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/theme_dark"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/theme_oled"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/theme_oled"
+                                        android:textSize="14sp" />
+                                </RadioGroup>
+                            </LinearLayout>
+
+                            <!-- 7. Voltage Unit Options -->
+                            <LinearLayout
+                                android:id="@+id/dropdown_voltage_unit"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:paddingBottom="12dp"
+                                android:visibility="gone">
+
+                                <RadioGroup
+                                    android:id="@+id/voltage_unit_radio_group"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+
+                                    <RadioButton
+                                        android:id="@+id/voltage_unit_mv"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/voltage_unit_mv"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/voltage_unit_v"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/voltage_unit_v"
+                                        android:textSize="14sp" />
+                                </RadioGroup>
+                            </LinearLayout>
+
+                            <!-- 8. RAM Unit Options -->
+                            <LinearLayout
+                                android:id="@+id/dropdown_ram_unit"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:paddingBottom="12dp"
+                                android:visibility="gone">
+
+                                <RadioGroup
+                                    android:id="@+id/ram_unit_radio_group"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+
+                                    <RadioButton
+                                        android:id="@+id/ram_unit_mb"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/ram_unit_mb"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/ram_unit_gb"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/ram_unit_gb"
+                                        android:textSize="14sp" />
+                                </RadioGroup>
+                            </LinearLayout>
+
+                            <!-- 9. Temperature Unit Options -->
+                            <LinearLayout
+                                android:id="@+id/dropdown_temp_unit"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:paddingBottom="12dp"
+                                android:visibility="gone">
+
+                                <RadioGroup
+                                    android:id="@+id/temp_unit_radio_group"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+
+                                    <RadioButton
+                                        android:id="@+id/temp_unit_celsius"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/temp_unit_celsius"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/temp_unit_fahrenheit"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/temp_unit_fahrenheit"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/temp_unit_kelvin"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/temp_unit_kelvin"
+                                        android:textSize="14sp" />
+                                </RadioGroup>
+                            </LinearLayout>
+
+                            <!-- 10. Thick Chin Options -->
+                            <LinearLayout
+                                android:id="@+id/dropdown_thick_chin"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:paddingBottom="16dp"
+                                android:visibility="gone">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:id="@+id/btn_thick_chin_minus_10"
+                                        android:layout_width="38dp"
+                                        android:layout_height="38dp"
+                                        android:background="?attr/selectableItemBackgroundBorderless"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:text="@string/thick_chin_minus_10"
+                                        android:textColor="?android:attr/textColorPrimary"
+                                        android:textSize="14sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/btn_thick_chin_minus_1"
+                                        android:layout_width="32dp"
+                                        android:layout_height="38dp"
+                                        android:layout_marginStart="2dp"
+                                        android:background="?attr/selectableItemBackgroundBorderless"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:text="@string/thick_chin_minus_1"
+                                        android:textColor="?android:attr/textColorPrimary"
+                                        android:textSize="16sp"
+                                        android:textStyle="bold" />
+
+                                    <SeekBar
+                                        android:id="@+id/thick_chin_seekbar"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="4dp"
+                                        android:layout_marginEnd="4dp"
+                                        android:layout_weight="1"
+                                        android:max="256"
+                                        android:paddingStart="6dp"
+                                        android:paddingEnd="6dp" />
+
+                                    <TextView
+                                        android:id="@+id/btn_thick_chin_plus_1"
+                                        android:layout_width="32dp"
+                                        android:layout_height="38dp"
+                                        android:background="?attr/selectableItemBackgroundBorderless"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:text="@string/thick_chin_plus_1"
+                                        android:textColor="?android:attr/textColorPrimary"
+                                        android:textSize="16sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/btn_thick_chin_plus_10"
+                                        android:layout_width="38dp"
+                                        android:layout_height="38dp"
+                                        android:layout_marginStart="2dp"
+                                        android:background="?attr/selectableItemBackgroundBorderless"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:text="@string/thick_chin_plus_10"
+                                        android:textColor="?android:attr/textColorPrimary"
+                                        android:textSize="14sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <Space
+                                        android:layout_width="72dp"
+                                        android:layout_height="wrap_content" />
+
+                                    <TextView
+                                        android:id="@+id/btn_thick_chin_quick_0"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="32dp"
+                                        android:background="?attr/selectableItemBackgroundBorderless"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:paddingStart="6dp"
+                                        android:paddingEnd="6dp"
+                                        android:text="@string/thick_chin_val_min"
+                                        android:textColor="?android:attr/textColorSecondary"
+                                        android:textSize="12sp"
+                                        android:textStyle="bold" />
+
+                                    <Space
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1" />
+
+                                    <TextView
+                                        android:id="@+id/btn_thick_chin_quick_256"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="32dp"
+                                        android:background="?attr/selectableItemBackgroundBorderless"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:paddingStart="6dp"
+                                        android:paddingEnd="6dp"
+                                        android:text="@string/thick_chin_val_max"
+                                        android:textColor="?android:attr/textColorSecondary"
+                                        android:textSize="12sp"
+                                        android:textStyle="bold" />
+
+                                    <Space
+                                        android:layout_width="72dp"
+                                        android:layout_height="wrap_content" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- 12. Assume OLED Options -->
+                            <LinearLayout
+                                android:id="@+id/dropdown_assume_oled"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:paddingBottom="12dp"
+                                android:visibility="gone">
+
+                                <RadioGroup
+                                    android:id="@+id/assume_oled_radio_group"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+
+                                    <RadioButton
+                                        android:id="@+id/assume_oled_none"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/assume_oled_opt_none"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/assume_oled_force_oled"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/assume_oled_opt_oled"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
+                                        android:id="@+id/assume_oled_not_oled"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/assume_oled_opt_not_oled"
+                                        android:textSize="14sp" />
+                                </RadioGroup>
+                            </LinearLayout>
+
+                        </FrameLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </ScrollView>
+        </LinearLayout>
+    </LinearLayout>
+</com.witherboymcw.superbattery.SwipeBackFrameLayout>
