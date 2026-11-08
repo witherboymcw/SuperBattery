@@ -130,41 +130,43 @@ class HotspotNotificationListener : NotificationListenerService() {
     private fun hotspotStatusFromNotification(sbn: StatusBarNotification): HotspotState? {
         val notif = sbn.notification ?: return null
         val extras = notif.extras ?: return null
-        val titleAndText = buildList {
-            try {
-                add(extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty())
-                add(extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString().orEmpty())
-                add(extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty())
-                add(extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty())
-                add(extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString().orEmpty())
-                add(extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty())
-                add(extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString().orEmpty())
-                add(notif.tickerText?.toString().orEmpty())
-                extras.keySet()?.forEach { key ->
-                    when (val value = extras.get(key)) {
-                        is CharSequence -> add(value.toString())
-                        is Array<*> -> value.filterIsInstance<CharSequence>().forEach { add(it.toString()) }
-                        is Iterable<*> -> value.filterIsInstance<CharSequence>().forEach { add(it.toString()) }
-                    }
-                }
-            } catch (_: Exception) {
-                // Ignore BadParcelableException if notification contains unknown 3rd party parcelables
-            }
-        }.asSequence()
-            .map { it.replace(WHITESPACE_REGEX, " ").trim() }
-            .filter { it.isNotEmpty() }
-            .toList()
 
-        val notificationTitle = listOf(
-            extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
-            extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString().orEmpty()
-        ).joinToString(" ").replace(WHITESPACE_REGEX, " ").trim()
+        val titleCharSeq = extras.getCharSequence(Notification.EXTRA_TITLE)
+        val bigTitleCharSeq = extras.getCharSequence(Notification.EXTRA_TITLE_BIG)
+        val notificationTitle = "$titleCharSeq $bigTitleCharSeq"
 
         val isHotspotTitle = notificationTitle.contains(HOTSPOT_NOTIFICATION_TITLE, ignoreCase = true) ||
             notificationTitle.contains(HOTSPOT_NOTIFICATION_TITLE_VI, ignoreCase = true)
         if (!isHotspotTitle) return null
 
-        val notificationContent = titleAndText.joinToString(" ")
+        val sb = StringBuilder()
+        fun appendText(cs: CharSequence?) {
+            if (!cs.isNullOrBlank()) {
+                sb.append(cs).append(' ')
+            }
+        }
+
+        try {
+            appendText(extras.getCharSequence(Notification.EXTRA_TITLE))
+            appendText(extras.getCharSequence(Notification.EXTRA_TITLE_BIG))
+            appendText(extras.getCharSequence(Notification.EXTRA_TEXT))
+            appendText(extras.getCharSequence(Notification.EXTRA_BIG_TEXT))
+            appendText(extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT))
+            appendText(extras.getCharSequence(Notification.EXTRA_SUB_TEXT))
+            appendText(extras.getCharSequence(Notification.EXTRA_INFO_TEXT))
+            appendText(notif.tickerText)
+            extras.keySet()?.forEach { key ->
+                when (val value = extras.get(key)) {
+                    is CharSequence -> appendText(value)
+                    is Array<*> -> value.filterIsInstance<CharSequence>().forEach { appendText(it) }
+                    is Iterable<*> -> value.filterIsInstance<CharSequence>().forEach { appendText(it) }
+                }
+            }
+        } catch (_: Exception) {
+            // Ignore BadParcelableException if notification contains unknown 3rd party parcelables
+        }
+
+        val notificationContent = sb.toString()
 
         // Read the device-count text only; the tethering channel or other notifications
         // are not used to decide whether the hotspot is on.
@@ -233,7 +235,6 @@ class HotspotNotificationListener : NotificationListenerService() {
         private const val KEY_CLIENTS = "clients"
         private const val HOTSPOT_NOTIFICATION_TITLE = "Tethering or hotspot active"
         private const val HOTSPOT_NOTIFICATION_TITLE_VI = "Điểm phát sóng"
-        private val WHITESPACE_REGEX = Regex("\\s+")
         private val NO_CONNECTED_DEVICE = Regex("\\b(no\\s+connected\\s+devices?|không\\s+có\\s+thiết\\s+bị)\\b", RegexOption.IGNORE_CASE)
         private val CONNECTED_DEVICES = Regex("\\b(\\d+)\\s+(connected\\s+devices?|thiết\\s+bị\\s+đã\\s+kết\\s+nối|thiết\\s+bị\\s+kết\\s+nối)\\b", RegexOption.IGNORE_CASE)
 

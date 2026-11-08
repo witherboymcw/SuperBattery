@@ -16,14 +16,14 @@
     <string name="low_voltage_channel">Điện áp pin thấp</string>
     <string name="low_voltage_title">Pin yếu</string>
     <string name="low_voltage_message">Hãy cắm sạc ngay (%1$d mV)</string>
-    <string name="critical_battery_channel">Cảnh báo pin</string>
+    <string name="critical_battery_channel">Cảnh báo pin nóng</string>
     <string name="critical_percent_title">Pin sắp cạn</string>
     <string name="critical_percent_message">Mức pin hiện tại là %1$d%%</string>
     <string name="critical_temperature_title">Pin đang rất nóng</string>
     <string name="critical_temperature_message">Nhiệt độ pin là %1$s</string>
     <string name="notification_access_title">Quyền đếm thiết bị Wi-Fi</string>
-    <string name="notification_access_disabled">Cho phép Super Battery đọc thông báo điểm phát sóng để hiển thị số thiết bị kết nối.</string>
-    <string name="notification_access_enabled">Đã bật quyền đọc thông báo. Bộ đếm sẽ cập nhật từ thông báo hệ thống.</string>
+    <string name="notification_access_disabled">Cho phép thông báo để hiển thị số thiết bị kết nối.</string>
+    <string name="notification_access_enabled">Đã bật quyền đọc thông báo. Bộ đếm sẽ bắt đầu cập nhật.</string>
     <string name="grant_notification_access">Cấp quyền đọc thông báo</string>
     <string name="manage_notification_access">🔑 Đọc thông báo</string>
     <string name="notification_access_settings_unavailable">Không thể mở cài đặt truy cập thông báo trên thiết bị này.</string>
@@ -47,10 +47,12 @@
 
     <string name="waiting_for_samples">Đang thu thập dữ liệu…</string>
     <string name="settings">Cài đặt</string>
-    <string name="language_subtitle">Chọn ngôn ngữ hiển thị của ứng dụng</string>
+    <string name="language_subtitle">Chọn ngôn ngữ hiển thị</string>
     <string name="allow_notifications">🔔 Gửi thông báo</string>
     <string name="allow_notifications_subtitle">Được cập nhật trạng thái hệ thống và cảnh báo</string>
     <string name="manage_notification_access_subtitle">Cần thiết để đếm số lượng thiết bị kết nối Wi-Fi</string>
+    <string name="permission_phone_state_title">📶 Quyền trạng thái điện thoại</string>
+    <string name="permission_phone_state_subtitle">Phát hiện trạng thái sóng di động</string>
     <string name="update_frequency">⏱️ Tần suất cập nhật</string>
     <string name="update_frequency_subtitle">Chỉnh tần suất làm mới dữ liệu hệ thống</string>
     <string name="update_every_half_second">Mỗi 0,5 giây</string>
@@ -93,4 +95,16 @@
     <string name="assume_oled_opt_none">Mặc định (Tự động)</string>
     <string name="assume_oled_opt_oled">Ép bật OLED</string>
     <string name="assume_oled_opt_not_oled">Tắt OLED (Ép LCD)</string>
+
+    <string name="notch_header">🪩 Tuỳ chỉnh Tai thỏ</string>
+    <string name="notch_subtitle">Che hoặc tạo tai thỏ ảo</string>
+    <string name="notch_mode_system">Mặc định theo hệ thống</string>
+    <string name="notch_mode_force">Thêm tai thỏ thủ công</string>
+    <string name="notch_mode_ignore">Bỏ qua tai thỏ</string>
+    <string name="notch_position">Vị trí tai thỏ</string>
+    <string name="notch_pos_center">Căn giữa</string>
+    <string name="notch_pos_not_center">Tùy chỉnh vị trí</string>
+    <string name="btn_set_notch_position">Chỉnh vị trí tai thỏ</string>
+    <string name="notch_instruction_text">Kéo hình tròn đến vị trí tai thỏ mong muốn, sau đó chạm ra ngoài để lưu.</string>
+    <string name="permission_already_granted">Quyền đã được cấp.</string>
 </resources>

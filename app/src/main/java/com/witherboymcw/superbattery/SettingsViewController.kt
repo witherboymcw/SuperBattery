@@ -14,9 +14,31 @@ import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import com.google.android.material.checkbox.MaterialCheckBox
 
 internal class SettingsViewController {
+    private fun getTargetLayoutRes(): Int = R.layout.layout_settings
+
     fun bind(activity: MainActivity, savedInstanceState: Bundle? = null) {
+        val targetLayout = getTargetLayoutRes()
+        val currentContainer = activity.findViewById<android.view.ViewGroup>(R.id.settings_container) ?: return
+        val parentView = currentContainer.parent as? android.view.ViewGroup
+
+        if (parentView != null) {
+            val currentTag = currentContainer.getTag(R.id.settings_container) as? Int
+            if (currentTag != targetLayout) {
+                val index = parentView.indexOfChild(currentContainer)
+                val visibility = currentContainer.visibility
+                parentView.removeView(currentContainer)
+                val newView = activity.layoutInflater.inflate(targetLayout, parentView, false)
+                newView.id = R.id.settings_container
+                newView.visibility = visibility
+                newView.setTag(R.id.settings_container, targetLayout)
+                parentView.addView(newView, index)
+            }
+        }
+
+        activity.applySettingsCardTheme()
+
         with(activity) {
-        val swipeContainer = findViewById<SwipeBackFrameLayout>(R.id.settings_container) ?: return
+        val swipeContainer = findViewById<android.view.ViewGroup>(R.id.settings_container) ?: return
         swipeContainer.isClickable = true
         swipeContainer.isFocusable = true
 
@@ -26,7 +48,7 @@ internal class SettingsViewController {
         }
 
         // Swipe right callback from SwipeBackFrameLayout
-        swipeContainer.swipeListener = object : SwipeBackFrameLayout.SwipeListener {
+        (swipeContainer as? SwipeBackFrameLayout)?.swipeListener = object : SwipeBackFrameLayout.SwipeListener {
             override fun onSwipeProgress(translationX: Float) {
                 swipeContainer.translationX = translationX
                 val widthVal = swipeContainer.width.toFloat().takeIf { it > 0 } ?: 1080f
@@ -88,6 +110,10 @@ internal class SettingsViewController {
                 langGroup?.check(R.id.lang_brainrot)
                 selectedLanguageText?.text = getString(R.string.language_brainrot)
             }
+            "vi-slang" -> {
+                langGroup?.check(R.id.lang_vietnamese_brainrot)
+                selectedLanguageText?.text = "Tiếng Việt (Brainrot)"
+            }
             else -> {
                 langGroup?.check(R.id.lang_system)
                 selectedLanguageText?.text = getString(R.string.at_system)
@@ -99,12 +125,14 @@ internal class SettingsViewController {
                 R.id.lang_vietnamese -> "vi"
                 R.id.lang_english -> "en"
                 R.id.lang_brainrot -> "art"
+                R.id.lang_vietnamese_brainrot -> "vi-slang"
                 else -> "system"
             }
             selectedLanguageText?.text = when (targetLang) {
                 "vi" -> getString(R.string.language_vietnamese)
                 "en" -> getString(R.string.language_english)
                 "art" -> getString(R.string.language_brainrot)
+                "vi-slang" -> "Tiếng Việt (Brainrot)"
                 else -> getString(R.string.at_system)
             }
             setAppLanguage(targetLang)
@@ -124,6 +152,15 @@ internal class SettingsViewController {
         // 3. Manage notification access
         findViewById<View>(R.id.card_notification_access)?.setOnClickListener {
             openNotificationAccessSettings()
+        }
+
+        // 3.5 Read phone state permission
+        findViewById<View>(R.id.card_phone_state_permission)?.setOnClickListener {
+            if (checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.READ_PHONE_STATE), PHONE_STATE_PERMISSION_REQUEST)
+            } else {
+                Toast.makeText(activity, R.string.permission_already_granted, Toast.LENGTH_SHORT).show()
+            }
         }
 
         // 4. Update frequency dropdown
@@ -542,6 +579,76 @@ internal class SettingsViewController {
         })
 
         // 12. Assume OLED dropdown
+        // Customize Notch
+        val headerNotch = findViewById<View>(R.id.header_notch)
+        val dropdownNotch = findViewById<View>(R.id.dropdown_notch)
+        val arrowNotch = findViewById<ImageView>(R.id.arrow_notch)
+        val selectedNotchText = findViewById<TextView>(R.id.selected_notch_text)
+        val notchModeGroup = findViewById<RadioGroup>(R.id.notch_mode_radio_group)
+        val notchPosContainer = findViewById<View>(R.id.notch_position_container)
+        val notchPosGroup = findViewById<RadioGroup>(R.id.notch_position_radio_group)
+        val btnSetNotchPos = findViewById<android.widget.Button>(R.id.btn_set_notch_position)
+
+        if (headerNotch != null && dropdownNotch != null && arrowNotch != null && selectedNotchText != null) {
+            val notchMode = prefs.getInt("notch_custom_mode", 0)
+            when (notchMode) {
+                0 -> notchModeGroup?.check(R.id.notch_mode_system)
+                1 -> notchModeGroup?.check(R.id.notch_mode_force)
+                2 -> notchModeGroup?.check(R.id.notch_mode_ignore)
+            }
+
+            fun updateNotchText() {
+                val mode = prefs.getInt("notch_custom_mode", 0)
+                selectedNotchText.text = when(mode) {
+                    1 -> getString(R.string.notch_mode_force)
+                    2 -> getString(R.string.notch_mode_ignore)
+                    else -> getString(R.string.notch_mode_system)
+                }
+                notchPosContainer?.visibility = if (mode == 1) View.VISIBLE else View.GONE
+            }
+            updateNotchText()
+
+            val isCenter = prefs.getBoolean("notch_is_center", true)
+            if (isCenter) {
+                notchPosGroup?.check(R.id.notch_pos_center)
+            } else {
+                notchPosGroup?.check(R.id.notch_pos_not_center)
+            }
+
+            notchModeGroup?.setOnCheckedChangeListener { _, checkedId ->
+                val mode = when(checkedId) {
+                    R.id.notch_mode_force -> 1
+                    R.id.notch_mode_ignore -> 2
+                    else -> 0
+                }
+                prefs.edit().putInt("notch_custom_mode", mode).apply()
+                updateNotchText()
+            }
+
+            notchPosGroup?.setOnCheckedChangeListener { _, checkedId ->
+                prefs.edit().putBoolean("notch_is_center", checkedId == R.id.notch_pos_center).apply()
+            }
+
+            btnSetNotchPos?.setOnClickListener {
+                showNotchPositionOverlay(activity)
+            }
+
+            val isNotchOpen = savedInstanceState?.getBoolean(KEY_NOTCH_DROPDOWN_OPEN, false) ?: false
+            if (isNotchOpen) {
+                dropdownNotch.visibility = View.VISIBLE
+                arrowNotch.rotation = 180f
+            }
+
+            headerNotch.setOnClickListener {
+                if (dropdownNotch.visibility == View.VISIBLE) {
+                    dropdownNotch.visibility = View.GONE
+                    arrowNotch.animate().rotation(0f).setDuration(200).start()
+                } else {
+                    dropdownNotch.visibility = View.VISIBLE
+                    arrowNotch.animate().rotation(180f).setDuration(200).start()
+                }
+            }
+        }
         val headerAssumeOled = findViewById<View>(R.id.header_assume_oled)
         val dropdownAssumeOled = findViewById<View>(R.id.dropdown_assume_oled)
         val arrowAssumeOled = findViewById<ImageView>(R.id.arrow_assume_oled)
@@ -607,6 +714,7 @@ internal class SettingsViewController {
                 dropdownRamUnit,
                 dropdownTempUnit,
                 dropdownThickChin,
+                dropdownNotch,
                 dropdownAssumeOled
             )
             val arrows = listOf(
@@ -617,6 +725,7 @@ internal class SettingsViewController {
                 arrowRamUnit,
                 arrowTempUnit,
                 arrowThickChin,
+                arrowNotch,
                 arrowAssumeOled
             )
 
@@ -649,6 +758,9 @@ internal class SettingsViewController {
             headerThickChin?.setOnClickListener {
                 selectSection(dropdownThickChin, arrowThickChin, R.string.thick_chin_header)
             }
+            headerNotch?.setOnClickListener {
+                selectSection(dropdownNotch, arrowNotch, R.string.notch_header)
+            }
             headerAssumeOled?.setOnClickListener {
                 selectSection(dropdownAssumeOled, arrowAssumeOled, R.string.assume_oled_header)
             }
@@ -667,6 +779,8 @@ internal class SettingsViewController {
                     Triple(dropdownTempUnit, arrowTempUnit, R.string.temp_unit_header)
                 savedInstanceState?.getBoolean(KEY_THICK_CHIN_DROPDOWN_OPEN) == true ->
                     Triple(dropdownThickChin, arrowThickChin, R.string.thick_chin_header)
+                savedInstanceState?.getBoolean(KEY_NOTCH_DROPDOWN_OPEN) == true ->
+                    Triple(dropdownNotch, arrowNotch, R.string.notch_header)
                 savedInstanceState?.getBoolean(KEY_ASSUME_OLED_DROPDOWN_OPEN) == true ->
                     Triple(dropdownAssumeOled, arrowAssumeOled, R.string.assume_oled_header)
                 else ->
@@ -691,8 +805,102 @@ internal class SettingsViewController {
             }
         }
 
-        updateNotificationPermissionStatuses()
+        updatePermissionStatuses()
             }
+    }
+
+    private fun showNotchPositionOverlay(activity: MainActivity) {
+        val wm = activity.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        val overlayView = android.widget.FrameLayout(activity)
+        overlayView.setBackgroundColor(0x88000000.toInt())
+
+        val circleView = View(activity)
+        circleView.background = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.OvalShape()).apply {
+            paint.color = android.graphics.Color.BLACK
+        }
+        val radius = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_DIP, 24f, activity.resources.displayMetrics).toInt()
+
+        val lp = android.widget.FrameLayout.LayoutParams(radius * 2, radius * 2)
+
+        val prefs = activity.getSharedPreferences(SETTINGS_PREFS, android.content.Context.MODE_PRIVATE)
+        val isCenter = prefs.getBoolean("notch_is_center", true)
+        var currentX = prefs.getFloat("notch_x", 0f)
+        var currentY = prefs.getFloat("notch_y", 0f)
+
+        lp.leftMargin = currentX.toInt() - radius
+        lp.topMargin = if (isCenter) activity.resources.displayMetrics.heightPixels / 2 - radius else currentY.toInt() - radius
+        circleView.layoutParams = lp
+
+        overlayView.addView(circleView)
+
+        val textInstruction = TextView(activity)
+        textInstruction.text = activity.getString(R.string.notch_instruction_text)
+        textInstruction.setTextColor(android.graphics.Color.WHITE)
+        textInstruction.gravity = android.view.Gravity.CENTER
+        overlayView.addView(textInstruction, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT).apply {
+            gravity = android.view.Gravity.CENTER
+        })
+
+        var dX = 0f
+        var dY = 0f
+
+        circleView.setOnTouchListener { view, event ->
+            when (event.action) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    dX = view.x - event.rawX
+                    dY = view.y - event.rawY
+                    true
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    view.animate()
+                        .x(event.rawX + dX)
+                        .apply {
+                            if (!isCenter) {
+                                y(event.rawY + dY)
+                            }
+                        }
+                        .setDuration(0)
+                        .start()
+                    true
+                }
+                else -> false
+            }
+        }
+
+        overlayView.setOnClickListener {
+            prefs.edit()
+                .putFloat("notch_x", circleView.x + radius)
+                .putFloat("notch_y", circleView.y + radius)
+                .apply()
+            try {
+                wm.removeView(overlayView)
+            } catch (_: Exception) {}
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(activity)) {
+            try {
+                activity.startActivity(android.content.Intent(
+                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:${activity.packageName}")
+                ))
+            } catch (_: Exception) {}
+            return
+        }
+
+        val params = android.view.WindowManager.LayoutParams(
+            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                @Suppress("DEPRECATION")
+                android.view.WindowManager.LayoutParams.TYPE_PHONE,
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            android.graphics.PixelFormat.TRANSLUCENT
+        )
+        try {
+            wm.addView(overlayView, params)
+        } catch (_: Exception) {}
     }
     companion object {
         const val KEY_LANGUAGE_DROPDOWN_OPEN = "key_language_dropdown_open"
@@ -703,6 +911,7 @@ internal class SettingsViewController {
         const val KEY_RAM_UNIT_DROPDOWN_OPEN = "key_ram_unit_dropdown_open"
         const val KEY_THICK_CHIN_DROPDOWN_OPEN = "key_thick_chin_dropdown_open"
         const val KEY_ASSUME_OLED_DROPDOWN_OPEN = "key_assume_oled_dropdown_open"
+        const val KEY_NOTCH_DROPDOWN_OPEN = "key_notch_dropdown_open"
         const val KEY_SETTINGS_SCROLL_Y = "key_settings_scroll_y"
         const val KEY_SETTINGS_SCROLL_RIGHT_Y = "key_settings_scroll_right_y"
         const val SETTINGS_PREFS = BatteryWidget.SETTINGS_PREFS
@@ -711,5 +920,6 @@ internal class SettingsViewController {
         const val ASSUME_OLED_KEY = "assume_oled"
         const val THICK_CHIN_LEVEL_KEY = "thick_chin_level"
         const val NOTIFICATION_PERMISSION_REQUEST = 1001
+        const val PHONE_STATE_PERMISSION_REQUEST = 1002
     }
 }

@@ -21,8 +21,8 @@
     <string name="critical_temperature_title">Battery temperature is critical</string>
     <string name="critical_temperature_message">Battery temperature is %1$s</string>
     <string name="notification_access_title">Hotspot counter access</string>
-    <string name="notification_access_disabled">Allow Super Battery to read the system hotspot notification to show connected clients.</string>
-    <string name="notification_access_enabled">Notification access is enabled. The hotspot counter will update from the system notification.</string>
+    <string name="notification_access_disabled">Allow us to read the system notification to count clients.</string>
+    <string name="notification_access_enabled">Notification access enabled. The counter will now update.</string>
     <string name="grant_notification_access">Enable notification access</string>
     <string name="manage_notification_access">🔑 Notification access</string>
     <string name="notification_access_settings_unavailable">Could not open notification access settings on this device.</string>
@@ -46,10 +46,12 @@
     <string name="current_temperature_format" translatable="false">%1$.1f°C</string>
     <string name="waiting_for_samples">Collecting samples…</string>
     <string name="settings">Settings</string>
-    <string name="language_subtitle">Choose your preferred application language</string>
+    <string name="language_subtitle">Choose your preferred</string>
     <string name="allow_notifications">🔔 Allow notifications</string>
     <string name="allow_notifications_subtitle">To receive system status updates and critical alerts</string>
     <string name="manage_notification_access_subtitle">Required to count connected hotspot clients</string>
+    <string name="permission_phone_state_title">📶 Read phone state permission</string>
+    <string name="permission_phone_state_subtitle">To accurately detect cellular signal status</string>
     <string name="update_frequency">⏱️ Update frequency</string>
     <string name="update_frequency_subtitle">Set how often telemetry data is refreshed</string>
     <string name="update_every_half_second">Every 0.5 seconds</string>
@@ -110,4 +112,16 @@
     <string name="assume_oled_opt_none">Default (Auto)</string>
     <string name="assume_oled_opt_oled">Force OLED</string>
     <string name="assume_oled_opt_not_oled">Force Non-OLED</string>
+
+    <string name="notch_header">🪩 Customize Notch</string>
+    <string name="notch_subtitle">Immersive notch masking</string>
+    <string name="notch_mode_system">Let system decide</string>
+    <string name="notch_mode_force">Force add notch</string>
+    <string name="notch_mode_ignore">Force ignore notch</string>
+    <string name="notch_position">Notch Position</string>
+    <string name="notch_pos_center">Center</string>
+    <string name="notch_pos_not_center">Not Center</string>
+    <string name="btn_set_notch_position">Set Notch Position</string>
+    <string name="notch_instruction_text">Drag the circle to the desired notch position, then tap anywhere else to save.</string>
+    <string name="permission_already_granted">Permission already granted.</string>
 </resources>

@@ -30,6 +30,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.RadioGroup
@@ -191,6 +192,9 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {
             // Guard against background service execution limits on Android 8.0+
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        }
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         initDashboardViews()
@@ -208,13 +212,9 @@ class MainActivity : AppCompatActivity() {
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
-            val displayCutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
-            val left = maxOf(navBars.left, displayCutout.left)
-            val top = displayCutout.top
-            val right = maxOf(navBars.right, displayCutout.right)
-            val bottom = maxOf(navBars.bottom, displayCutout.bottom)
-            view.setPadding(left, top, right, bottom)
+            view.setPadding(navBars.left, 0, navBars.right, navBars.bottom)
             applyThickChinPadding()
+            applyAsymmetricCorners(insets)
             insets
         }
         onBackPressedDispatcher.addCallback(this, settingsBackCallback)
@@ -251,6 +251,58 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         handleWidgetIntent(intent)
         updateDashboard()
+    }
+
+    private fun applyAsymmetricCorners(insets: WindowInsetsCompat) {
+        val defaultRadius = 12f * resources.displayMetrics.density
+        var dynamicRadiusPx = defaultRadius
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val windowInsets = insets.toWindowInsets()
+            if (windowInsets != null) {
+                val corner = windowInsets.getRoundedCorner(android.view.RoundedCorner.POSITION_TOP_LEFT)
+                if (corner != null) {
+                    val screenRadiusPx = corner.radius.toFloat()
+                    val calculatedRadius = screenRadiusPx - (16f * resources.displayMetrics.density)
+                    if (calculatedRadius >= defaultRadius) {
+                        dynamicRadiusPx = calculatedRadius
+                    }
+                }
+            }
+        }
+
+        val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+
+        val cardBattery = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_battery)
+        val cardNetwork = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_network)
+        val cardVoltage = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_voltage_graph)
+        val cardRam = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_ram_graph)
+        val cardTemp = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_temperature_graph)
+
+        val setCorners = { card: com.google.android.material.card.MaterialCardView?, tl: Float, tr: Float, br: Float, bl: Float ->
+            card?.let {
+                it.shapeAppearanceModel = it.shapeAppearanceModel.toBuilder()
+                    .setTopLeftCornerSize(tl)
+                    .setTopRightCornerSize(tr)
+                    .setBottomRightCornerSize(br)
+                    .setBottomLeftCornerSize(bl)
+                    .build()
+            }
+        }
+
+        if (isPortrait) {
+            setCorners(cardBattery, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
+            setCorners(cardNetwork, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
+            setCorners(cardVoltage, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
+            setCorners(cardRam, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
+            setCorners(cardTemp, defaultRadius, defaultRadius, dynamicRadiusPx, dynamicRadiusPx)
+        } else {
+            setCorners(cardBattery, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
+            setCorners(cardNetwork, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
+            setCorners(cardVoltage, defaultRadius, defaultRadius, defaultRadius, dynamicRadiusPx)
+            setCorners(cardRam, defaultRadius, dynamicRadiusPx, defaultRadius, defaultRadius)
+            setCorners(cardTemp, defaultRadius, defaultRadius, dynamicRadiusPx, defaultRadius)
+        }
     }
 
     private fun handleWidgetIntent(intent: Intent?) {
@@ -300,6 +352,10 @@ class MainActivity : AppCompatActivity() {
         if (dropdownAssumeOled?.visibility == View.VISIBLE) {
             outState.putBoolean(KEY_ASSUME_OLED_DROPDOWN_OPEN, true)
         }
+        val dropdownNotch = findViewById<View>(R.id.dropdown_notch)
+        if (dropdownNotch?.visibility == View.VISIBLE) {
+            outState.putBoolean(SettingsViewController.KEY_NOTCH_DROPDOWN_OPEN, true)
+        }
         val scrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_view)
             ?: findViewById<android.widget.ScrollView>(R.id.settings_scroll_left)
         scrollView?.let {
@@ -314,7 +370,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadRefreshInterval()
-        updateNotificationPermissionStatuses()
+        updatePermissionStatuses()
         handler.removeCallbacks(refreshDashboard)
         handler.post(refreshDashboard)
         handler.removeCallbacks(clockRunnable)
@@ -367,7 +423,7 @@ class MainActivity : AppCompatActivity() {
                 connectivityManager?.unregisterNetworkCallback(callback)
             } catch (_: Exception) {}
         }
-        findViewById<SwipeBackFrameLayout>(R.id.settings_container)?.swipeListener = null
+        (findViewById<android.view.View>(R.id.settings_container) as? SwipeBackFrameLayout)?.swipeListener = null
         super.onDestroy()
     }
 
@@ -375,9 +431,10 @@ class MainActivity : AppCompatActivity() {
         settingsViewController.bind(this, savedInstanceState)
     }
 
-    internal fun updateNotificationPermissionStatuses() {
+    internal fun updatePermissionStatuses() {
         val statusAllowNotifications = findViewById<TextView>(R.id.status_allow_notifications)
         val statusNotificationAccess = findViewById<TextView>(R.id.status_notification_access)
+        val statusPhoneState = findViewById<TextView>(R.id.status_phone_state_permission)
 
         val hasPostNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -388,6 +445,9 @@ class MainActivity : AppCompatActivity() {
 
         val hasAccess = hasNotificationAccess()
         statusNotificationAccess?.text = if (hasAccess) "✅" else "❌"
+
+        val hasPhoneState = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        statusPhoneState?.text = if (hasPhoneState) "✅" else "❌"
     }
 
     override fun onRequestPermissionsResult(
@@ -397,14 +457,17 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
-            updateNotificationPermissionStatuses()
+            updatePermissionStatuses()
+        } else if (requestCode == PHONE_STATE_PERMISSION_REQUEST) {
+            updatePermissionStatuses()
+            updateSimSignalStatus()
         }
     }
 
     private fun ensureInitialLanguage() {
         val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
         var savedLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-        val validLangs = setOf("system", "vi", "en", "art")
+        val validLangs = setOf("system", "vi", "en", "art", "vi-slang")
 
         if (savedLang !in validLangs) {
             savedLang = "system"
@@ -695,10 +758,33 @@ class MainActivity : AppCompatActivity() {
             cardTemp?.strokeWidth = 0
         }
 
+        applySettingsCardTheme()
+    }
+
+    internal fun applySettingsCardTheme() {
+        val prefs = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
+        val savedTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
+        val assumeOled = prefs.getString(ASSUME_OLED_KEY, "none") ?: "none"
+        val isEffectiveOled = when (assumeOled) {
+            "oled" -> true
+            "not_oled" -> false
+            else -> OledDetector.isGuaranteedOled(this)
+        }
+        val isOled = savedTheme == "oled" || (savedTheme == "system" && isEffectiveOled && ((resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES))
+
+        val strokeWidthPx = (resources.displayMetrics.density * 1f).toInt()
+        val defaultSurface = com.google.android.material.color.MaterialColors.getColor(
+            this, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT
+        )
+        val outlineColor = com.google.android.material.color.MaterialColors.getColor(
+            this, com.google.android.material.R.attr.colorOutline, Color.GRAY
+        )
+
         val settingsCardIds = intArrayOf(
             R.id.card_language,
             R.id.card_allow_notifications,
             R.id.card_notification_access,
+            R.id.card_phone_state_permission,
             R.id.card_update_frequency,
             R.id.card_theme,
             R.id.card_use_system_battery,
@@ -1137,11 +1223,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val samplePool = ArrayDeque<HistoryGraphView.Sample>()
+
     private fun addSample(history: ArrayDeque<HistoryGraphView.Sample>, value: Float, timestampMs: Long) {
         val earliest = timestampMs - HISTORY_WINDOW_MS
-        while (history.isNotEmpty() && history.first().timestampMs < earliest) history.removeFirst()
-        if (history.size == MAX_HISTORY_POINTS) history.removeFirst()
-        history.addLast(HistoryGraphView.Sample(timestampMs, value))
+        while (history.isNotEmpty() && history.first().timestampMs < earliest) {
+            samplePool.addLast(history.removeFirst())
+        }
+        while (history.size >= MAX_HISTORY_POINTS) {
+            samplePool.addLast(history.removeFirst())
+        }
+        val sample = if (samplePool.isNotEmpty()) {
+            samplePool.removeLast().apply {
+                this.timestampMs = timestampMs
+                this.value = value
+            }
+        } else {
+            HistoryGraphView.Sample(timestampMs, value)
+        }
+        history.addLast(sample)
     }
 
     private fun formatBytes(bytes: Long): String {
@@ -1192,6 +1292,7 @@ class MainActivity : AppCompatActivity() {
         private const val REFRESH_INTERVAL_KEY = "refresh_interval_ms"
         private const val DEFAULT_REFRESH_INTERVAL_MS = 1_000L
         private const val NOTIFICATION_PERMISSION_REQUEST = 1001
+        private const val PHONE_STATE_PERMISSION_REQUEST = 1002
         private const val KEY_SETTINGS_OPEN = "key_settings_open"
         private const val KEY_LANGUAGE_DROPDOWN_OPEN = "key_language_dropdown_open"
         private const val KEY_FREQUENCY_DROPDOWN_OPEN = "key_frequency_dropdown_open"

@@ -2,33 +2,34 @@
 <resources>
 
     <string name="battery_widget_name">Juice Aura Check</string>
-    <string name="battery_details_widget_name">Battery Lore &amp; Heat Check</string>
+    <string name="battery_details_widget_name">Battery &amp; Heat Check</string>
 
 
     <string name="calendar_widget_name">Calendar</string>
     <string name="appwidget_text">SKIBIDI</string>
-    <string name="add_widget">Drop that widget on the screen</string>
+    <string name="add_widget">Drop that like a hot brotato</string>
     <string name="app_widget_description">Juice level and raw voltage flexing</string>
     <string name="battery_details_widget_description">How cooked the battery is and who is leeching your hotspot</string>
 
-    <string name="calendar_widget_description">Gregorian and Vietnamese lunar dates</string>
+
+    <string name="calendar_widget_description">Boomer calendar &amp; Moon aura tracker</string>
     <string name="super_widget_description">Vibe check, moon lore, and remaining battery aura AIO</string>
     <string name="hotspot_radio_off">Sleepin\'</string>
     <string name="hotspot_clients_count">Leeches: %1$d</string>
     <string name="low_voltage_channel">Dangerously low aura</string>
     <string name="low_voltage_title">Bro you are cooked</string>
     <string name="low_voltage_message">Feed me right now bro (%1$d mV)</string>
-    <string name="critical_battery_channel">Absolute battery meltdown alerts</string>
+    <string name="critical_battery_channel">Hot battery will commit battery</string>
     <string name="critical_percent_title">Negative aura: Battery is dying</string>
     <string name="critical_percent_message">Only %1$d%% juice left, it\'s so over</string>
-    <string name="critical_temperature_title">Phone is literally on fire (without fuel)</string>
-    <string name="critical_temperature_message">Battery reached %1$s, stop cooking bro</string>
-    <string name="notification_access_title">Let us spot the hotspot moochers</string>
-    <string name="notification_access_disabled">Give Super Battery the notification pass so it can catch people taxing your hotspot.</string>
-    <string name="notification_access_enabled">Notification pass secured. Hotspot leech counter is locked in.</string>
+    <string name="critical_temperature_title">Battery is on fire fr</string>
+    <string name="critical_temperature_message">Battery reached %1$s, stop cooking my guy</string>
+    <string name="notification_access_title">Let us spot the Fanum Taxers</string>
+    <string name="notification_access_disabled">Give us the notification pass to count leeching NPCs.</string>
+    <string name="notification_access_enabled">Notification pass secured. Leech counter is locked in.</string>
     <string name="grant_notification_access">Unlock notification rizz</string>
     <string name="manage_notification_access">🔑 Bro is listening in 4K</string>
-    <string name="notification_access_settings_unavailable">Device settings completely ghosted, massive L.</string>
+    <string name="notification_access_settings_unavailable">Settings completely ghosted, massive L.</string>
     <string name="notification_listener_label">Super Battery Fanum Tax detector</string>
     <string name="dashboard_title">Telemetry</string>
     <string name="metric_battery">Juice</string>
@@ -37,29 +38,31 @@
 
 
 
-    <string name="network_unavailable">Caught in Ohio (No signal)</string>
+    <string name="network_unavailable">Good luck with that</string>
     <string name="voltage_title">Potential</string>
     <string name="ram_title">Dedotated WAM</string>
 
 
     <string name="temperature_title">Thermal cook level</string>
-    <string name="temp_status_nominal">Chillin</string>
-    <string name="temp_status_hot">Cookin</string>
+    <string name="temp_status_nominal">Chillin\'</string>
+    <string name="temp_status_hot">Searin\'</string>
     <string name="temp_status_critical">Fried</string>
 
     <string name="waiting_for_samples">Let me cook… (gathering stats)</string>
-    <string name="settings">Tweaks &amp; Rizz</string>
-    <string name="language_subtitle">Pick your preferred</string>
+    <string name="settings">Tweaks</string>
+    <string name="language_subtitle">Pick yo mama tongue</string>
     <string name="allow_notifications">🔔 Enable yapping</string>
     <string name="allow_notifications_subtitle">Get pinged when your battery is cooked</string>
     <string name="manage_notification_access_subtitle">How many are leeching your aura</string>
+    <string name="permission_phone_state_title">📶 Cell tower aura check</string>
+    <string name="permission_phone_state_subtitle">Let us see if you\'re cooked in Ala-bar-ma</string>
     <string name="update_frequency">⏱️ Ping speed</string>
-    <string name="update_frequency_subtitle">How fast telemetry stats dish out</string>
+    <string name="update_frequency_subtitle">How fast lore drops</string>
     <string name="update_every_half_second">Sweaty mode (0.5s)</string>
     <string name="update_every_second">Locked in (1s)</string>
     <string name="update_every_two_seconds">Chilling in Ohio (2s)</string>
     <string name="use_system_battery_counter">🔋 Trust OEM scam counter</string>
-    <string name="use_system_battery_counter_subtitle">Use OEM percentage instead of raw voltage math</string>
+    <string name="use_system_battery_counter_subtitle">Trust phone NPC math over raw juice</string>
     <string name="voltage_unit_header">⚡ Voltage drip</string>
     <string name="voltage_unit_subtitle">Measure voltage in raw mV or standard V</string>
     <string name="voltage_unit_mv">mV (Micro flexing)</string>
@@ -85,7 +88,7 @@
     <string name="theme_dark">Nocturnal (Dark)</string>
 
     <string name="thick_chin_header">📱 Mow mewing chin</string>
-    <string name="thick_chin_subtitle">Reduce Ohio bottom gap for gigachad chins</string>
+    <string name="thick_chin_subtitle">Help poof out gigachad chins</string>
     <string name="thick_chin_default">Default (16 dp)</string>
     <string name="thick_chin_min_label">Level 0 (16 dp)</string>
     <string name="thick_chin_max_label">Level 256 (0 dp)</string>
@@ -95,6 +98,18 @@
     <string name="assume_oled_header">🖥️ Assume OLED</string>
     <string name="assume_oled_subtitle">Automatic OLED screen detection</string>
     <string name="assume_oled_opt_none">Auto (Default Rizz)</string>
-    <string name="assume_oled_opt_oled">Force OLED (Pitch Black)</string>
-    <string name="assume_oled_opt_not_oled">Force LCD</string>
+    <string name="assume_oled_opt_oled">Max Aura Black</string>
+    <string name="assume_oled_opt_not_oled">Min Aura Hazy</string>
+
+    <string name="notch_header">🪩 Notch (or _jeb?)</string>
+    <string name="notch_subtitle">Mewing the notch away</string>
+    <string name="notch_mode_system">Let Android NPC cook</string>
+    <string name="notch_mode_force">Spawn custom notch</string>
+    <string name="notch_mode_ignore">Ghost the notch completely</string>
+    <string name="notch_position">Notch Coordinates</string>
+    <string name="notch_pos_center">Mid diff</string>
+    <string name="notch_pos_not_center">Off-grid</string>
+    <string name="btn_set_notch_position">Drag &amp; Lock Notch</string>
+    <string name="notch_instruction_text">Drag the orb where the notch goes, then tap away to lock in.</string>
+    <string name="permission_already_granted">Already unlocked bro.</string>
 </resources>

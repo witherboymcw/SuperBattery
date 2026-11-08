@@ -20,7 +20,25 @@ internal object VietnameseLunarCalendar {
         val isLeapMonth: Boolean
     )
 
+    private var cachedSolarDay = -1
+    private var cachedSolarMonth = -1
+    private var cachedSolarYear = -1
+    private var cachedLunarDate: LunarDate? = null
+
+    @Synchronized
     fun fromSolar(day: Int, month: Int, year: Int): LunarDate {
+        if (day == cachedSolarDay && month == cachedSolarMonth && year == cachedSolarYear) {
+            cachedLunarDate?.let { return it }
+        }
+        val date = computeFromSolar(day, month, year)
+        cachedSolarDay = day
+        cachedSolarMonth = month
+        cachedSolarYear = year
+        cachedLunarDate = date
+        return date
+    }
+
+    private fun computeFromSolar(day: Int, month: Int, year: Int): LunarDate {
         val dayNumber = julianDay(day, month, year)
         val k = ((dayNumber - 2415021.076998695) / SYNODIC_MONTH).toInt()
         var monthStart = newMoonDay(k + 1)

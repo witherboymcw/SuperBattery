@@ -15,29 +15,43 @@ class BatteryRingView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private var progress: Int = 100
+    private var density = resources.displayMetrics.density
+    private var strokeWidth = 5f * density
+    private var dotRadius = 1.875f * density
+
+    private val unitCos = FloatArray(6)
+    private val unitSin = FloatArray(6)
 
     var startAngle: Float = 270f
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                recalculateDotVectors()
+                invalidate()
+            }
         }
 
     var maxSweep: Float = 300f
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                recalculateDotVectors()
+                invalidate()
+            }
         }
 
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         color = 0x33888888
         strokeCap = Paint.Cap.ROUND
+        strokeWidth = this@BatteryRingView.strokeWidth
     }
 
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         color = Color.rgb(0, 230, 118)
         strokeCap = Paint.Cap.ROUND
+        strokeWidth = this@BatteryRingView.strokeWidth
     }
 
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -53,6 +67,17 @@ class BatteryRingView @JvmOverloads constructor(
             startAngle = a.getFloat(R.styleable.BatteryRingView_ringStartAngle, startAngle)
             maxSweep = a.getFloat(R.styleable.BatteryRingView_ringMaxSweep, maxSweep)
             a.recycle()
+        }
+        recalculateDotVectors()
+    }
+
+    private fun recalculateDotVectors() {
+        for (i in 0..5) {
+            val frac = i / 5f
+            val tickAngleDeg = startAngle + maxSweep * frac
+            val tickAngleRad = Math.toRadians(tickAngleDeg.toDouble())
+            unitCos[i] = Math.cos(tickAngleRad).toFloat()
+            unitSin[i] = Math.sin(tickAngleRad).toFloat()
         }
     }
 
@@ -75,11 +100,6 @@ class BatteryRingView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val density = resources.displayMetrics.density
-        val strokeWidth = 5f * density
-        trackPaint.strokeWidth = strokeWidth
-        progressPaint.strokeWidth = strokeWidth
-
         val diameter = minOf(width - paddingLeft - paddingRight, height - paddingTop - paddingBottom) - strokeWidth
         if (diameter <= 0f) return
 
@@ -99,19 +119,9 @@ class BatteryRingView @JvmOverloads constructor(
         }
 
         // 3. Draw 6 dots overlaid directly on the Ring path (at 0%, 20%, 40%, 60%, 80%, 100%)
-        val dotRadius = 1.875f * density
-
         for (i in 0..5) {
-            val frac = i / 5f
-            val tickAngleDeg = startAngle + maxSweep * frac
-            val tickAngleRad = Math.toRadians(tickAngleDeg.toDouble())
-
-            val cosA = Math.cos(tickAngleRad).toFloat()
-            val sinA = Math.sin(tickAngleRad).toFloat()
-
-            val dotX = cx + radius * cosA
-            val dotY = cy + radius * sinA
-
+            val dotX = cx + radius * unitCos[i]
+            val dotY = cy + radius * unitSin[i]
             canvas.drawCircle(dotX, dotY, dotRadius, dotPaint)
         }
     }

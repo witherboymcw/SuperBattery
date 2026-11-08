@@ -14,7 +14,7 @@ class HistoryGraphView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
-    data class Sample(val timestampMs: Long, val value: Float)
+    data class Sample(var timestampMs: Long = 0L, var value: Float = 0f)
 
     private val points = ArrayList<Sample>()
     private val transformedValues = FloatArray(MAX_CAPACITY)
@@ -139,6 +139,12 @@ class HistoryGraphView @JvmOverloads constructor(
     var onAxisOffsetsChanged: ((leftOffset: Float, rightOffset: Float, plotWidth: Float) -> Unit)? = null
     private var lastReportedLeft = -1f
     private var lastReportedRightOffset = -1f
+    private var pendingLeft = 0f
+    private var pendingRightOffset = 0f
+    private var pendingPlotWidth = 0f
+    private val axisOffsetRunnable = Runnable {
+        onAxisOffsetsChanged?.invoke(pendingLeft, pendingRightOffset, pendingPlotWidth)
+    }
 
     var suppressMinYLabel: Boolean = false
 
@@ -152,8 +158,8 @@ class HistoryGraphView @JvmOverloads constructor(
         val right = width - paddingRight - 4f
         val labelHeight = fontMetrics.descent - fontMetrics.ascent
         val strokeInset = linePaint.strokeWidth / 2f + 2f * density
-        val top = paddingTop + labelHeight + strokeInset + 4f * density
-        val bottom = height - paddingBottom - labelHeight * 2f - strokeInset - 4f * density
+        val top = paddingTop + labelHeight / 2f + strokeInset
+        val bottom = height - paddingBottom - labelHeight * 0.75f - strokeInset - 4f * density
         if (right <= left || bottom <= top) return
 
         val rightOffset = width - right
@@ -161,9 +167,12 @@ class HistoryGraphView @JvmOverloads constructor(
         if (left != lastReportedLeft || rightOffset != lastReportedRightOffset) {
             lastReportedLeft = left
             lastReportedRightOffset = rightOffset
-            val listener = onAxisOffsetsChanged
-            if (listener != null) {
-                post { listener.invoke(left, rightOffset, plotWidth) }
+            if (onAxisOffsetsChanged != null) {
+                pendingLeft = left
+                pendingRightOffset = rightOffset
+                pendingPlotWidth = plotWidth
+                removeCallbacks(axisOffsetRunnable)
+                post(axisOffsetRunnable)
             }
         }
 
@@ -186,7 +195,7 @@ class HistoryGraphView @JvmOverloads constructor(
                 canvas.drawText(yLabelTexts[i], labelX, baseline, textPaint)
             }
         }
-        val maxLabelBaseline = paddingTop - fontMetrics.ascent
+        val maxLabelBaseline = top - (fontMetrics.ascent + fontMetrics.descent) / 2f
         val minLabelBaseline = bottom - (fontMetrics.ascent + fontMetrics.descent) / 2f
         canvas.drawText(yLabelTexts[0], labelX, maxLabelBaseline, textPaint)
         if (!suppressMinYLabel) {
@@ -195,7 +204,7 @@ class HistoryGraphView @JvmOverloads constructor(
         textPaint.textAlign = Paint.Align.LEFT
 
         // X-axis ruler ticks and labels (every 20s)
-        val timeLabelBaseline = height - paddingBottom - fontMetrics.descent
+        val timeLabelBaseline = height - paddingBottom - fontMetrics.descent + 8f * density
         val plotHeight = bottom - top
 
         var secondsAgo = 0L
