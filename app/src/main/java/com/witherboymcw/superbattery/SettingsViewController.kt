@@ -14,9 +14,33 @@ import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import com.google.android.material.checkbox.MaterialCheckBox
 
 internal class SettingsViewController {
+    private var activityRef: MainActivity? = null
+    internal var pendingThickChinLevel: Int? = null
+    private val thickChinCommitHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val thickChinCommitRunnable = Runnable { flushThickChinCommit() }
+
+    internal fun scheduleThickChinCommit() {
+        thickChinCommitHandler.removeCallbacks(thickChinCommitRunnable)
+        thickChinCommitHandler.postDelayed(thickChinCommitRunnable, 2000L)
+    }
+
+    internal fun flushThickChinCommit() {
+        thickChinCommitHandler.removeCallbacks(thickChinCommitRunnable)
+        val level = pendingThickChinLevel ?: return
+        pendingThickChinLevel = null
+        val act = activityRef ?: return
+        act.thickChinOverrideLevel = null
+        val prefs = act.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, android.content.Context.MODE_PRIVATE)
+        val saved = prefs.getInt(THICK_CHIN_LEVEL_KEY, -1)
+        if (saved != level) {
+            prefs.edit().putInt(THICK_CHIN_LEVEL_KEY, level).apply()
+        }
+    }
+
     private fun getTargetLayoutRes(): Int = R.layout.layout_settings
 
     fun bind(activity: MainActivity, savedInstanceState: Bundle? = null) {
+        this.activityRef = activity
         val targetLayout = getTargetLayoutRes()
         val currentContainer = activity.findViewById<android.view.ViewGroup>(R.id.settings_container) ?: return
         val parentView = currentContainer.parent as? android.view.ViewGroup
@@ -480,18 +504,24 @@ internal class SettingsViewController {
             arrowThickChin?.rotation = 180f
         }
 
+        val savedThickChinLevel = prefs.getInt(THICK_CHIN_LEVEL_KEY, 0).coerceIn(0, 256)
+        pendingThickChinLevel = savedThickChinLevel
+
         fun updateThickChin(newLevel: Int, updateSeekBar: Boolean = true) {
             val level = newLevel.coerceIn(0, 256)
+            pendingThickChinLevel = level
             selectedThickChinText?.text = level.toString()
             if (updateSeekBar && thickChinSeekBar?.progress != level) {
                 thickChinSeekBar?.progress = level
             }
-            prefs.edit().putInt(THICK_CHIN_LEVEL_KEY, level).apply()
-            applyThickChinPadding()
+            activity.applyThickChinPadding(level)
+            scheduleThickChinCommit()
         }
 
-        val savedThickChinLevel = prefs.getInt(THICK_CHIN_LEVEL_KEY, 0).coerceIn(0, 256)
-        updateThickChin(savedThickChinLevel, updateSeekBar = true)
+        selectedThickChinText?.text = savedThickChinLevel.toString()
+        if (thickChinSeekBar?.progress != savedThickChinLevel) {
+            thickChinSeekBar?.progress = savedThickChinLevel
+        }
 
         fun setupRepeatButton(button: View?, delta: Int) {
             button ?: return
@@ -503,7 +533,7 @@ internal class SettingsViewController {
                         return
                     }
                     repeatCount++
-                    val current = prefs.getInt(THICK_CHIN_LEVEL_KEY, 0)
+                    val current = pendingThickChinLevel ?: prefs.getInt(THICK_CHIN_LEVEL_KEY, 0)
                     updateThickChin(current + delta)
                     val nextDelay = if (repeatCount < 3) 500L else 250L
                     handler.postDelayed(this, nextDelay)
@@ -522,7 +552,7 @@ internal class SettingsViewController {
                     MotionEvent.ACTION_DOWN -> {
                         v.parent?.requestDisallowInterceptTouchEvent(true)
                         repeatCount = 0
-                        val current = prefs.getInt(THICK_CHIN_LEVEL_KEY, 0)
+                        val current = pendingThickChinLevel ?: prefs.getInt(THICK_CHIN_LEVEL_KEY, 0)
                         updateThickChin(current + delta)
                         handler.postDelayed(repeatRunnable, 500L)
                         true
@@ -540,6 +570,7 @@ internal class SettingsViewController {
                         if (event.action == MotionEvent.ACTION_UP) {
                             v.performClick()
                         }
+                        scheduleThickChinCommit()
                         true
                     }
                     else -> false
@@ -574,9 +605,39 @@ internal class SettingsViewController {
                 }
             }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                thickChinCommitHandler.removeCallbacks(thickChinCommitRunnable)
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                scheduleThickChinCommit()
+            }
         })
+
+        val settingsScrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_view)
+        val settingsScrollLeft = findViewById<android.widget.ScrollView>(R.id.settings_scroll_left)
+        val settingsScrollRight = findViewById<android.widget.ScrollView>(R.id.settings_scroll_right)
+
+        fun setupScrollFlush(view: View?) {
+            view ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                view.setOnScrollChangeListener { _, _, _, _, _ ->
+                    if (pendingThickChinLevel != null) {
+                        flushThickChinCommit()
+                    }
+                }
+            } else {
+                view.viewTreeObserver?.addOnScrollChangedListener {
+                    if (pendingThickChinLevel != null) {
+                        flushThickChinCommit()
+                    }
+                }
+            }
+        }
+
+        setupScrollFlush(settingsScrollView)
+        setupScrollFlush(settingsScrollLeft)
+        setupScrollFlush(settingsScrollRight)
 
         // 12. Assume OLED dropdown
         // Customize Notch
@@ -623,10 +684,14 @@ internal class SettingsViewController {
                 }
                 prefs.edit().putInt("notch_custom_mode", mode).apply()
                 updateNotchText()
+                NotchHeaderHelper.updateHomeHeaderLayout(activity)
+                NotchHeaderHelper.updateSettingsHeaderLayout(activity)
             }
 
             notchPosGroup?.setOnCheckedChangeListener { _, checkedId ->
                 prefs.edit().putBoolean("notch_is_center", checkedId == R.id.notch_pos_center).apply()
+                NotchHeaderHelper.updateHomeHeaderLayout(activity)
+                NotchHeaderHelper.updateSettingsHeaderLayout(activity)
             }
 
             btnSetNotchPos?.setOnClickListener {
@@ -730,6 +795,7 @@ internal class SettingsViewController {
             )
 
             fun selectSection(activeDropdown: View?, activeArrow: ImageView?, titleRes: Int) {
+                flushThickChinCommit()
                 dropdowns.forEach { it?.visibility = View.GONE }
                 arrows.forEach { it?.rotation = 0f }
                 activeDropdown?.visibility = View.VISIBLE
@@ -806,6 +872,8 @@ internal class SettingsViewController {
         }
 
         updatePermissionStatuses()
+        NotchHeaderHelper.updateSettingsHeaderLayout(activity)
+        NotchHeaderHelper.updateHomeHeaderLayout(activity)
             }
     }
 
@@ -875,6 +943,8 @@ internal class SettingsViewController {
             try {
                 wm.removeView(overlayView)
             } catch (_: Exception) {}
+            NotchHeaderHelper.updateHomeHeaderLayout(activity)
+            NotchHeaderHelper.updateSettingsHeaderLayout(activity)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(activity)) {

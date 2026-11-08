@@ -163,6 +163,7 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
                 val scrollContent = child.getChildAt(0) as? ViewGroup ?: continue
                 for (j in 0 until scrollContent.childCount) {
                     val card = scrollContent.getChildAt(j)
+                    if (card.id == R.id.tv_settings_title) continue
                     card.translationX = 0f
                     val lp = card.layoutParams as? ViewGroup.MarginLayoutParams
                     if (lp != null && lp.rightMargin != 0) {

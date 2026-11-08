@@ -27,6 +27,7 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.telephony.TelephonyManager
 import android.view.MotionEvent
+import android.view.Surface
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
@@ -83,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     private var cardBatteryDetail: TextView? = null
     private var batteryRing: BatteryRingView? = null
     internal var btnSettings: View? = null
+    internal var thickChinOverrideLevel: Int? = null
     private val memoryInfo = ActivityManager.MemoryInfo()
     private var isSettingsOpen = false
 
@@ -215,6 +217,8 @@ class MainActivity : AppCompatActivity() {
             view.setPadding(navBars.left, 0, navBars.right, navBars.bottom)
             applyThickChinPadding()
             applyAsymmetricCorners(insets)
+            NotchHeaderHelper.updateHomeHeaderLayout(this)
+            NotchHeaderHelper.updateSettingsHeaderLayout(this)
             insets
         }
         onBackPressedDispatcher.addCallback(this, settingsBackCallback)
@@ -397,6 +401,30 @@ class MainActivity : AppCompatActivity() {
         updateRingerModeIcon()
         updateBluetoothStatus()
         updateSimSignalStatus()
+        NotchHeaderHelper.updateHomeHeaderLayout(this)
+        NotchHeaderHelper.updateSettingsHeaderLayout(this)
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        NotchHeaderHelper.updateHomeHeaderLayout(this)
+        NotchHeaderHelper.updateSettingsHeaderLayout(this)
+        val savedTheme = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
+            .getString(APP_THEME_KEY, "system") ?: "system"
+        val assumeOled = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
+            .getString(ASSUME_OLED_KEY, "none") ?: "none"
+        val isEffectiveOled = when (assumeOled) {
+            "oled" -> true
+            "not_oled" -> false
+            else -> OledDetector.isGuaranteedOled(this)
+        }
+        val effectiveThemeForGraph = if (savedTheme == "oled" || (savedTheme == "system" && isEffectiveOled && ((resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES))) {
+            "oled"
+        } else {
+            savedTheme
+        }
+        applyGraphBackgrounds(effectiveThemeForGraph)
+        applySettingsCardTheme()
     }
 
     override fun onUserLeaveHint() {
@@ -405,6 +433,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        settingsViewController.flushThickChinCommit()
         handler.removeCallbacks(refreshDashboard)
         handler.removeCallbacks(clockRunnable)
         try {
@@ -521,9 +550,11 @@ class MainActivity : AppCompatActivity() {
             ?.setInterpolator(FastOutSlowInInterpolator())
             ?.start()
         settingsBackCallback.isEnabled = true
+        NotchHeaderHelper.updateSettingsHeaderLayout(this)
     }
 
     internal fun closeSettingsScreen(animate: Boolean = true) {
+        settingsViewController.flushThickChinCommit()
         val container = findViewById<View>(R.id.settings_container) ?: return
         if (container.visibility != View.VISIBLE) return
         isSettingsOpen = false
@@ -730,32 +761,13 @@ class MainActivity : AppCompatActivity() {
         val dashboardCards = arrayOf(cardBattery, cardNetwork, cardVoltage, cardRam, cardTemp)
         dashboardCards.forEach { card ->
             card?.strokeColor = outlineColor
-        }
-
-        if (isOled) {
-            cardBattery?.setCardBackgroundColor(Color.TRANSPARENT)
-            cardNetwork?.setCardBackgroundColor(Color.TRANSPARENT)
-            cardVoltage?.setCardBackgroundColor(Color.BLACK)
-            cardRam?.setCardBackgroundColor(Color.BLACK)
-            cardTemp?.setCardBackgroundColor(Color.BLACK)
-
-            cardBattery?.strokeWidth = strokeWidthPx
-            cardNetwork?.strokeWidth = strokeWidthPx
-            cardVoltage?.strokeWidth = strokeWidthPx
-            cardRam?.strokeWidth = strokeWidthPx
-            cardTemp?.strokeWidth = strokeWidthPx
-        } else {
-            cardBattery?.setCardBackgroundColor(defaultSurface)
-            cardNetwork?.setCardBackgroundColor(defaultSurface)
-            cardVoltage?.setCardBackgroundColor(defaultSurface)
-            cardRam?.setCardBackgroundColor(defaultSurface)
-            cardTemp?.setCardBackgroundColor(defaultSurface)
-
-            cardBattery?.strokeWidth = 0
-            cardNetwork?.strokeWidth = 0
-            cardVoltage?.strokeWidth = 0
-            cardRam?.strokeWidth = 0
-            cardTemp?.strokeWidth = 0
+            if (isOled) {
+                card?.setCardBackgroundColor(Color.TRANSPARENT)
+                card?.strokeWidth = strokeWidthPx
+            } else {
+                card?.setCardBackgroundColor(defaultSurface)
+                card?.strokeWidth = 0
+            }
         }
 
         applySettingsCardTheme()
@@ -792,6 +804,7 @@ class MainActivity : AppCompatActivity() {
             R.id.card_ram_unit,
             R.id.card_temp_unit,
             R.id.card_thick_chin,
+            R.id.card_notch,
             R.id.card_assume_oled,
             R.id.settings_detail_card
         )
@@ -807,6 +820,11 @@ class MainActivity : AppCompatActivity() {
                     card.strokeWidth = 0
                 }
             }
+        }
+
+        findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_settings_back)?.let { backCard ->
+            backCard.setCardBackgroundColor(defaultSurface)
+            backCard.strokeWidth = 0
         }
     }
 
@@ -1263,17 +1281,64 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    internal fun applyThickChinPadding() {
-        val dashboard = findViewById<View>(R.id.dashboard) ?: return
+    internal fun applyThickChinPadding(overrideLevel: Int? = thickChinOverrideLevel) {
+        if (overrideLevel != null) thickChinOverrideLevel = overrideLevel
         val prefs = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
-        val level = prefs.getInt(THICK_CHIN_LEVEL_KEY, 0).coerceIn(0, 256)
+        val level = (overrideLevel ?: thickChinOverrideLevel ?: prefs.getInt(THICK_CHIN_LEVEL_KEY, 0)).coerceIn(0, 256)
         val density = resources.displayMetrics.density
         val reductionDp = level * (1f / 16f)
-        val effectivePaddingDp = (16f - reductionDp).coerceAtLeast(0f)
-        val bottomPx = (effectivePaddingDp * density).roundToInt()
-        val topPx = (12f * density).roundToInt()
-        val sidePx = (16f * density).roundToInt()
-        dashboard.setPaddingRelative(sidePx, topPx, sidePx, bottomPx)
+
+        val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display?.rotation ?: Surface.ROTATION_0
+        } else {
+            @Suppress("DEPRECATION")
+            (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
+        }
+
+        val default16Px = (16f * density).roundToInt()
+        val default8Px = (8f * density).roundToInt()
+        val default12Px = (12f * density).roundToInt()
+        val default24Px = (24f * density).roundToInt()
+
+        val reduced12Px = ((12f - reductionDp).coerceAtLeast(0f) * density).roundToInt()
+        val reduced16Px = ((16f - reductionDp).coerceAtLeast(0f) * density).roundToInt()
+        val reduced24Px = ((24f - reductionDp).coerceAtLeast(8f) * density).roundToInt()
+
+        // 1. Home Dashboard
+        findViewById<View>(R.id.dashboard)?.let { dashboard ->
+            val leftPx = if (rotation == Surface.ROTATION_270) reduced16Px else default16Px
+            val topPx = if (rotation == Surface.ROTATION_180) reduced16Px else default16Px
+            val rightPx = if (rotation == Surface.ROTATION_90) reduced16Px else default16Px
+            val bottomPx = if (rotation == Surface.ROTATION_0) reduced16Px else default16Px
+            dashboard.setPaddingRelative(leftPx, topPx, rightPx, bottomPx)
+        }
+
+        // 2. Settings Screen
+        val singleScrollView = findViewById<View>(R.id.settings_scroll_view)
+        if (singleScrollView != null) {
+            // Single column Settings (Portrait)
+            val leftPx = if (rotation == Surface.ROTATION_270) reduced16Px else default16Px
+            val topPx = if (rotation == Surface.ROTATION_180) reduced16Px else default16Px
+            val rightPx = if (rotation == Surface.ROTATION_90) reduced16Px else default16Px
+            val bottomPx = if (rotation == Surface.ROTATION_0) reduced24Px else default24Px
+            singleScrollView.setPaddingRelative(leftPx, topPx, rightPx, bottomPx)
+        } else {
+            // Two-column Settings (Landscape)
+            val scrollLeft = findViewById<View>(R.id.settings_scroll_left)
+            val scrollRight = findViewById<View>(R.id.settings_scroll_right)
+
+            val leftColStartPx = if (rotation == Surface.ROTATION_270) reduced16Px else default16Px
+            val leftColTopPx = if (rotation == Surface.ROTATION_180) reduced12Px else default12Px
+            val leftColBottomPx = if (rotation == Surface.ROTATION_0) reduced24Px else default24Px
+
+            scrollLeft?.setPaddingRelative(leftColStartPx, leftColTopPx, default8Px, leftColBottomPx)
+
+            val rightColEndPx = if (rotation == Surface.ROTATION_90) reduced16Px else default16Px
+            val rightColTopPx = if (rotation == Surface.ROTATION_180) reduced12Px else default12Px
+            val rightColBottomPx = if (rotation == Surface.ROTATION_0) reduced24Px else default24Px
+
+            scrollRight?.setPaddingRelative(default8Px, rightColTopPx, rightColEndPx, rightColBottomPx)
+        }
     }
 
     private fun loadRefreshInterval() {
