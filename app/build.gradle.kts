@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.witherboymcw.superbattery"
-        minSdk = 29
+        minSdk = 26
         targetSdk = 36
         versionCode = 5
         versionName = "26.11.07"
@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.window)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

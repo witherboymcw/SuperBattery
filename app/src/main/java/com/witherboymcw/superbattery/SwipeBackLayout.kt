@@ -25,7 +25,7 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
     private var startX = 0f
     private var startY = 0f
     private var isSwipingRight = false
-    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat() * 0.25f
     private val minFlingVelocity = ViewConfiguration.get(context).scaledMinimumFlingVelocity.toFloat()
     private var velocityTracker: VelocityTracker? = null
 
@@ -104,7 +104,7 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
                     if (ev.action == MotionEvent.ACTION_UP) {
                         velocityTracker?.computeCurrentVelocity(1000)
                         val xVelocity = velocityTracker?.xVelocity ?: 0f
-                        if (xVelocity > (minFlingVelocity * 0.75f)) {
+                        if (xVelocity > (minFlingVelocity * 0.25f)) {
                             isFling = true
                         }
                     }

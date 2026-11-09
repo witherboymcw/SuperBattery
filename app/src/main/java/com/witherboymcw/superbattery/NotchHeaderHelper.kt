@@ -139,7 +139,7 @@ object NotchHeaderHelper {
             }
             CutoutPosition.TOP_LEFT -> {
                 val cutoutRight = cutoutInfo.rectRight
-                val leftBoundary = (cutoutRight + clearance).coerceAtLeast(0f)
+                val leftBoundary = (cutoutRight + margin).coerceAtLeast(0f)
                 val rightBoundary = W / 2f - clearance
                 val targetTitleCenterX = if (leftBoundary < rightBoundary) {
                     (leftBoundary + rightBoundary) / 2f
@@ -212,7 +212,7 @@ object NotchHeaderHelper {
             }
             CutoutPosition.TOP_LEFT -> {
                 val cutoutRight = cutoutInfo.rectRight
-                val targetBackLeft = (cutoutRight + clearance).coerceAtLeast(margin)
+                val targetBackLeft = (cutoutRight + margin).coerceAtLeast(margin)
                 cardBack.translationX = targetBackLeft - defaultBackLeft
 
                 val shiftedBackRight = targetBackLeft + backWidth

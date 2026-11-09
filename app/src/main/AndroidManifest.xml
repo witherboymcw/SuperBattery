@@ -19,7 +19,9 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SuperBattery">
+        android:theme="@style/Theme.SuperBattery"
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="tiramisu">
 
         <receiver
             android:name=".BatteryWidget"

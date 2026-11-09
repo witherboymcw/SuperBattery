@@ -62,6 +62,10 @@ internal class SettingsViewController {
         activity.applySettingsCardTheme()
 
         with(activity) {
+        if (FoldableDetector.isFoldableDevice(this)) {
+            findViewById<View>(R.id.card_thick_chin)?.visibility = View.GONE
+        }
+
         val swipeContainer = findViewById<android.view.ViewGroup>(R.id.settings_container) ?: return
         swipeContainer.isClickable = true
         swipeContainer.isFocusable = true

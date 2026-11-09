@@ -38,11 +38,17 @@ import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
+import kotlinx.coroutines.launch
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -127,6 +133,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val settingsBackCallback = object : OnBackPressedCallback(false) {
+        private var initialWidth = 0f
+
+        // Khi người dùng bắt đầu chạm và kéo từ mép màn hình vào
+        override fun handleOnBackStarted(backEvent: BackEventCompat) {
+            val container = findViewById<View>(R.id.settings_container) ?: return
+            initialWidth = container.width.toFloat().takeIf { it > 0f } ?: 1080f
+        }
+
+        // Khi ngón tay đang di chuyển (tiến trình 0.0 -> 1.0)
+        override fun handleOnBackProgressed(backEvent: BackEventCompat) {
+            val container = findViewById<View>(R.id.settings_container) ?: return
+            // backEvent.progress chạy từ 0.0 đến 1.0
+            // Cho container trượt sang phải theo tỷ lệ vuốt
+            val progress = backEvent.progress
+            container.translationX = initialWidth * progress
+        }
+
+        // Nếu người dùng đổi ý đẩy ngón tay trả lại mép viền (Hủy đóng)
+        override fun handleOnBackCancelled() {
+            val container = findViewById<View>(R.id.settings_container) ?: return
+            container.animate()
+                .translationX(0f)
+                .setDuration(150L)
+                .setInterpolator(FastOutSlowInInterpolator())
+                .start()
+        }
+
+        // Khi người dùng thả tay ra để xác nhận đóng màn hình
         override fun handleOnBackPressed() {
             closeSettingsScreen()
         }
@@ -194,8 +228,10 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {
             // Guard against background service execution limits on Android 8.0+
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
@@ -208,9 +244,17 @@ class MainActivity : AppCompatActivity() {
         }
         applyGraphBackgrounds(effectiveThemeForGraph)
 
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+            windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            )
+        }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
@@ -247,6 +291,28 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             handleWidgetIntent(intent)
+        }
+
+        updateFoldableUiState()
+        lifecycleScope.launch {
+            try {
+                WindowInfoTracker.getOrCreate(this@MainActivity)
+                    .windowLayoutInfo(this@MainActivity)
+                    .collect { layoutInfo ->
+                        val hasFoldingFeature = layoutInfo.displayFeatures.any { it is FoldingFeature }
+                        if (hasFoldingFeature) {
+                            FoldableDetector.markFoldingFeatureDetected(true)
+                            applyThickChinPadding()
+                            updateFoldableUiState()
+                        }
+                    }
+            } catch (_: Exception) {}
+        }
+    }
+
+    internal fun updateFoldableUiState() {
+        if (FoldableDetector.isFoldableDevice(this)) {
+            findViewById<View>(R.id.card_thick_chin)?.visibility = View.GONE
         }
     }
 
@@ -409,6 +475,7 @@ class MainActivity : AppCompatActivity() {
         super.onConfigurationChanged(newConfig)
         NotchHeaderHelper.updateHomeHeaderLayout(this)
         NotchHeaderHelper.updateSettingsHeaderLayout(this)
+        applyThickChinPadding()
         val savedTheme = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
             .getString(APP_THEME_KEY, "system") ?: "system"
         val assumeOled = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
@@ -1074,8 +1141,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun hasNotificationAccess(): Boolean {
         val component = ComponentName(this, HotspotNotificationListener::class.java)
-        return getSystemService(NotificationManager::class.java)
-            .isNotificationListenerAccessGranted(component)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            getSystemService(NotificationManager::class.java)
+                ?.isNotificationListenerAccessGranted(component) == true
+        } else {
+            val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+            enabledListeners?.contains(component.flattenToString()) == true || enabledListeners?.contains(component.flattenToShortString()) == true
+        }
     }
 
     internal fun updateDashboard() {
@@ -1284,7 +1356,14 @@ class MainActivity : AppCompatActivity() {
     internal fun applyThickChinPadding(overrideLevel: Int? = thickChinOverrideLevel) {
         if (overrideLevel != null) thickChinOverrideLevel = overrideLevel
         val prefs = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
-        val level = (overrideLevel ?: thickChinOverrideLevel ?: prefs.getInt(THICK_CHIN_LEVEL_KEY, 0)).coerceIn(0, 256)
+
+        val savedTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
+        val isNight = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val isLight = savedTheme == "light" || (savedTheme == "system" && !isNight)
+        val isFoldable = FoldableDetector.isFoldableDevice(this)
+
+        val rawLevel = (overrideLevel ?: thickChinOverrideLevel ?: prefs.getInt(THICK_CHIN_LEVEL_KEY, 0)).coerceIn(0, 256)
+        val level = if (isLight || isFoldable) 0 else rawLevel
         val density = resources.displayMetrics.density
         val reductionDp = level * (1f / 16f)
 
