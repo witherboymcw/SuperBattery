@@ -140,7 +140,7 @@ internal class SettingsViewController {
             }
             "vi-slang" -> {
                 langGroup?.check(R.id.lang_vietnamese_brainrot)
-                selectedLanguageText?.text = "Tiếng Việt (Brainrot)"
+                selectedLanguageText?.text = getString(R.string.language_vietnamese_brainrot)
             }
             else -> {
                 langGroup?.check(R.id.lang_system)
@@ -160,7 +160,7 @@ internal class SettingsViewController {
                 "vi" -> getString(R.string.language_vietnamese)
                 "en" -> getString(R.string.language_english)
                 "art" -> getString(R.string.language_brainrot)
-                "vi-slang" -> "Tiếng Việt (Brainrot)"
+                "vi-slang" -> getString(R.string.language_vietnamese_brainrot)
                 else -> getString(R.string.at_system)
             }
             setAppLanguage(targetLang)
@@ -976,6 +976,13 @@ internal class SettingsViewController {
             wm.addView(overlayView, params)
         } catch (_: Exception) {}
     }
+
+    fun unbind() {
+        flushThickChinCommit()
+        thickChinCommitHandler.removeCallbacksAndMessages(null)
+        activityRef = null
+    }
+
     companion object {
         const val KEY_LANGUAGE_DROPDOWN_OPEN = "key_language_dropdown_open"
         const val KEY_FREQUENCY_DROPDOWN_OPEN = "key_frequency_dropdown_open"

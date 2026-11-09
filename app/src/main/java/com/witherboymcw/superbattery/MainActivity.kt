@@ -34,7 +34,6 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
@@ -513,6 +512,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        settingsViewController.unbind()
         handler.removeCallbacksAndMessages(null)
         networkCallback?.let { callback ->
             try {
@@ -532,17 +532,14 @@ class MainActivity : AppCompatActivity() {
         val statusNotificationAccess = findViewById<TextView>(R.id.status_notification_access)
         val statusPhoneState = findViewById<TextView>(R.id.status_phone_state_permission)
 
-        val hasPostNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
+        val hasPostNotificationPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         statusAllowNotifications?.text = if (hasPostNotificationPermission) "✅" else "❌"
 
         val hasAccess = hasNotificationAccess()
         statusNotificationAccess?.text = if (hasAccess) "✅" else "❌"
 
-        val hasPhoneState = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val hasPhoneState = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
         statusPhoneState?.text = if (hasPhoneState) "✅" else "❌"
     }
 
@@ -1354,7 +1351,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun applyThickChinPadding(overrideLevel: Int? = thickChinOverrideLevel) {
-        if (overrideLevel != null) thickChinOverrideLevel = overrideLevel
+        overrideLevel?.let { thickChinOverrideLevel = it }
         val prefs = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
 
         val savedTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"

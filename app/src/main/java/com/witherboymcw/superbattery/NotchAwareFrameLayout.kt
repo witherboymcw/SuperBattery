@@ -1,6 +1,7 @@
 package com.witherboymcw.superbattery
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Canvas
 import android.graphics.RectF
 import android.os.Build
@@ -19,23 +20,52 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
     private val radialMaskView = RadialMaskView(context)
     private val prefs = context.getSharedPreferences(SettingsViewController.SETTINGS_PREFS, Context.MODE_PRIVATE)
 
+    private var cachedNotchCustomMode = 0
+    private var cachedNotchIsCenter = true
+    private var cachedNotchX = -1f
+    private var cachedNotchY = -1f
+
+    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "notch_custom_mode" || key == "notch_is_center" || key == "notch_x" || key == "notch_y") {
+            reloadNotchPrefs()
+            invalidate()
+        }
+    }
+
+    private fun reloadNotchPrefs() {
+        cachedNotchCustomMode = prefs.getInt("notch_custom_mode", 0)
+        cachedNotchIsCenter = prefs.getBoolean("notch_is_center", true)
+        cachedNotchX = prefs.getFloat("notch_x", -1f)
+        cachedNotchY = prefs.getFloat("notch_y", -1f)
+    }
+
     private val scrollChangeListener = ViewTreeObserver.OnScrollChangedListener {
         updateChildOffsets()
     }
 
+    private val tempNotchRect = RectF()
+    private val tempRootLoc = IntArray(2)
+    private val tempCardLoc = IntArray(2)
+
     init {
         clipChildren = false
+        reloadNotchPrefs()
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         clipChildren = false
+        reloadNotchPrefs()
+        prefs.registerOnSharedPreferenceChangeListener(prefListener)
         viewTreeObserver.addOnScrollChangedListener(scrollChangeListener)
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        viewTreeObserver.removeOnScrollChangedListener(scrollChangeListener)
+        prefs.unregisterOnSharedPreferenceChangeListener(prefListener)
+        if (viewTreeObserver.isAlive) {
+            viewTreeObserver.removeOnScrollChangedListener(scrollChangeListener)
+        }
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
@@ -44,27 +74,24 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
     }
 
     private fun getNotchRect(): RectF? {
-        val notchMode = prefs.getInt("notch_custom_mode", 0)
-        if (notchMode == 2) return null
+        if (cachedNotchCustomMode == 2) return null
 
-        var notchRect: RectF? = null
-        if (notchMode == 1) {
-            val isCentered = prefs.getBoolean("notch_is_center", true)
-            val nX = prefs.getFloat("notch_x", -1f)
-            val nY = prefs.getFloat("notch_y", -1f)
-            if (nX != -1f && nY != -1f) {
+        if (cachedNotchCustomMode == 1) {
+            if (cachedNotchX != -1f && cachedNotchY != -1f) {
                 val notchRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24f, resources.displayMetrics)
-                val finalY = if (isCentered) height / 2f else nY
-                notchRect = RectF(nX - notchRadius, finalY - notchRadius, nX + notchRadius, finalY + notchRadius)
+                val finalY = if (cachedNotchIsCenter) height / 2f else cachedNotchY
+                tempNotchRect.set(cachedNotchX - notchRadius, finalY - notchRadius, cachedNotchX + notchRadius, finalY + notchRadius)
+                return tempNotchRect
             }
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 rootWindowInsets?.displayCutout?.boundingRects?.firstOrNull()?.let { rect ->
-                    notchRect = RectF(rect)
+                    tempNotchRect.set(rect)
+                    return tempNotchRect
                 }
             }
         }
-        return notchRect
+        return null
     }
 
     private fun updateChildOffsets() {
@@ -106,11 +133,10 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         val peakY = rect.centerY()
         val totalHeight = height.toFloat()
 
-        val rootLoc = IntArray(2)
-        getLocationOnScreen(rootLoc)
+        getLocationOnScreen(tempRootLoc)
 
         val reductionPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 56f, resources.displayMetrics).toInt()
-        applyDetourToScrollChildren(this, peakX, peakY, totalHeight, rootLoc[1], reductionPx)
+        applyDetourToScrollChildren(this, peakX, peakY, totalHeight, tempRootLoc[1], reductionPx)
     }
 
     private fun applyDetourToScrollChildren(
@@ -137,9 +163,8 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
                         card.layoutParams = lp
                     }
 
-                    val cardLoc = IntArray(2)
-                    card.getLocationOnScreen(cardLoc)
-                    val cardCenterY = (cardLoc[1] - rootScreenY) + card.height / 2f
+                    card.getLocationOnScreen(tempCardLoc)
+                    val cardCenterY = (tempCardLoc[1] - rootScreenY) + card.height / 2f
 
                     val denominator = if (cardCenterY < peakY) peakY else (totalHeight - peakY)
                     val t = if (denominator > 0f) {

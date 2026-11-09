@@ -148,6 +148,11 @@ class HistoryGraphView @JvmOverloads constructor(
 
     var suppressMinYLabel: Boolean = false
 
+    override fun onDetachedFromWindow() {
+        removeCallbacks(axisOffsetRunnable)
+        super.onDetachedFromWindow()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 

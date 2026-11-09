@@ -1,6 +1,7 @@
 package com.witherboymcw.superbattery
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -26,6 +27,27 @@ class RadialMaskView @JvmOverloads constructor(
     private val maskPath = Path()
     private val prefs = context.getSharedPreferences(SettingsViewController.SETTINGS_PREFS, Context.MODE_PRIVATE)
 
+    private var cachedNotchCustomMode = 0
+    private var cachedNotchIsCenter = true
+    private var cachedNotchX = -1f
+    private var cachedNotchY = -1f
+
+    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "notch_custom_mode" || key == "notch_is_center" || key == "notch_x" || key == "notch_y") {
+            reloadNotchPrefs()
+            invalidate()
+        }
+    }
+
+    private fun reloadNotchPrefs() {
+        cachedNotchCustomMode = prefs.getInt("notch_custom_mode", 0)
+        cachedNotchIsCenter = prefs.getBoolean("notch_is_center", true)
+        cachedNotchX = prefs.getFloat("notch_x", -1f)
+        cachedNotchY = prefs.getFloat("notch_y", -1f)
+    }
+
+    private val tempNotchRect = RectF()
+
     init {
         val typedValue = TypedValue()
         if (context.theme.resolveAttribute(android.R.attr.colorBackground, typedValue, true)) {
@@ -33,6 +55,18 @@ class RadialMaskView @JvmOverloads constructor(
         } else {
             maskPaint.color = Color.BLACK
         }
+        reloadNotchPrefs()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        reloadNotchPrefs()
+        prefs.registerOnSharedPreferenceChangeListener(prefListener)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        prefs.unregisterOnSharedPreferenceChangeListener(prefListener)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -51,51 +85,48 @@ class RadialMaskView @JvmOverloads constructor(
         // Do NOT draw mask in portrait or portrait-reversed
         if (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) return
 
-        val notchMode = prefs.getInt("notch_custom_mode", 0)
-        if (notchMode == 2) return
+        if (cachedNotchCustomMode == 2) return
 
-        var notchRect: RectF? = null
+        var hasNotchRect = false
         val clearanceDp = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12f, resources.displayMetrics)
 
-        if (notchMode == 1) {
-            val isCentered = prefs.getBoolean("notch_is_center", true)
-            val nX = prefs.getFloat("notch_x", -1f)
-            val nY = prefs.getFloat("notch_y", -1f)
-            if (nX != -1f && nY != -1f) {
+        if (cachedNotchCustomMode == 1) {
+            if (cachedNotchX != -1f && cachedNotchY != -1f) {
                 val notchRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24f, resources.displayMetrics)
-                val finalY = if (isCentered) height / 2f else nY
-                notchRect = RectF(nX - notchRadius, finalY - notchRadius, nX + notchRadius, finalY + notchRadius)
+                val finalY = if (cachedNotchIsCenter) height / 2f else cachedNotchY
+                tempNotchRect.set(cachedNotchX - notchRadius, finalY - notchRadius, cachedNotchX + notchRadius, finalY + notchRadius)
+                hasNotchRect = true
             }
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 hostView.rootWindowInsets?.displayCutout?.boundingRects?.firstOrNull()?.let { rect ->
-                    notchRect = RectF(rect)
+                    tempNotchRect.set(rect)
+                    hasNotchRect = true
                 }
             }
         }
 
-        if (notchRect == null) return
-        val rect = notchRect!!
+        if (!hasNotchRect) return
 
         // Proximity Guard Clause (48dp)
         val maxEdgeDistPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 48f, resources.displayMetrics)
-        val distLeft = rect.left
-        val distRight = width - rect.right
+        val distLeft = tempNotchRect.left
+        val distRight = width - tempNotchRect.right
         val distanceFromEdge = if (rotation == Surface.ROTATION_270) distRight else distLeft
         if (distanceFromEdge > maxEdgeDistPx) return
 
-        val isRight = rotation == Surface.ROTATION_270 || rect.centerX() > width / 2f
+        val isRight = rotation == Surface.ROTATION_270 || tempNotchRect.centerX() > width / 2f
 
         if (isRight) {
             // Right Notch: Perfect Circular Mask centered at notch bounds
-            val circleRadius = maxOf(rect.width(), rect.height()) / 2f + clearanceDp
+            val circleRadius = maxOf(tempNotchRect.width(), tempNotchRect.height()) / 2f + clearanceDp
             maskPath.reset()
-            maskPath.addCircle(rect.centerX(), rect.centerY(), circleRadius, Path.Direction.CW)
+            maskPath.addCircle(tempNotchRect.centerX(), tempNotchRect.centerY(), circleRadius, Path.Direction.CW)
             canvas.drawPath(maskPath, maskPaint)
         }
 
-        if (notchMode == 1) {
-            canvas.drawOval(rect, notchPaint)
+        if (cachedNotchCustomMode == 1) {
+            canvas.drawOval(tempNotchRect, notchPaint)
         }
     }
 }
