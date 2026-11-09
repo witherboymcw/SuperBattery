@@ -510,4 +510,5 @@
     </com.witherboymcw.superbattery.DashboardLayout>
 
     <include layout="@layout/layout_settings" />
+    <include layout="@layout/layout_hotspot" />
 </FrameLayout>

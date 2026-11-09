@@ -227,4 +227,58 @@ object NotchHeaderHelper {
             }
         }
     }
+
+    fun updateHotspotHeaderLayout(activity: MainActivity) {
+        val root = activity.findViewById<View>(R.id.main) ?: return
+        val cardBack = activity.findViewById<View>(R.id.card_hotspot_back)
+            ?: activity.findViewById<View>(R.id.hotspot_back_button) ?: return
+        val tvHotspotTitle = activity.findViewById<TextView>(R.id.tv_hotspot_title) ?: return
+
+        val parentView = cardBack.parent as? View ?: root
+        if (parentView.width <= 0 || tvHotspotTitle.width <= 0) {
+            tvHotspotTitle.post { updateHotspotHeaderLayout(activity) }
+            return
+        }
+
+        val cutoutInfo = getCutoutInfo(activity, root)
+        val W = parentView.width.toFloat()
+        val clearance = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12f, activity.resources.displayMetrics)
+        val margin = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, activity.resources.displayMetrics)
+
+        cardBack.translationX = 0f
+        tvHotspotTitle.translationX = 0f
+
+        val defaultBackLeft = cardBack.left.toFloat()
+        val defaultTitleCenterX = tvHotspotTitle.left + tvHotspotTitle.width / 2f
+        val backWidth = cardBack.width.toFloat()
+        val titleWidth = tvHotspotTitle.width.toFloat()
+
+        when (cutoutInfo.position) {
+            CutoutPosition.NONE, CutoutPosition.TOP_LEFT -> {
+                cardBack.translationX = 0f
+                tvHotspotTitle.translationX = 0f
+            }
+            CutoutPosition.CENTER -> {
+                cardBack.translationX = 0f
+
+                val targetTitleCenterX = (W / 4f)
+                tvHotspotTitle.translationX = targetTitleCenterX - defaultTitleCenterX
+            }
+            CutoutPosition.TOP_RIGHT -> {
+                val cutoutLeft = cutoutInfo.rectLeft
+                val targetBackRight = (cutoutLeft - margin).coerceAtMost(W - margin)
+                val targetBackLeft = targetBackRight - backWidth
+                cardBack.translationX = targetBackLeft - defaultBackLeft
+
+                val leftBoundary = margin
+                val rightBoundary = targetBackLeft - clearance
+                val targetTitleCenterX = if (leftBoundary + titleWidth <= rightBoundary) {
+                    (leftBoundary + rightBoundary) / 2f
+                } else {
+                    leftBoundary + titleWidth / 2f
+                }
+                tvHotspotTitle.translationX = targetTitleCenterX - defaultTitleCenterX
+            }
+        }
+    }
 }

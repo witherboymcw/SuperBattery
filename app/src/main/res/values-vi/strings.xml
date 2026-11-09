@@ -107,4 +107,11 @@
     <string name="btn_set_notch_position">Chỉnh vị trí tai thỏ</string>
     <string name="notch_instruction_text">Kéo hình tròn đến vị trí tai thỏ mong muốn, sau đó chạm ra ngoài để lưu.</string>
     <string name="permission_already_granted">Quyền đã được cấp.</string>
+
+    <string name="hotspot_title">Thiết bị Hotspot</string>
+    <string name="status_connected">Đã kết nối</string>
+    <string name="status_allowed">Được phép</string>
+    <string name="status_denied">Bị chặn</string>
+    <string name="hotspot_device_details">Chi tiết thiết bị</string>
+    <string name="hotspot_status_header">Trạng thái truy cập</string>
 </resources>

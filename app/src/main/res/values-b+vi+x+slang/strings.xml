@@ -94,4 +94,11 @@
     <string name="btn_set_notch_position">Chốt toạ độ tai thỏ</string>
     <string name="notch_instruction_text">Kéo cục tròn đến chỗ tai thỏ cần đặt, rồi bấm ra ngoài để khoá vị trí.</string>
     <string name="permission_already_granted">Đã có quyền rồi nha bro.</string>
+
+    <string name="hotspot_title">Hội anh em Hotspot</string>
+    <string name="status_connected">Đang dính keo</string>
+    <string name="status_allowed">Cho vào sới</string>
+    <string name="status_denied">Ăn cấm cổng</string>
+    <string name="hotspot_device_details">Thông số máy</string>
+    <string name="hotspot_status_header">Vé vào cổng</string>
 </resources>

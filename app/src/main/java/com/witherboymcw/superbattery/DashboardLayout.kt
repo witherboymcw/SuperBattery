@@ -15,6 +15,18 @@ class DashboardLayout @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
+    enum class SwipeDirection {
+        NONE,
+        LEFT_TO_SETTINGS,
+        RIGHT_TO_HOTSPOT
+    }
+
+    interface DualSwipeListener {
+        fun onSwipeStart(direction: SwipeDirection)
+        fun onSwipeProgress(direction: SwipeDirection, dx: Float, targetX: Float)
+        fun onSwipeEnd(direction: SwipeDirection, shouldOpen: Boolean)
+    }
+
     interface SwipeListener {
         fun onSwipeStart()
         fun onSwipeProgress(dx: Float, targetX: Float)
@@ -23,10 +35,12 @@ class DashboardLayout @JvmOverloads constructor(
 
     var canSwipe: (() -> Boolean)? = null
     var swipeListener: SwipeListener? = null
+    var dualSwipeListener: DualSwipeListener? = null
     var swipeSensitivity: Float = 1f
+
     private var startX = 0f
     private var startY = 0f
-    private var isSwipingLeft = false
+    private var currentDirection = SwipeDirection.NONE
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat() * 0.25f
     private val minFlingVelocity = ViewConfiguration.get(context).scaledMinimumFlingVelocity.toFloat()
     private var velocityTracker: VelocityTracker? = null
@@ -56,24 +70,31 @@ class DashboardLayout @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 startX = ev.rawX
                 startY = ev.rawY
-                isSwipingLeft = false
+                currentDirection = SwipeDirection.NONE
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = ev.rawX - startX
                 val dy = ev.rawY - startY
                 val effectiveDx = dx * swipeSensitivity
-                if (!isSwipingLeft && effectiveDx < -touchSlop && abs(dx) > abs(dy)) {
-                    isSwipingLeft = true
+                if (currentDirection == SwipeDirection.NONE && abs(dx) > touchSlop && abs(dx) > abs(dy)) {
+                    if (effectiveDx < 0) {
+                        currentDirection = SwipeDirection.LEFT_TO_SETTINGS
+                    } else {
+                        currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
+                    }
                     parent?.requestDisallowInterceptTouchEvent(true)
-                    swipeListener?.onSwipeStart()
+                    dualSwipeListener?.onSwipeStart(currentDirection)
+                    if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
+                        swipeListener?.onSwipeStart()
+                    }
                 }
             }
         }
         
-        val result = isSwipingLeft || super.onInterceptTouchEvent(ev)
+        val result = currentDirection != SwipeDirection.NONE || super.onInterceptTouchEvent(ev)
         
         if (ev.action == MotionEvent.ACTION_UP || ev.action == MotionEvent.ACTION_CANCEL) {
-            isSwipingLeft = false
+            currentDirection = SwipeDirection.NONE
             recycleVelocityTracker()
         }
         return result
@@ -95,43 +116,61 @@ class DashboardLayout @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 startX = ev.rawX
                 startY = ev.rawY
-                isSwipingLeft = false
+                currentDirection = SwipeDirection.NONE
                 handled = true
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = ev.rawX - startX
                 val dy = ev.rawY - startY
                 val effectiveDx = dx * swipeSensitivity
-                if (!isSwipingLeft && effectiveDx < -touchSlop && abs(dx) > abs(dy)) {
-                    isSwipingLeft = true
+
+                if (currentDirection == SwipeDirection.NONE && abs(dx) > touchSlop && abs(dx) > abs(dy)) {
+                    if (effectiveDx < 0) {
+                        currentDirection = SwipeDirection.LEFT_TO_SETTINGS
+                    } else {
+                        currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
+                    }
                     parent?.requestDisallowInterceptTouchEvent(true)
-                    swipeListener?.onSwipeStart()
+                    dualSwipeListener?.onSwipeStart(currentDirection)
+                    if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
+                        swipeListener?.onSwipeStart()
+                    }
                 }
-                if (isSwipingLeft) {
+
+                if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
                     val targetX = (screenWidth + effectiveDx).coerceIn(0f, screenWidth)
+                    dualSwipeListener?.onSwipeProgress(currentDirection, effectiveDx, targetX)
                     swipeListener?.onSwipeProgress(effectiveDx, targetX)
+                    handled = true
+                } else if (currentDirection == SwipeDirection.RIGHT_TO_HOTSPOT) {
+                    val targetX = (-screenWidth + effectiveDx).coerceIn(-screenWidth, 0f)
+                    dualSwipeListener?.onSwipeProgress(currentDirection, effectiveDx, targetX)
                     handled = true
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                if (isSwipingLeft) {
+                if (currentDirection != SwipeDirection.NONE) {
                     val effectiveDx = (ev.rawX - startX) * swipeSensitivity
-                    val currentX = (screenWidth + effectiveDx).coerceIn(0f, screenWidth)
                     val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                     val threshold = if (isLandscape) 0.18f else 0.40f
-                    
-                    var isFling = false
-                    if (ev.action == MotionEvent.ACTION_UP) {
-                        velocityTracker?.computeCurrentVelocity(1000)
-                        val xVelocity = velocityTracker?.xVelocity ?: 0f
-                        if (xVelocity < -(minFlingVelocity * 0.25f)) {
-                            isFling = true
-                        }
+
+                    velocityTracker?.computeCurrentVelocity(1000)
+                    val xVelocity = velocityTracker?.xVelocity ?: 0f
+
+                    if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
+                        val currentX = (screenWidth + effectiveDx).coerceIn(0f, screenWidth)
+                        val isFling = ev.action == MotionEvent.ACTION_UP && xVelocity < -(minFlingVelocity * 0.25f)
+                        val shouldOpen = isFling || currentX < screenWidth * (1f - threshold)
+                        dualSwipeListener?.onSwipeEnd(currentDirection, shouldOpen)
+                        swipeListener?.onSwipeEnd(shouldOpen)
+                    } else if (currentDirection == SwipeDirection.RIGHT_TO_HOTSPOT) {
+                        val currentX = (-screenWidth + effectiveDx).coerceIn(-screenWidth, 0f)
+                        val isFling = ev.action == MotionEvent.ACTION_UP && xVelocity > (minFlingVelocity * 0.25f)
+                        val shouldOpen = isFling || currentX > -screenWidth * (1f - threshold)
+                        dualSwipeListener?.onSwipeEnd(currentDirection, shouldOpen)
                     }
-                    
-                    val shouldOpen = isFling || currentX < screenWidth * (1f - threshold)
-                    swipeListener?.onSwipeEnd(shouldOpen)
-                    isSwipingLeft = false
+
+                    currentDirection = SwipeDirection.NONE
                     handled = true
                 } else if (ev.action == MotionEvent.ACTION_UP) {
                     performClick()

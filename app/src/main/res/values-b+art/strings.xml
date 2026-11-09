@@ -112,4 +112,11 @@
     <string name="btn_set_notch_position">Drag &amp; Lock Notch</string>
     <string name="notch_instruction_text">Drag the orb where the notch goes, then tap away to lock in.</string>
     <string name="permission_already_granted">Already unlocked bro.</string>
+
+    <string name="hotspot_title">Hotspot Bro Squad</string>
+    <string name="status_connected">Locked In</string>
+    <string name="status_allowed">Allowed Rizz</string>
+    <string name="status_denied">Banned / L</string>
+    <string name="hotspot_device_details">Device Stats</string>
+    <string name="hotspot_status_header">Access Pass</string>
 </resources>

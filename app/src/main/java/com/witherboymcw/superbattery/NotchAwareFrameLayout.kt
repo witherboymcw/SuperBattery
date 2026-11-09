@@ -149,7 +149,7 @@ class NotchAwareFrameLayout @JvmOverloads constructor
         viewGroup.clipChildren = false
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
-            if (child.id == R.id.settings_scroll_left && child is ScrollView) {
+            if ((child.id == R.id.settings_scroll_left || child.id == R.id.hotspot_scroll_left) && child is ScrollView) {
                 child.clipChildren = false
                 child.elevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10f, resources.displayMetrics)
                 val scrollContent = child.getChildAt(0) as? ViewGroup ?: continue
@@ -187,7 +187,7 @@ class NotchAwareFrameLayout @JvmOverloads constructor
                 val scrollContent = child.getChildAt(0) as? ViewGroup ?: continue
                 for (j in 0 until scrollContent.childCount) {
                     val card = scrollContent.getChildAt(j)
-                    if (card.id == R.id.tv_settings_title) continue
+                    if (card.id == R.id.tv_settings_title || card.id == R.id.tv_hotspot_title) continue
                     card.translationX = 0f
                     val lp = card.layoutParams as? ViewGroup.MarginLayoutParams
                     if (lp != null && lp.rightMargin != 0) {
