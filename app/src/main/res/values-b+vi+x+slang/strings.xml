@@ -101,4 +101,10 @@
     <string name="status_denied">Ăn cấm cổng</string>
     <string name="hotspot_device_details">Thông số máy</string>
     <string name="hotspot_status_header">Vé vào cổng</string>
+    <string name="btn_rename">✏️ Đổi tên gọi</string>
+    <string name="btn_remove_alias">🗑️ Xoá tên gọi</string>
+    <string name="dialog_rename_title">Đặt tên mới</string>
+    <string name="dialog_rename_message">Biệt danh mới cho %1$s:</string>
+    <string name="btn_save">Lưu</string>
+    <string name="btn_cancel">Thôi</string>
 </resources>

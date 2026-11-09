@@ -6,50 +6,21 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import java.util.Locale
 
 internal class HotspotViewController {
 
-    data class HotspotDevice(
-        val id: String,
-        val name: String,
-        val mac: String,
-        var status: String, // "Connected", "Allowed", or "Denied"
-        val ip: String,
-        val dataUsed: String,
-        val duration: String
-    )
-
     private var activityRef: MainActivity? = null
-    private var selectedDeviceId: String? = "dev_1"
-
-    val devices = listOf(
-        HotspotDevice("dev_1", "Galaxy S23 Ultra", "A4:C3:F0:11:22:33", "Connected", "192.168.43.101", "452.1 MB", "2h 15m"),
-        HotspotDevice("dev_2", "MacBook Pro M3", "70:85:C2:AB:CD:01", "Connected", "192.168.43.102", "1.2 GB", "4h 05m"),
-        HotspotDevice("dev_3", "iPhone 15 Pro", "BC:D1:D3:44:55:66", "Connected", "192.168.43.103", "89.4 MB", "45m"),
-        HotspotDevice("dev_4", "iPad Air", "E8:68:E7:77:88:99", "Allowed", "192.168.43.104", "310.0 MB", "Offline"),
-        HotspotDevice("dev_5", "Dell XPS 15", "34:E6:D7:AA:BB:CC", "Connected", "192.168.43.105", "850.7 MB", "1h 30m"),
-        HotspotDevice("dev_6", "Google Pixel 8", "18:C0:4D:DD:EE:FF", "Connected", "192.168.43.106", "120.3 MB", "3h 10m"),
-        HotspotDevice("dev_7", "Sony Bravia Smart TV", "00:1A:7D:12:34:56", "Allowed", "192.168.43.107", "2.4 GB", "Offline"),
-        HotspotDevice("dev_8", "Nintendo Switch", "98:B6:E9:88:77:66", "Denied", "—", "0 MB", "Blocked"),
-        HotspotDevice("dev_9", "PlayStation 5", "70:66:55:44:33:22", "Allowed", "192.168.43.109", "5.1 GB", "Offline"),
-        HotspotDevice("dev_10", "ThinkPad X1 Carbon", "00:21:CC:11:22:33", "Connected", "192.168.43.110", "640.2 MB", "5h 50m"),
-        HotspotDevice("dev_11", "Asus ROG Phone 7", "24:4B:03:AA:11:22", "Connected", "192.168.43.111", "95.0 MB", "1h 05m"),
-        HotspotDevice("dev_12", "Surface Laptop Studio", "58:82:A8:33:44:55", "Allowed", "192.168.43.112", "180.5 MB", "Offline"),
-        HotspotDevice("dev_13", "Kindle Paperwhite", "F0:D2:F1:66:77:88", "Allowed", "192.168.43.113", "12.1 MB", "Offline"),
-        HotspotDevice("dev_14", "Galaxy Watch 6", "8C:85:90:99:AA:BB", "Connected", "192.168.43.114", "8.4 MB", "6h 12m"),
-        HotspotDevice("dev_15", "Raspberry Pi 5", "D8:3A:DD:CC:BB:AA", "Connected", "192.168.43.115", "340.9 MB", "12h 40m"),
-        HotspotDevice("dev_16", "LG Smart Fridge", "2C:AA:8E:12:34:78", "Denied", "—", "0 MB", "Blocked"),
-        HotspotDevice("dev_17", "Sonos Era 300", "48:A6:B8:99:88:77", "Allowed", "192.168.43.117", "620.0 MB", "Offline"),
-        HotspotDevice("dev_18", "Tesla Model 3", "A0:6C:65:44:33:11", "Connected", "192.168.43.118", "1.8 GB", "20m"),
-        HotspotDevice("dev_19", "Apple TV 4K", "38:F9:D3:55:66:77", "Allowed", "192.168.43.119", "3.5 GB", "Offline"),
-        HotspotDevice("dev_20", "Meta Quest 3", "2C:26:17:88:99:00", "Denied", "—", "0 MB", "Blocked")
-    )
+    private var selectedDeviceMac: String? = null
 
     private fun getTargetLayoutRes(): Int = R.layout.layout_hotspot
 
@@ -106,15 +77,24 @@ internal class HotspotViewController {
                 }
             }
 
+            // Load persisted clients from HotspotManager and sort:
+            // 1. Devices with isCurrentlyOnline == true go first
+            // 2. Then sorted by lastConnectedTimeMs descending (most recently connected at top)
+            val rawClients = HotspotManager.loadPersistedClients(activity)
+            val sortedClients = rawClients.sortedWith(
+                compareByDescending<HotspotClient> { it.isCurrentlyOnline }
+                    .thenByDescending { it.lastConnectedTimeMs }
+            )
+
             val portraitCardsContainer = findViewById<ViewGroup>(R.id.hotspot_cards_container)
             val landscapeLeftContainer = findViewById<ViewGroup>(R.id.hotspot_cards_left_container)
 
             if (portraitCardsContainer != null) {
-                // Portrait mode: Single column layout with 20 expandable cards
+                // Portrait mode: Single column layout with expandable cards
                 portraitCardsContainer.removeAllViews()
                 val inflater = LayoutInflater.from(activity)
 
-                devices.forEach { device ->
+                sortedClients.forEach { client ->
                     val cardView = inflater.inflate(R.layout.card_hotspot_device, portraitCardsContainer, false)
                     applyCardTheme(cardView)
                     val headerView = cardView.findViewById<View>(R.id.header_hotspot_device)
@@ -131,29 +111,53 @@ internal class HotspotViewController {
                     val tvIp = cardView.findViewById<TextView>(R.id.tv_device_ip)
                     val tvData = cardView.findViewById<TextView>(R.id.tv_device_data)
                     val tvTime = cardView.findViewById<TextView>(R.id.tv_device_time)
+                    val tvOriginalName = cardView.findViewById<TextView>(R.id.tv_device_original_name)
+                    val btnRename = cardView.findViewById<View>(R.id.btn_rename_alias)
+                    val btnRemoveAlias = cardView.findViewById<View>(R.id.btn_remove_alias)
 
-                    tvName.text = device.name
-                    tvMac.text = device.mac
-                    tvStatus.text = getLocalizedStatus(device.status)
+                    tvName.text = client.displayName
+                    tvMac.text = client.mac
+                    tvStatus.text = getLocalizedStatus(activity, client)
 
-                    tvIp.text = getString(R.string.hotspot_ip_address, device.ip)
-                    tvData.text = getString(R.string.hotspot_data_used, device.dataUsed)
-                    tvTime.text = getString(R.string.hotspot_connected_time, device.duration)
+                    if (!client.customAlias.isNullOrBlank()) {
+                        tvOriginalName.visibility = View.VISIBLE
+                        tvOriginalName.text = getString(R.string.hotspot_original_name, client.deviceName)
+                        btnRemoveAlias.visibility = View.VISIBLE
+                    } else {
+                        tvOriginalName.visibility = View.GONE
+                        btnRemoveAlias.visibility = View.GONE
+                    }
+
+                    tvIp.text = getString(R.string.hotspot_ip_address, client.ipAddress)
+                    tvData.text = getString(R.string.hotspot_data_used, formatByteSize(client.totalDataBytes))
+                    tvTime.text = getString(R.string.hotspot_connected_time, formatConnectedTime(client.lastConnectedTimeMs, client.isCurrentlyOnline))
 
                     // 2 Radio Buttons: Allowed and Denied
-                    if (device.status == "Denied") {
+                    if (client.isDenied) {
                         radioDenied.isChecked = true
                     } else {
                         radioAllowed.isChecked = true
                     }
 
                     radioGroup.setOnCheckedChangeListener { _, checkedId ->
-                        if (checkedId == R.id.radio_status_denied) {
-                            device.status = "Denied"
-                        } else {
-                            device.status = "Allowed"
+                        val newDenied = checkedId == R.id.radio_status_denied
+                        if (client.isDenied != newDenied) {
+                            client.isDenied = newDenied
+                            HotspotManager.updateClientStatus(activity, client.mac, newDenied)
+                            tvStatus.text = getLocalizedStatus(activity, client)
                         }
-                        tvStatus.text = getLocalizedStatus(device.status)
+                    }
+
+                    btnRename.setOnClickListener {
+                        showRenameDialog(activity, client) {
+                            bind(activity)
+                        }
+                    }
+
+                    btnRemoveAlias.setOnClickListener {
+                        client.customAlias = null
+                        HotspotManager.updateClientAlias(activity, client.mac, null)
+                        bind(activity)
                     }
 
                     headerView.setOnClickListener {
@@ -178,39 +182,63 @@ internal class HotspotViewController {
                 val detailIp = findViewById<TextView>(R.id.hotspot_detail_ip)
                 val detailData = findViewById<TextView>(R.id.hotspot_detail_data)
                 val detailTime = findViewById<TextView>(R.id.hotspot_detail_time)
+                val detailOriginalName = findViewById<TextView>(R.id.hotspot_detail_original_name)
+                val detailBtnRename = findViewById<View>(R.id.hotspot_detail_btn_rename)
+                val detailBtnRemoveAlias = findViewById<View>(R.id.hotspot_detail_btn_remove_alias)
 
                 val cardHeaderViews = mutableListOf<Triple<View, ImageView, TextView>>()
 
-                fun selectDevice(targetDevice: HotspotDevice, selectedArrow: ImageView) {
-                    selectedDeviceId = targetDevice.id
+                fun selectDevice(targetClient: HotspotClient, selectedArrow: ImageView) {
+                    selectedDeviceMac = targetClient.mac
                     cardHeaderViews.forEach { (_, arrow, _) -> arrow.rotation = 0f }
                     selectedArrow.rotation = 180f
 
-                    detailCardTitle?.text = targetDevice.name
-                    detailCardMac?.text = targetDevice.mac
-                    detailIp?.text = getString(R.string.hotspot_ip_address, targetDevice.ip)
-                    detailData?.text = getString(R.string.hotspot_data_used, targetDevice.dataUsed)
-                    detailTime?.text = getString(R.string.hotspot_connected_time, targetDevice.duration)
+                    detailCardTitle?.text = targetClient.displayName
+                    detailCardMac?.text = targetClient.mac
+                    detailIp?.text = getString(R.string.hotspot_ip_address, targetClient.ipAddress)
+                    detailData?.text = getString(R.string.hotspot_data_used, formatByteSize(targetClient.totalDataBytes))
+                    detailTime?.text = getString(R.string.hotspot_connected_time, formatConnectedTime(targetClient.lastConnectedTimeMs, targetClient.isCurrentlyOnline))
+
+                    if (!targetClient.customAlias.isNullOrBlank()) {
+                        detailOriginalName?.visibility = View.VISIBLE
+                        detailOriginalName?.text = getString(R.string.hotspot_original_name, targetClient.deviceName)
+                        detailBtnRemoveAlias?.visibility = View.VISIBLE
+                    } else {
+                        detailOriginalName?.visibility = View.GONE
+                        detailBtnRemoveAlias?.visibility = View.GONE
+                    }
 
                     detailRadioGroup?.setOnCheckedChangeListener(null)
-                    if (targetDevice.status == "Denied") {
+                    if (targetClient.isDenied) {
                         detailRadioDenied?.isChecked = true
                     } else {
                         detailRadioAllowed?.isChecked = true
                     }
 
                     detailRadioGroup?.setOnCheckedChangeListener { _, checkedId ->
-                        if (checkedId == R.id.hotspot_detail_radio_denied) {
-                            targetDevice.status = "Denied"
-                        } else {
-                            targetDevice.status = "Allowed"
+                        val newDenied = checkedId == R.id.hotspot_detail_radio_denied
+                        if (targetClient.isDenied != newDenied) {
+                            targetClient.isDenied = newDenied
+                            HotspotManager.updateClientStatus(activity, targetClient.mac, newDenied)
+                            val matchingTuple = cardHeaderViews.firstOrNull { it.first.tag == targetClient.mac }
+                            matchingTuple?.third?.text = getLocalizedStatus(activity, targetClient)
                         }
-                        val matchingTuple = cardHeaderViews.firstOrNull { it.first.tag == targetDevice.id }
-                        matchingTuple?.third?.text = getLocalizedStatus(targetDevice.status)
+                    }
+
+                    detailBtnRename?.setOnClickListener {
+                        showRenameDialog(activity, targetClient) {
+                            bind(activity)
+                        }
+                    }
+
+                    detailBtnRemoveAlias?.setOnClickListener {
+                        targetClient.customAlias = null
+                        HotspotManager.updateClientAlias(activity, targetClient.mac, null)
+                        bind(activity)
                     }
                 }
 
-                devices.forEach { device ->
+                sortedClients.forEach { client ->
                     val cardView = inflater.inflate(R.layout.card_hotspot_device, landscapeLeftContainer, false)
                     applyCardTheme(cardView)
                     val headerView = cardView.findViewById<View>(R.id.header_hotspot_device)
@@ -222,24 +250,30 @@ internal class HotspotViewController {
 
                     dropdownView.visibility = View.GONE
 
-                    tvName.text = device.name
-                    tvMac.text = device.mac
-                    tvStatus.text = getLocalizedStatus(device.status)
+                    tvName.text = client.displayName
+                    tvMac.text = if (!client.customAlias.isNullOrBlank()) {
+                        "${client.mac} (${client.deviceName})"
+                    } else {
+                        client.mac
+                    }
+                    tvStatus.text = getLocalizedStatus(activity, client)
 
-                    headerView.tag = device.id
+                    headerView.tag = client.mac
                     cardHeaderViews.add(Triple(headerView, ivArrow, tvStatus))
 
                     headerView.setOnClickListener {
-                        selectDevice(device, ivArrow)
+                        selectDevice(client, ivArrow)
                     }
 
                     landscapeLeftContainer.addView(cardView)
                 }
 
                 // Initial selection
-                val initialDev = devices.firstOrNull { it.id == selectedDeviceId } ?: devices.first()
-                val initialTuple = cardHeaderViews.firstOrNull { it.first.tag == initialDev.id } ?: cardHeaderViews.first()
-                selectDevice(initialDev, initialTuple.second)
+                if (sortedClients.isNotEmpty()) {
+                    val initialClient = sortedClients.firstOrNull { it.mac == selectedDeviceMac } ?: sortedClients.first()
+                    val initialTuple = cardHeaderViews.firstOrNull { it.first.tag == initialClient.mac } ?: cardHeaderViews.first()
+                    selectDevice(initialClient, initialTuple.second)
+                }
             }
 
             val savedScrollY = savedInstanceState?.getInt(KEY_HOTSPOT_SCROLL_Y, -1) ?: -1
@@ -248,14 +282,43 @@ internal class HotspotViewController {
                     ?: findViewById<ScrollView>(R.id.hotspot_scroll_left)
                 scrollView?.post { scrollView.scrollTo(0, savedScrollY) }
             }
-            val savedRightScrollY = savedInstanceState?.getInt(KEY_HOTSPOT_SCROLL_RIGHT_Y, -1) ?: -1
-            if (savedRightScrollY >= 0) {
-                val rightScrollView = findViewById<ScrollView>(R.id.hotspot_scroll_right)
-                rightScrollView?.post { rightScrollView.scrollTo(0, savedRightScrollY) }
-            }
 
             NotchHeaderHelper.updateHotspotHeaderLayout(activity)
         }
+    }
+
+    private fun showRenameDialog(activity: MainActivity, client: HotspotClient, onUpdated: () -> Unit) {
+        val builder = AlertDialog.Builder(activity)
+        builder.setTitle(R.string.dialog_rename_title)
+        builder.setMessage(activity.getString(R.string.dialog_rename_message, client.deviceName))
+
+        val input = EditText(activity).apply {
+            setText(client.customAlias ?: client.deviceName)
+            setSingleLine(true)
+            selectAll()
+        }
+
+        val container = FrameLayout(activity).apply {
+            val paddingPx = (16 * activity.resources.displayMetrics.density).toInt()
+            setPadding(paddingPx, paddingPx / 2, paddingPx, paddingPx / 2)
+            addView(input)
+        }
+        builder.setView(container)
+
+        builder.setPositiveButton(R.string.btn_save) { dialog, _ ->
+            val newAlias = input.text.toString().trim()
+            val targetAlias = if (newAlias.isNotBlank() && newAlias != client.deviceName) newAlias else null
+            client.customAlias = targetAlias
+            HotspotManager.updateClientAlias(activity, client.mac, targetAlias)
+            onUpdated()
+            dialog.dismiss()
+        }
+
+        builder.setNegativeButton(R.string.btn_cancel) { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        builder.show()
     }
 
     private fun applyCardTheme(cardView: View) {
@@ -289,12 +352,35 @@ internal class HotspotViewController {
         }
     }
 
-    private fun getLocalizedStatus(status: String): String {
-        val act = activityRef ?: return status
-        return when (status) {
-            "Denied" -> act.getString(R.string.status_denied)
-            "Allowed" -> act.getString(R.string.status_allowed)
-            else -> act.getString(R.string.status_connected)
+    private fun getLocalizedStatus(context: Context, client: HotspotClient): String {
+        return when {
+            client.isDenied -> context.getString(R.string.status_denied)
+            client.isCurrentlyOnline -> context.getString(R.string.status_connected)
+            else -> context.getString(R.string.status_allowed)
+        }
+    }
+
+    private fun formatByteSize(bytes: Long): String {
+        if (bytes <= 0L) return "0 MB"
+        val kb = bytes / 1024f
+        val mb = kb / 1024f
+        val gb = mb / 1024f
+        return when {
+            gb >= 1.0f -> String.format(Locale.US, "%.1f GB", gb)
+            mb >= 1.0f -> String.format(Locale.US, "%.1f MB", mb)
+            else -> String.format(Locale.US, "%.1f KB", kb)
+        }
+    }
+
+    private fun formatConnectedTime(timeMs: Long, isOnline: Boolean): String {
+        if (timeMs <= 0L) return "Offline"
+        if (isOnline) {
+            val diffMinutes = ((System.currentTimeMillis() - timeMs) / 60_000L).coerceAtLeast(1)
+            val hours = diffMinutes / 60
+            val mins = diffMinutes % 60
+            return if (hours > 0) "${hours}h ${mins}m" else "${mins}m"
+        } else {
+            return "Offline"
         }
     }
 

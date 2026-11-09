@@ -135,4 +135,11 @@
     <string name="hotspot_data_used" translatable="false">Data Used: %1$s</string>
     <string name="hotspot_connected_time" translatable="false">Connection Time: %1$s</string>
     <string name="hotspot_status_header">Access Status</string>
+    <string name="btn_rename">✏️ Rename</string>
+    <string name="btn_remove_alias">🗑️ Remove Alias</string>
+    <string name="dialog_rename_title">Rename Device</string>
+    <string name="dialog_rename_message">Enter custom alias for %1$s:</string>
+    <string name="hotspot_original_name" translatable="false">Original: %1$s</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
 </resources>

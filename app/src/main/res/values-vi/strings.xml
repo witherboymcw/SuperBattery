@@ -114,4 +114,10 @@
     <string name="status_denied">Bị chặn</string>
     <string name="hotspot_device_details">Chi tiết thiết bị</string>
     <string name="hotspot_status_header">Trạng thái truy cập</string>
+    <string name="btn_rename">✏️ Đổi tên</string>
+    <string name="btn_remove_alias">🗑️ Xoá biệt danh</string>
+    <string name="dialog_rename_title">Đổi tên thiết bị</string>
+    <string name="dialog_rename_message">Nhập biệt danh cho %1$s:</string>
+    <string name="btn_save">Lưu</string>
+    <string name="btn_cancel">Hủy</string>
 </resources>
