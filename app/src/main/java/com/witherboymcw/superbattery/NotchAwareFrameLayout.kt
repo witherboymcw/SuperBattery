@@ -13,9 +13,8 @@ import android.view.ViewTreeObserver
 import android.widget.ScrollView
 import kotlin.math.abs
 
-class NotchAwareFrameLayout @JvmOverloads constructor(
-    context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
-) : SwipeBackFrameLayout(context, attrs, defStyleAttr) {
+class NotchAwareFrameLayout @JvmOverloads constructor
+    (context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : SwipeBackFrameLayout(context, attrs, defStyleAttr) {
 
     private val radialMaskView = RadialMaskView(context)
     private val prefs = context.getSharedPreferences(SettingsViewController.SETTINGS_PREFS, Context.MODE_PRIVATE)
