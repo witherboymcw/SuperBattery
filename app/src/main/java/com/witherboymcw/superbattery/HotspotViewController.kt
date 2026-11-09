@@ -3,17 +3,16 @@ package com.witherboymcw.superbattery
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.RadioButton
-import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import java.util.Locale
 
@@ -104,29 +103,21 @@ internal class HotspotViewController {
                     val tvStatus = cardView.findViewById<TextView>(R.id.tv_device_status)
                     val ivArrow = cardView.findViewById<ImageView>(R.id.iv_device_arrow)
 
-                    val radioGroup = cardView.findViewById<RadioGroup>(R.id.device_status_radio_group)
                     val radioAllowed = cardView.findViewById<RadioButton>(R.id.radio_status_allowed)
                     val radioDenied = cardView.findViewById<RadioButton>(R.id.radio_status_denied)
 
                     val tvIp = cardView.findViewById<TextView>(R.id.tv_device_ip)
                     val tvData = cardView.findViewById<TextView>(R.id.tv_device_data)
                     val tvTime = cardView.findViewById<TextView>(R.id.tv_device_time)
-                    val tvOriginalName = cardView.findViewById<TextView>(R.id.tv_device_original_name)
-                    val btnRename = cardView.findViewById<View>(R.id.btn_rename_alias)
+
+                    val etAlias = cardView.findViewById<EditText>(R.id.et_device_alias)
                     val btnRemoveAlias = cardView.findViewById<View>(R.id.btn_remove_alias)
 
-                    tvName.text = client.displayName
+                    // In Portrait mode: collapsed 1 shows Alias (default = original name); expanded 1 shows Original Name
+                    val isInitiallyExpanded = dropdownView.visibility == View.VISIBLE
+                    tvName.text = if (isInitiallyExpanded) client.deviceName else client.displayName
                     tvMac.text = client.mac
                     tvStatus.text = getLocalizedStatus(activity, client)
-
-                    if (!client.customAlias.isNullOrBlank()) {
-                        tvOriginalName.visibility = View.VISIBLE
-                        tvOriginalName.text = getString(R.string.hotspot_original_name, client.deviceName)
-                        btnRemoveAlias.visibility = View.VISIBLE
-                    } else {
-                        tvOriginalName.visibility = View.GONE
-                        btnRemoveAlias.visibility = View.GONE
-                    }
 
                     tvIp.text = getString(R.string.hotspot_ip_address, client.ipAddress)
                     tvData.text = getString(R.string.hotspot_data_used, formatByteSize(client.totalDataBytes))
@@ -135,35 +126,78 @@ internal class HotspotViewController {
                     // 2 Radio Buttons: Allowed and Denied
                     if (client.isDenied) {
                         radioDenied.isChecked = true
+                        radioAllowed.isChecked = false
                     } else {
                         radioAllowed.isChecked = true
+                        radioDenied.isChecked = false
                     }
 
-                    radioGroup.setOnCheckedChangeListener { _, checkedId ->
-                        val newDenied = checkedId == R.id.radio_status_denied
-                        if (client.isDenied != newDenied) {
-                            client.isDenied = newDenied
-                            HotspotManager.updateClientStatus(activity, client.mac, newDenied)
+                    radioAllowed.setOnClickListener {
+                        if (client.isDenied) {
+                            client.isDenied = false
+                            radioAllowed.isChecked = true
+                            radioDenied.isChecked = false
+                            HotspotManager.updateClientStatus(activity, client.mac, false)
                             tvStatus.text = getLocalizedStatus(activity, client)
                         }
                     }
 
-                    btnRename.setOnClickListener {
-                        showRenameDialog(activity, client) {
-                            bind(activity)
+                    radioDenied.setOnClickListener {
+                        if (!client.isDenied) {
+                            client.isDenied = true
+                            radioDenied.isChecked = true
+                            radioAllowed.isChecked = false
+                            HotspotManager.updateClientStatus(activity, client.mac, true)
+                            tvStatus.text = getLocalizedStatus(activity, client)
                         }
                     }
+
+                    // Default alias is original name. Show remove alias button if customized.
+                    etAlias.setText(client.customAlias ?: client.deviceName)
+                    btnRemoveAlias.visibility = if (client.customAlias != null) View.VISIBLE else View.GONE
+
+                    var isUpdatingText = false
+                    etAlias.addTextChangedListener(object : TextWatcher {
+                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                            if (isUpdatingText) return
+                            val inputStr = s?.toString()?.trim() ?: ""
+                            val newAlias = if (inputStr.isNotBlank() && inputStr != client.deviceName) inputStr else null
+                            if (client.customAlias != newAlias) {
+                                client.customAlias = newAlias
+                                HotspotManager.updateClientAlias(activity, client.mac, newAlias)
+                                btnRemoveAlias.visibility = if (newAlias != null) View.VISIBLE else View.GONE
+                                if (dropdownView.visibility == View.GONE) {
+                                    tvName.text = client.displayName
+                                }
+                            }
+                        }
+                        override fun afterTextChanged(s: Editable?) {}
+                    })
 
                     btnRemoveAlias.setOnClickListener {
                         client.customAlias = null
                         HotspotManager.updateClientAlias(activity, client.mac, null)
-                        bind(activity)
+                        isUpdatingText = true
+                        etAlias.setText(client.deviceName)
+                        isUpdatingText = false
+                        btnRemoveAlias.visibility = View.GONE
+                        if (dropdownView.visibility == View.GONE) {
+                            tvName.text = client.displayName
+                        }
                     }
 
                     headerView.setOnClickListener {
                         val isExpanded = dropdownView.visibility == View.VISIBLE
-                        dropdownView.visibility = if (isExpanded) View.GONE else View.VISIBLE
-                        ivArrow.animate().rotation(if (isExpanded) 0f else 180f).setDuration(200L).start()
+                        if (isExpanded) {
+                            dropdownView.visibility = View.GONE
+                            ivArrow.animate().rotation(0f).setDuration(200L).start()
+                            tvName.text = client.displayName // Collapsed: show Alias / displayName
+                        } else {
+                            dropdownView.visibility = View.VISIBLE
+                            ivArrow.animate().rotation(180f).setDuration(200L).start()
+                            tvName.text = client.deviceName // Expanded: original name replaces alias in 1
+                        }
                     }
 
                     portraitCardsContainer.addView(cardView)
@@ -175,66 +209,95 @@ internal class HotspotViewController {
 
                 val detailCardTitle = findViewById<TextView>(R.id.hotspot_detail_title)
                 val detailCardMac = findViewById<TextView>(R.id.hotspot_detail_mac)
-                val detailRadioGroup = findViewById<RadioGroup>(R.id.hotspot_detail_status_radio_group)
                 val detailRadioAllowed = findViewById<RadioButton>(R.id.hotspot_detail_radio_allowed)
                 val detailRadioDenied = findViewById<RadioButton>(R.id.hotspot_detail_radio_denied)
 
                 val detailIp = findViewById<TextView>(R.id.hotspot_detail_ip)
                 val detailData = findViewById<TextView>(R.id.hotspot_detail_data)
                 val detailTime = findViewById<TextView>(R.id.hotspot_detail_time)
-                val detailOriginalName = findViewById<TextView>(R.id.hotspot_detail_original_name)
-                val detailBtnRename = findViewById<View>(R.id.hotspot_detail_btn_rename)
+
+                val detailEtAlias = findViewById<EditText>(R.id.hotspot_detail_et_alias)
                 val detailBtnRemoveAlias = findViewById<View>(R.id.hotspot_detail_btn_remove_alias)
 
-                val cardHeaderViews = mutableListOf<Triple<View, ImageView, TextView>>()
+                // Store card tuple: headerView, tvName, tvStatus
+                val cardHeaderViews = mutableListOf<Triple<View, TextView, TextView>>()
+                var activeTextWatcher: TextWatcher? = null
 
                 fun selectDevice(targetClient: HotspotClient, selectedArrow: ImageView) {
                     selectedDeviceMac = targetClient.mac
-                    cardHeaderViews.forEach { (_, arrow, _) -> arrow.rotation = 0f }
-                    selectedArrow.rotation = 180f
 
-                    detailCardTitle?.text = targetClient.displayName
+                    // Item 1 of the detail card shows Original Device Name
+                    detailCardTitle?.text = targetClient.deviceName
                     detailCardMac?.text = targetClient.mac
                     detailIp?.text = getString(R.string.hotspot_ip_address, targetClient.ipAddress)
                     detailData?.text = getString(R.string.hotspot_data_used, formatByteSize(targetClient.totalDataBytes))
                     detailTime?.text = getString(R.string.hotspot_connected_time, formatConnectedTime(targetClient.lastConnectedTimeMs, targetClient.isCurrentlyOnline))
 
-                    if (!targetClient.customAlias.isNullOrBlank()) {
-                        detailOriginalName?.visibility = View.VISIBLE
-                        detailOriginalName?.text = getString(R.string.hotspot_original_name, targetClient.deviceName)
-                        detailBtnRemoveAlias?.visibility = View.VISIBLE
-                    } else {
-                        detailOriginalName?.visibility = View.GONE
-                        detailBtnRemoveAlias?.visibility = View.GONE
-                    }
-
-                    detailRadioGroup?.setOnCheckedChangeListener(null)
                     if (targetClient.isDenied) {
                         detailRadioDenied?.isChecked = true
+                        detailRadioAllowed?.isChecked = false
                     } else {
                         detailRadioAllowed?.isChecked = true
+                        detailRadioDenied?.isChecked = false
                     }
 
-                    detailRadioGroup?.setOnCheckedChangeListener { _, checkedId ->
-                        val newDenied = checkedId == R.id.hotspot_detail_radio_denied
-                        if (targetClient.isDenied != newDenied) {
-                            targetClient.isDenied = newDenied
-                            HotspotManager.updateClientStatus(activity, targetClient.mac, newDenied)
+                    detailRadioAllowed?.setOnClickListener {
+                        if (targetClient.isDenied) {
+                            targetClient.isDenied = false
+                            detailRadioAllowed?.isChecked = true
+                            detailRadioDenied?.isChecked = false
+                            HotspotManager.updateClientStatus(activity, targetClient.mac, false)
                             val matchingTuple = cardHeaderViews.firstOrNull { it.first.tag == targetClient.mac }
                             matchingTuple?.third?.text = getLocalizedStatus(activity, targetClient)
                         }
                     }
 
-                    detailBtnRename?.setOnClickListener {
-                        showRenameDialog(activity, targetClient) {
-                            bind(activity)
+                    detailRadioDenied?.setOnClickListener {
+                        if (!targetClient.isDenied) {
+                            targetClient.isDenied = true
+                            detailRadioDenied?.isChecked = true
+                            detailRadioAllowed?.isChecked = false
+                            HotspotManager.updateClientStatus(activity, targetClient.mac, true)
+                            val matchingTuple = cardHeaderViews.firstOrNull { it.first.tag == targetClient.mac }
+                            matchingTuple?.third?.text = getLocalizedStatus(activity, targetClient)
                         }
                     }
+
+                    // Alias Textbox and Remove Alias button binding
+                    activeTextWatcher?.let { detailEtAlias?.removeTextChangedListener(it) }
+                    detailEtAlias?.setText(targetClient.customAlias ?: targetClient.deviceName)
+                    detailBtnRemoveAlias?.visibility = if (targetClient.customAlias != null) View.VISIBLE else View.GONE
+
+                    var isUpdatingDetailText = false
+                    val newWatcher = object : TextWatcher {
+                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                            if (isUpdatingDetailText) return
+                            val inputStr = s?.toString()?.trim() ?: ""
+                            val newAlias = if (inputStr.isNotBlank() && inputStr != targetClient.deviceName) inputStr else null
+                            if (targetClient.customAlias != newAlias) {
+                                targetClient.customAlias = newAlias
+                                HotspotManager.updateClientAlias(activity, targetClient.mac, newAlias)
+                                detailBtnRemoveAlias?.visibility = if (newAlias != null) View.VISIBLE else View.GONE
+                                // Item 1 in left client cards updates immediately on every character typed!
+                                val matchingTuple = cardHeaderViews.firstOrNull { it.first.tag == targetClient.mac }
+                                matchingTuple?.second?.text = targetClient.displayName
+                            }
+                        }
+                        override fun afterTextChanged(s: Editable?) {}
+                    }
+                    activeTextWatcher = newWatcher
+                    detailEtAlias?.addTextChangedListener(newWatcher)
 
                     detailBtnRemoveAlias?.setOnClickListener {
                         targetClient.customAlias = null
                         HotspotManager.updateClientAlias(activity, targetClient.mac, null)
-                        bind(activity)
+                        isUpdatingDetailText = true
+                        detailEtAlias?.setText(targetClient.deviceName)
+                        isUpdatingDetailText = false
+                        detailBtnRemoveAlias?.visibility = View.GONE
+                        val matchingTuple = cardHeaderViews.firstOrNull { it.first.tag == targetClient.mac }
+                        matchingTuple?.second?.text = targetClient.displayName
                     }
                 }
 
@@ -250,16 +313,13 @@ internal class HotspotViewController {
 
                     dropdownView.visibility = View.GONE
 
+                    // Item 1 in landscape left client cards NEVER changes when selecting
                     tvName.text = client.displayName
-                    tvMac.text = if (!client.customAlias.isNullOrBlank()) {
-                        "${client.mac} (${client.deviceName})"
-                    } else {
-                        client.mac
-                    }
+                    tvMac.text = client.mac
                     tvStatus.text = getLocalizedStatus(activity, client)
 
                     headerView.tag = client.mac
-                    cardHeaderViews.add(Triple(headerView, ivArrow, tvStatus))
+                    cardHeaderViews.add(Triple(headerView, tvName, tvStatus))
 
                     headerView.setOnClickListener {
                         selectDevice(client, ivArrow)
@@ -271,8 +331,9 @@ internal class HotspotViewController {
                 // Initial selection
                 if (sortedClients.isNotEmpty()) {
                     val initialClient = sortedClients.firstOrNull { it.mac == selectedDeviceMac } ?: sortedClients.first()
-                    val initialTuple = cardHeaderViews.firstOrNull { it.first.tag == initialClient.mac } ?: cardHeaderViews.first()
-                    selectDevice(initialClient, initialTuple.second)
+                    val initialView = landscapeLeftContainer.findViewWithTag<View>(initialClient.mac)
+                    val initialArrow = initialView?.findViewById<ImageView>(R.id.iv_device_arrow) ?: ImageView(activity)
+                    selectDevice(initialClient, initialArrow)
                 }
             }
 
@@ -285,40 +346,6 @@ internal class HotspotViewController {
 
             NotchHeaderHelper.updateHotspotHeaderLayout(activity)
         }
-    }
-
-    private fun showRenameDialog(activity: MainActivity, client: HotspotClient, onUpdated: () -> Unit) {
-        val builder = AlertDialog.Builder(activity)
-        builder.setTitle(R.string.dialog_rename_title)
-        builder.setMessage(activity.getString(R.string.dialog_rename_message, client.deviceName))
-
-        val input = EditText(activity).apply {
-            setText(client.customAlias ?: client.deviceName)
-            setSingleLine(true)
-            selectAll()
-        }
-
-        val container = FrameLayout(activity).apply {
-            val paddingPx = (16 * activity.resources.displayMetrics.density).toInt()
-            setPadding(paddingPx, paddingPx / 2, paddingPx, paddingPx / 2)
-            addView(input)
-        }
-        builder.setView(container)
-
-        builder.setPositiveButton(R.string.btn_save) { dialog, _ ->
-            val newAlias = input.text.toString().trim()
-            val targetAlias = if (newAlias.isNotBlank() && newAlias != client.deviceName) newAlias else null
-            client.customAlias = targetAlias
-            HotspotManager.updateClientAlias(activity, client.mac, targetAlias)
-            onUpdated()
-            dialog.dismiss()
-        }
-
-        builder.setNegativeButton(R.string.btn_cancel) { dialog, _ ->
-            dialog.dismiss()
-        }
-
-        builder.show()
     }
 
     private fun applyCardTheme(cardView: View) {

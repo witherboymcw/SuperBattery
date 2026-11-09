@@ -119,6 +119,8 @@
     <string name="status_denied">Banned / L</string>
     <string name="hotspot_device_details">Device Stats</string>
     <string name="hotspot_status_header">Access Pass</string>
+    <string name="hotspot_alias_header">Bro Nickname</string>
+    <string name="hotspot_alias_hint">Type new rizz name…</string>
     <string name="btn_rename">✏️ New Rizz Name</string>
     <string name="btn_remove_alias">🗑️ Reset Name</string>
     <string name="dialog_rename_title">Rename Bro</string>

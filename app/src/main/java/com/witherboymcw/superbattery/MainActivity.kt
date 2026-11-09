@@ -12,6 +12,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Rect
 import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.Network
@@ -32,6 +33,8 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.SeekBar
@@ -434,11 +437,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.action == MotionEvent.ACTION_DOWN) {
+            val currentFocusedView = currentFocus
+            if (currentFocusedView is EditText) {
+                val outRect = Rect()
+                currentFocusedView.getGlobalVisibleRect(outRect)
+                if (!outRect.contains(ev.rawX.toInt(), ev.rawY.toInt())) {
+                    currentFocusedView.clearFocus()
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                    imm?.hideSoftInputFromWindow(currentFocusedView.windowToken, 0)
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         val container = findViewById<View>(R.id.settings_container)
         if (container != null && container.visibility == View.VISIBLE) {
             outState.putBoolean(KEY_SETTINGS_OPEN, true)
+        }
+        val hotspotContainer = findViewById<View>(R.id.hotspot_container)
+        if (isHotspotOpen || (hotspotContainer != null && hotspotContainer.visibility == View.VISIBLE)) {
+            outState.putBoolean(KEY_HOTSPOT_OPEN, true)
         }
         val dropdownLanguage = findViewById<View>(R.id.dropdown_language)
         if (dropdownLanguage?.visibility == View.VISIBLE) {
@@ -519,13 +542,24 @@ class MainActivity : AppCompatActivity() {
         updateSimSignalStatus()
         NotchHeaderHelper.updateHomeHeaderLayout(this)
         NotchHeaderHelper.updateSettingsHeaderLayout(this)
+        NotchHeaderHelper.updateHotspotHeaderLayout(this)
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         NotchHeaderHelper.updateHomeHeaderLayout(this)
         NotchHeaderHelper.updateSettingsHeaderLayout(this)
+        NotchHeaderHelper.updateHotspotHeaderLayout(this)
         applyThickChinPadding()
+
+        val hotspotContainer = findViewById<View>(R.id.hotspot_container)
+        if (isHotspotOpen || (hotspotContainer != null && hotspotContainer.visibility == View.VISIBLE)) {
+            hotspotContainer?.visibility = View.VISIBLE
+            hotspotContainer?.translationX = 0f
+            isHotspotOpen = true
+            hotspotBackCallback.isEnabled = true
+        }
+
         val savedTheme = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
             .getString(APP_THEME_KEY, "system") ?: "system"
         val assumeOled = getSharedPreferences(SETTINGS_PREFS, MODE_PRIVATE)
@@ -542,6 +576,7 @@ class MainActivity : AppCompatActivity() {
         }
         applyGraphBackgrounds(effectiveThemeForGraph)
         applySettingsCardTheme()
+        applyHotspotCardTheme()
     }
 
     override fun onUserLeaveHint() {

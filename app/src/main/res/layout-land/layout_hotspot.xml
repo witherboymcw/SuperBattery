@@ -8,6 +8,7 @@
     android:clickable="true"
     android:clipChildren="false"
     android:focusable="true"
+    android:focusableInTouchMode="true"
     android:visibility="gone">
 
     <LinearLayout
@@ -95,6 +96,8 @@
                     android:id="@+id/hotspot_detail_card"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
                     app:cardBackgroundColor="?attr/colorSurface"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="1dp"
@@ -107,6 +110,7 @@
                         android:orientation="vertical"
                         android:padding="16dp">
 
+                        <!-- Top of Detail Card shows Original Device Name -->
                         <TextView
                             android:id="@+id/hotspot_detail_title"
                             android:layout_width="match_parent"
@@ -131,132 +135,143 @@
                             android:background="?attr/colorOutline"
                             android:alpha="0.2" />
 
-                        <!-- Detail Card divided into 2 Columns -->
+                        <!-- Detail Card divided into 2 Columns without middle vertical line -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
                             android:layout_weight="1"
-                            android:orientation="horizontal">
+                            android:orientation="vertical">
 
-                            <!-- Sub-Column 1: Access Status & Metrics -->
+                            <!-- Section Headers Row -->
                             <LinearLayout
-                                android:layout_width="0dp"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
+                                android:layout_marginBottom="4dp"
+                                android:orientation="horizontal">
 
                                 <TextView
-                                    android:layout_width="wrap_content"
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginBottom="4dp"
+                                    android:layout_weight="1"
                                     android:text="@string/hotspot_status_header"
                                     android:textColor="?android:attr/textColorSecondary"
                                     android:textSize="12sp"
                                     android:textStyle="bold" />
 
-                                <RadioGroup
-                                    android:id="@+id/hotspot_detail_status_radio_group"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="vertical">
-
-                                    <RadioButton
-                                        android:id="@+id/hotspot_detail_radio_allowed"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:paddingStart="4dp"
-                                        android:paddingEnd="4dp"
-                                        android:text="@string/status_allowed"
-                                        android:textColor="?android:attr/textColorPrimary"
-                                        android:textSize="13sp" />
-
-                                    <RadioButton
-                                        android:id="@+id/hotspot_detail_radio_denied"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:paddingStart="4dp"
-                                        android:paddingEnd="4dp"
-                                        android:text="@string/status_denied"
-                                        android:textColor="?android:attr/textColorPrimary"
-                                        android:textSize="13sp" />
-                                </RadioGroup>
-
-                                <View
-                                    android:layout_width="match_parent"
-                                    android:layout_height="1dp"
-                                    android:layout_marginTop="8dp"
-                                    android:layout_marginBottom="8dp"
-                                    android:background="?attr/colorOutline"
-                                    android:alpha="0.1" />
-
                                 <TextView
-                                    android:id="@+id/hotspot_detail_ip"
-                                    android:layout_width="wrap_content"
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:textColor="?android:attr/textColorSecondary"
-                                    android:textSize="12sp" />
-
-                                <TextView
-                                    android:id="@+id/hotspot_detail_data"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:textColor="?android:attr/textColorSecondary"
-                                    android:textSize="12sp" />
-
-                                <TextView
-                                    android:id="@+id/hotspot_detail_time"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:textColor="?android:attr/textColorSecondary"
-                                    android:textSize="12sp" />
-                            </LinearLayout>
-
-                            <!-- Vertical Divider -->
-                            <View
-                                android:layout_width="1dp"
-                                android:layout_height="match_parent"
-                                android:layout_marginStart="10dp"
-                                android:layout_marginEnd="10dp"
-                                android:background="?attr/colorOutline"
-                                android:alpha="0.15" />
-
-                            <!-- Sub-Column 2: Original Name & Alias Action Buttons -->
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/hotspot_detail_original_name"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="16dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/hotspot_alias_header"
                                     android:textColor="?android:attr/textColorSecondary"
                                     android:textSize="12sp"
-                                    android:textStyle="italic"
-                                    android:visibility="gone" />
+                                    android:textStyle="bold" />
+                            </LinearLayout>
 
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/hotspot_detail_btn_rename"
-                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/btn_rename"
-                                    android:textSize="12sp" />
+                            <!-- Row 1: Allowed Radio Button & Alias EditText -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="38dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <RadioButton
+                                    android:id="@+id/hotspot_detail_radio_allowed"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_weight="1"
+                                    android:gravity="center_vertical"
+                                    android:paddingStart="4dp"
+                                    android:paddingEnd="4dp"
+                                    android:text="@string/status_allowed"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="13sp" />
+
+                                <EditText
+                                    android:id="@+id/hotspot_detail_et_alias"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginStart="16dp"
+                                    android:layout_weight="1"
+                                    android:autofillHints=""
+                                    android:background="@drawable/shape_edittext_bg"
+                                    android:hint="@string/hotspot_alias_hint"
+                                    android:imeOptions="actionDone"
+                                    android:inputType="textCapWords"
+                                    android:paddingStart="8dp"
+                                    android:paddingEnd="8dp"
+                                    android:singleLine="true"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textColorHint="?android:attr/textColorSecondary"
+                                    android:textSize="13sp" />
+                            </LinearLayout>
+
+                            <!-- Row 2: Denied Radio Button & Remove Alias Button -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="38dp"
+                                android:layout_marginTop="6dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <RadioButton
+                                    android:id="@+id/hotspot_detail_radio_denied"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_weight="1"
+                                    android:gravity="center_vertical"
+                                    android:paddingStart="4dp"
+                                    android:paddingEnd="4dp"
+                                    android:text="@string/status_denied"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="13sp" />
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/hotspot_detail_btn_remove_alias"
                                     style="@style/Widget.MaterialComponents.Button.TextButton"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="4dp"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginStart="16dp"
+                                    android:layout_weight="1"
+                                    android:gravity="start|center_vertical"
+                                    android:padding="0dp"
                                     android:text="@string/btn_remove_alias"
-                                    android:textSize="12sp"
+                                    android:textSize="11sp"
                                     android:visibility="gone" />
                             </LinearLayout>
+
+                            <!-- Device Metrics -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginTop="10dp"
+                                android:layout_marginBottom="10dp"
+                                android:background="?attr/colorOutline"
+                                android:alpha="0.1" />
+
+                            <TextView
+                                android:id="@+id/hotspot_detail_ip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/hotspot_detail_data"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/hotspot_detail_time"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textSize="13sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
