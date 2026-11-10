@@ -27,8 +27,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.BackEventCompat
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -37,7 +35,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.window.layout.FoldingFeature
@@ -137,7 +134,7 @@ class MainActivity : AppCompatActivity() {
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
             view.setPadding(navBars.left, 0, navBars.right, navBars.bottom)
             applyThickChinPadding()
-            CornerAwarenessHelper.applyAsymmetricCorners(this, insets)
+            CornerAwareness.applyAsymmetricCorners(this, insets)
             NotchAwareness.updateAllHeaders(this)
             insets
         }

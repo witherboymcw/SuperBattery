@@ -12,7 +12,7 @@ import com.google.android.material.card.MaterialCardView
  * Utility helper for calculating Android 12+ dynamic screen rounded corners
  * and adjusting asymmetric shapeAppearanceModel corner sizes for dashboard cards.
  */
-object CornerAwarenessHelper {
+object CornerAwareness {
 
     const val DEFAULT_CORNER_RADIUS_DP = 12f
     const val CORNER_OFFSET_DP = 16f

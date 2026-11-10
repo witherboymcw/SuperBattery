@@ -228,7 +228,7 @@ class ExampleUnitTest {
         val density = 2.0f
         val expectedDefaultRadiusPx = 12f * density
 
-        val radiusWithNullInsets = CornerAwarenessHelper.calculateDynamicCornerRadius(null, density)
+        val radiusWithNullInsets = CornerAwareness.calculateDynamicCornerRadius(null, density)
         assertEquals(expectedDefaultRadiusPx, radiusWithNullInsets, 0.001f)
     }
 }
