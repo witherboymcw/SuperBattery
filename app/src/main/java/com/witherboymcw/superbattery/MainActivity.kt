@@ -288,9 +288,7 @@ class MainActivity : AppCompatActivity() {
             view.setPadding(navBars.left, 0, navBars.right, navBars.bottom)
             applyThickChinPadding()
             applyAsymmetricCorners(insets)
-            NotchHeaderHelper.updateHomeHeaderLayout(this)
-            NotchHeaderHelper.updateSettingsHeaderLayout(this)
-            NotchHeaderHelper.updateHotspotHeaderLayout(this)
+            NotchAwareness.updateAllHeaders(this)
             insets
         }
         onBackPressedDispatcher.addCallback(this, settingsBackCallback)
@@ -540,16 +538,12 @@ class MainActivity : AppCompatActivity() {
         updateRingerModeIcon()
         updateBluetoothStatus()
         updateSimSignalStatus()
-        NotchHeaderHelper.updateHomeHeaderLayout(this)
-        NotchHeaderHelper.updateSettingsHeaderLayout(this)
-        NotchHeaderHelper.updateHotspotHeaderLayout(this)
+        NotchAwareness.updateAllHeaders(this)
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
-        NotchHeaderHelper.updateHomeHeaderLayout(this)
-        NotchHeaderHelper.updateSettingsHeaderLayout(this)
-        NotchHeaderHelper.updateHotspotHeaderLayout(this)
+        NotchAwareness.updateAllHeaders(this)
         applyThickChinPadding()
 
         val hotspotContainer = findViewById<View>(R.id.hotspot_container)
@@ -699,7 +693,7 @@ class MainActivity : AppCompatActivity() {
             .withLayer()
             .start()
         hotspotBackCallback.isEnabled = true
-        NotchHeaderHelper.updateHotspotHeaderLayout(this)
+        NotchAwareness.updateHotspotHeaderLayout(this)
     }
 
     internal fun closeHotspotScreen(animate: Boolean = true) {
@@ -743,7 +737,7 @@ class MainActivity : AppCompatActivity() {
             ?.setInterpolator(FastOutSlowInInterpolator())
             ?.start()
         settingsBackCallback.isEnabled = true
-        NotchHeaderHelper.updateSettingsHeaderLayout(this)
+        NotchAwareness.updateSettingsHeaderLayout(this)
     }
 
     internal fun closeSettingsScreen(animate: Boolean = true) {

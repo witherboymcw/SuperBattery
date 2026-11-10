@@ -344,7 +344,7 @@ internal class HotspotViewController {
                 scrollView?.post { scrollView.scrollTo(0, savedScrollY) }
             }
 
-            NotchHeaderHelper.updateHotspotHeaderLayout(activity)
+            NotchAwareness.updateHotspotHeaderLayout(activity)
         }
     }
 

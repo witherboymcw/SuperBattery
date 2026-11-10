@@ -63,6 +63,7 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
    * Redmi Note 10S 4G
    * TECNO Camon 40 4G
    * Redmi Note 12 Pro Plus 5G
+   * Redmi Note 14 Pro 5G
 5. Các thiết bị có màn hình tỉ lệ ngắn hơn 9x19,5, các thiết bị đang xoay ngang màn hình, và các thiết bị đang bật nút điều hướng hệ thống **chắc chắn** sẽ phải cuộn trang trên màn hình app chính.
 
 ---

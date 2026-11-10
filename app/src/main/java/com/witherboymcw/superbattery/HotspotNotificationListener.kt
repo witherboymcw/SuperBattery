@@ -19,8 +19,84 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.content.ContextCompat
-
+import org.json.JSONArray
 import java.lang.ref.WeakReference
+
+data class HotspotRule(
+    val oem: String,
+    val titlePatterns: List<String>,
+    val noDeviceRegex: Regex,
+    val connectedRegex: Regex
+)
+
+object HotspotRuleLoader {
+    private const val RULES_FILE = "hotspot_rules.json"
+
+    private val defaultRules = listOf(
+        HotspotRule(
+            oem = "Universal / All Brands",
+            titlePatterns = listOf(
+                "(?i)^(?=.*(?:tethering|hotspot|chia\\s+sẻ|chia\\s+se|phát\\s+sóng|phat\\s+song))(?=.*(?:\\b(?:on|active|activated|bật|bat)\\b|kích\\s+hoạt|kich\\s+hoat)).*$"
+            ),
+            noDeviceRegex = Regex(
+                "\\b(no\\s+(?:connected\\s+)?devices?|no\\s+devices?\\s+connected|0\\s+(?:connected\\s+)?devices?|không\\s+có\\s+thiết\\s+bị(?:\\s+nào)?(?:\\s+kết\\s+nối)?|khong\\s+co\\s+thiet\\s+bi(?:\\s+nao)?(?:\\s+ket\\s+noi)?|chưa\\s+có\\s+thiết\\s+bị|chua\\s+co\\s+thiet\\s+bi)\\b",
+                RegexOption.IGNORE_CASE
+            ),
+            connectedRegex = Regex(
+                "\\b(\\d+)\\s+(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị(?:\\s+(?:đã|da))?(?:\\s+(?:kết\\s+nối|ket\\s+noi))?|thiet\\s+bi)\\b",
+                RegexOption.IGNORE_CASE
+            )
+        )
+    )
+
+    @Volatile
+    private var cachedRules: List<HotspotRule>? = null
+
+    fun getRules(context: Context): List<HotspotRule> {
+        cachedRules?.let { return it }
+        val loaded = loadFromAssets(context)
+        val finalRules = if (loaded.isNotEmpty()) loaded else defaultRules
+        cachedRules = finalRules
+        return finalRules
+    }
+
+    private fun loadFromAssets(context: Context): List<HotspotRule> {
+        return try {
+            val jsonString = context.assets.open(RULES_FILE).use { stream ->
+                stream.bufferedReader().use { it.readText() }
+            }
+            val jsonArray = JSONArray(jsonString)
+            val list = mutableListOf<HotspotRule>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                val oem = obj.optString("oem", "Unknown OEM")
+                val patternsArr = obj.optJSONArray("title_patterns")
+                val patterns = mutableListOf<String>()
+                if (patternsArr != null) {
+                    for (j in 0 until patternsArr.length()) {
+                        patterns.add(patternsArr.getString(j))
+                    }
+                }
+                val noDevPattern = obj.optString("no_device_regex")
+                val connPattern = obj.optString("connected_regex")
+                if (patterns.isNotEmpty() && noDevPattern.isNotBlank() && connPattern.isNotBlank()) {
+                    list.add(
+                        HotspotRule(
+                            oem = oem,
+                            titlePatterns = patterns,
+                            noDeviceRegex = Regex(noDevPattern, RegexOption.IGNORE_CASE),
+                            connectedRegex = Regex(connPattern, RegexOption.IGNORE_CASE)
+                        )
+                    )
+                }
+            }
+            list
+        } catch (e: Exception) {
+            Log.e("HotspotRuleLoader", "Failed to load $RULES_FILE from assets, using default rules", e)
+            emptyList()
+        }
+    }
+}
 
 class HotspotNotificationListener : NotificationListenerService() {
 
@@ -135,9 +211,17 @@ class HotspotNotificationListener : NotificationListenerService() {
         val bigTitleCharSeq = extras.getCharSequence(Notification.EXTRA_TITLE_BIG)
         val notificationTitle = "$titleCharSeq $bigTitleCharSeq"
 
-        val isHotspotTitle = notificationTitle.contains(HOTSPOT_NOTIFICATION_TITLE, ignoreCase = true) ||
-            notificationTitle.contains(HOTSPOT_NOTIFICATION_TITLE_VI, ignoreCase = true)
-        if (!isHotspotTitle) return null
+        val rules = HotspotRuleLoader.getRules(this)
+        val matchingRule = rules.firstOrNull { rule ->
+            rule.titlePatterns.any { pattern ->
+                try {
+                    Regex(pattern, RegexOption.IGNORE_CASE).containsMatchIn(notificationTitle) ||
+                            notificationTitle.contains(pattern, ignoreCase = true)
+                } catch (_: Exception) {
+                    notificationTitle.contains(pattern, ignoreCase = true)
+                }
+            }
+        } ?: return null
 
         val sb = StringBuilder()
         fun appendText(cs: CharSequence?) {
@@ -168,11 +252,13 @@ class HotspotNotificationListener : NotificationListenerService() {
 
         val notificationContent = sb.toString()
 
-        // Read the device-count text only; the tethering channel or other notifications
-        // are not used to decide whether the hotspot is on.
-        if (NO_CONNECTED_DEVICE.containsMatchIn(notificationContent)) return HotspotState.ON_EMPTY
-        val clients = CONNECTED_DEVICES.find(notificationContent)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        if (matchingRule.noDeviceRegex.containsMatchIn(notificationContent)) {
+            return HotspotState.ON_EMPTY
+        }
+
+        val clients = matchingRule.connectedRegex.find(notificationContent)?.groupValues?.getOrNull(1)?.toIntOrNull()
             ?: return HotspotState.ON_EMPTY
+
         return if (clients == 0) HotspotState.ON_EMPTY else HotspotState.ON_CONNECTED(clients)
     }
 
@@ -233,10 +319,6 @@ class HotspotNotificationListener : NotificationListenerService() {
         private const val PREFERENCES_NAME = "hotspot_notification_state"
         private const val KEY_STATE = "state"
         private const val KEY_CLIENTS = "clients"
-        private const val HOTSPOT_NOTIFICATION_TITLE = "Tethering or hotspot active"
-        private const val HOTSPOT_NOTIFICATION_TITLE_VI = "Điểm phát sóng"
-        private val NO_CONNECTED_DEVICE = Regex("\\b(no\\s+connected\\s+devices?|không\\s+có\\s+thiết\\s+bị)\\b", RegexOption.IGNORE_CASE)
-        private val CONNECTED_DEVICES = Regex("\\b(\\d+)\\s+(connected\\s+devices?|thiết\\s+bị\\s+đã\\s+kết\\s+nối|thiết\\s+bị\\s+kết\\s+nối)\\b", RegexOption.IGNORE_CASE)
 
         sealed class HotspotState {
             data object OFF : HotspotState()

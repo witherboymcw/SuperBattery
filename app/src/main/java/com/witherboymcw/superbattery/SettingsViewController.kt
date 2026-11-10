@@ -655,25 +655,25 @@ internal class SettingsViewController {
         val btnSetNotchPos = findViewById<android.widget.Button>(R.id.btn_set_notch_position)
 
         if (headerNotch != null && dropdownNotch != null && arrowNotch != null && selectedNotchText != null) {
-            val notchMode = prefs.getInt("notch_custom_mode", 0)
+            val notchMode = prefs.getInt(NotchAwareness.KEY_NOTCH_CUSTOM_MODE, NotchAwareness.MODE_SYSTEM)
             when (notchMode) {
-                0 -> notchModeGroup?.check(R.id.notch_mode_system)
-                1 -> notchModeGroup?.check(R.id.notch_mode_force)
-                2 -> notchModeGroup?.check(R.id.notch_mode_ignore)
+                NotchAwareness.MODE_SYSTEM -> notchModeGroup?.check(R.id.notch_mode_system)
+                NotchAwareness.MODE_FORCE -> notchModeGroup?.check(R.id.notch_mode_force)
+                NotchAwareness.MODE_IGNORE -> notchModeGroup?.check(R.id.notch_mode_ignore)
             }
 
             fun updateNotchText() {
-                val mode = prefs.getInt("notch_custom_mode", 0)
+                val mode = prefs.getInt(NotchAwareness.KEY_NOTCH_CUSTOM_MODE, NotchAwareness.MODE_SYSTEM)
                 selectedNotchText.text = when(mode) {
-                    1 -> getString(R.string.notch_mode_force)
-                    2 -> getString(R.string.notch_mode_ignore)
+                    NotchAwareness.MODE_FORCE -> getString(R.string.notch_mode_force)
+                    NotchAwareness.MODE_IGNORE -> getString(R.string.notch_mode_ignore)
                     else -> getString(R.string.notch_mode_system)
                 }
-                notchPosContainer?.visibility = if (mode == 1) View.VISIBLE else View.GONE
+                notchPosContainer?.visibility = if (mode == NotchAwareness.MODE_FORCE) View.VISIBLE else View.GONE
             }
             updateNotchText()
 
-            val isCenter = prefs.getBoolean("notch_is_center", true)
+            val isCenter = prefs.getBoolean(NotchAwareness.KEY_NOTCH_IS_CENTER, true)
             if (isCenter) {
                 notchPosGroup?.check(R.id.notch_pos_center)
             } else {
@@ -682,24 +682,22 @@ internal class SettingsViewController {
 
             notchModeGroup?.setOnCheckedChangeListener { _, checkedId ->
                 val mode = when(checkedId) {
-                    R.id.notch_mode_force -> 1
-                    R.id.notch_mode_ignore -> 2
-                    else -> 0
+                    R.id.notch_mode_force -> NotchAwareness.MODE_FORCE
+                    R.id.notch_mode_ignore -> NotchAwareness.MODE_IGNORE
+                    else -> NotchAwareness.MODE_SYSTEM
                 }
-                prefs.edit().putInt("notch_custom_mode", mode).apply()
+                prefs.edit().putInt(NotchAwareness.KEY_NOTCH_CUSTOM_MODE, mode).apply()
                 updateNotchText()
-                NotchHeaderHelper.updateHomeHeaderLayout(activity)
-                NotchHeaderHelper.updateSettingsHeaderLayout(activity)
+                NotchAwareness.updateAllHeaders(activity)
             }
 
             notchPosGroup?.setOnCheckedChangeListener { _, checkedId ->
-                prefs.edit().putBoolean("notch_is_center", checkedId == R.id.notch_pos_center).apply()
-                NotchHeaderHelper.updateHomeHeaderLayout(activity)
-                NotchHeaderHelper.updateSettingsHeaderLayout(activity)
+                prefs.edit().putBoolean(NotchAwareness.KEY_NOTCH_IS_CENTER, checkedId == R.id.notch_pos_center).apply()
+                NotchAwareness.updateAllHeaders(activity)
             }
 
             btnSetNotchPos?.setOnClickListener {
-                showNotchPositionOverlay(activity)
+                NotchAwareness.showNotchPositionOverlay(activity)
             }
 
             val isNotchOpen = savedInstanceState?.getBoolean(KEY_NOTCH_DROPDOWN_OPEN, false) ?: false
@@ -876,105 +874,8 @@ internal class SettingsViewController {
         }
 
         updatePermissionStatuses()
-        NotchHeaderHelper.updateSettingsHeaderLayout(activity)
-        NotchHeaderHelper.updateHomeHeaderLayout(activity)
-            }
-    }
-
-    private fun showNotchPositionOverlay(activity: MainActivity) {
-        val wm = activity.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
-        val overlayView = android.widget.FrameLayout(activity)
-        overlayView.setBackgroundColor(0x88000000.toInt())
-
-        val circleView = View(activity)
-        circleView.background = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.OvalShape()).apply {
-            paint.color = android.graphics.Color.BLACK
+        NotchAwareness.updateAllHeaders(activity)
         }
-        val radius = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_DIP, 24f, activity.resources.displayMetrics).toInt()
-
-        val lp = android.widget.FrameLayout.LayoutParams(radius * 2, radius * 2)
-
-        val prefs = activity.getSharedPreferences(SETTINGS_PREFS, android.content.Context.MODE_PRIVATE)
-        val isCenter = prefs.getBoolean("notch_is_center", true)
-        var currentX = prefs.getFloat("notch_x", 0f)
-        var currentY = prefs.getFloat("notch_y", 0f)
-
-        lp.leftMargin = currentX.toInt() - radius
-        lp.topMargin = if (isCenter) activity.resources.displayMetrics.heightPixels / 2 - radius else currentY.toInt() - radius
-        circleView.layoutParams = lp
-
-        overlayView.addView(circleView)
-
-        val textInstruction = TextView(activity)
-        textInstruction.text = activity.getString(R.string.notch_instruction_text)
-        textInstruction.setTextColor(android.graphics.Color.WHITE)
-        textInstruction.gravity = android.view.Gravity.CENTER
-        overlayView.addView(textInstruction, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT).apply {
-            gravity = android.view.Gravity.CENTER
-        })
-
-        var dX = 0f
-        var dY = 0f
-
-        circleView.setOnTouchListener { view, event ->
-            when (event.action) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    dX = view.x - event.rawX
-                    dY = view.y - event.rawY
-                    true
-                }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    view.animate()
-                        .x(event.rawX + dX)
-                        .apply {
-                            if (!isCenter) {
-                                y(event.rawY + dY)
-                            }
-                        }
-                        .setDuration(0)
-                        .start()
-                    true
-                }
-                else -> false
-            }
-        }
-
-        overlayView.setOnClickListener {
-            prefs.edit()
-                .putFloat("notch_x", circleView.x + radius)
-                .putFloat("notch_y", circleView.y + radius)
-                .apply()
-            try {
-                wm.removeView(overlayView)
-            } catch (_: Exception) {}
-            NotchHeaderHelper.updateHomeHeaderLayout(activity)
-            NotchHeaderHelper.updateSettingsHeaderLayout(activity)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(activity)) {
-            try {
-                activity.startActivity(android.content.Intent(
-                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    android.net.Uri.parse("package:${activity.packageName}")
-                ))
-            } catch (_: Exception) {}
-            return
-        }
-
-        val params = android.view.WindowManager.LayoutParams(
-            android.view.WindowManager.LayoutParams.MATCH_PARENT,
-            android.view.WindowManager.LayoutParams.MATCH_PARENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else
-                @Suppress("DEPRECATION")
-                android.view.WindowManager.LayoutParams.TYPE_PHONE,
-            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            android.graphics.PixelFormat.TRANSLUCENT
-        )
-        try {
-            wm.addView(overlayView, params)
-        } catch (_: Exception) {}
     }
 
     fun unbind() {

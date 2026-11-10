@@ -62,6 +62,7 @@ _"With a high-capacity custom cell attached, why not use it as an emergency back
    * Redmi Note 10S 4G
    * TECNO Camon 40 4G
    * Redmi Note 12 Pro Plus 5G
+   * Redmi Note 14 Pro 5G
 5. Screens with aspect ratios wider/shorter than 9:19.5, devices oriented in landscape mode, and those with navigation buttons on, **will require vertical scrolling** on the main dashboard screen.
 
 ---

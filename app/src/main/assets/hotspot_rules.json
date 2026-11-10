@@ -1,0 +1,10 @@
+[
+  {
+    "oem": "Universal / All Brands (HyperOS, MIUI, One UI, AOSP, ColorOS, OxygenOS, FuntouchOS)",
+    "title_patterns": [
+      "(?i)^(?=.*(?:tethering|hotspot|chia\\s+sẻ|chia\\s+se|phát\\s+sóng|phat\\s+song))(?=.*(?:\\b(?:on|active|activated|bật|bat)\\b|kích\\s+hoạt|kich\\s+hoat)).*$"
+    ],
+    "no_device_regex": "\\b(no\\s+(?:connected\\s+)?devices?|no\\s+devices?\\s+connected|0\\s+(?:connected\\s+)?devices?|không\\s+có\\s+thiết\\s+bị(?:\\s+nào)?(?:\\s+kết\\s+nối)?|khong\\s+co\\s+thiet\\s+bi(?:\\s+nao)?(?:\\s+ket\\s+noi)?|chưa\\s+có\\s+thiết\\s+bị|chua\\s+co\\s+thiet\\s+bi)\\b",
+    "connected_regex": "\\b(\\d+)\\s+(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị(?:\\s+(?:đã|da))?(?:\\s+(?:kết\\s+nối|ket\\s+noi))?|thiet\\s+bi)\\b"
+  }
+]
