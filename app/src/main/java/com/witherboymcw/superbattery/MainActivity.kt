@@ -17,7 +17,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
-import android.telephony.TelephonyManager
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -75,8 +74,6 @@ class MainActivity : AppCompatActivity() {
     internal var btnSettings: View? = null
     internal var thickChinOverrideLevel: Int? = null
     private val memoryInfo = ActivityManager.MemoryInfo()
-    private var isSettingsOpen = false
-    private var isHotspotOpen = false
     private var lastNetworkCardTapTime = 0L
 
     private var tvHeaderClock: TextView? = null
@@ -92,62 +89,6 @@ class MainActivity : AppCompatActivity() {
         override fun run() {
             tvHeaderClock?.text = clockFormat.format(Date())
             handler.postDelayed(this, 1_000L)
-        }
-    }
-
-    private val settingsBackCallback = object : OnBackPressedCallback(false) {
-        private var initialWidth = 0f
-
-        override fun handleOnBackStarted(backEvent: BackEventCompat) {
-            val container = findViewById<View>(R.id.settings_container) ?: return
-            initialWidth = container.width.toFloat().takeIf { it > 0f } ?: 1080f
-        }
-
-        override fun handleOnBackProgressed(backEvent: BackEventCompat) {
-            val container = findViewById<View>(R.id.settings_container) ?: return
-            val progress = backEvent.progress
-            container.translationX = initialWidth * progress
-        }
-
-        override fun handleOnBackCancelled() {
-            val container = findViewById<View>(R.id.settings_container) ?: return
-            container.animate()
-                .translationX(0f)
-                .setDuration(150L)
-                .setInterpolator(FastOutSlowInInterpolator())
-                .start()
-        }
-
-        override fun handleOnBackPressed() {
-            closeSettingsScreen()
-        }
-    }
-
-    private val hotspotBackCallback = object : OnBackPressedCallback(false) {
-        private var initialWidth = 0f
-
-        override fun handleOnBackStarted(backEvent: BackEventCompat) {
-            val container = findViewById<View>(R.id.hotspot_container) ?: return
-            initialWidth = container.width.toFloat().takeIf { it > 0f } ?: 1080f
-        }
-
-        override fun handleOnBackProgressed(backEvent: BackEventCompat) {
-            val container = findViewById<View>(R.id.hotspot_container) ?: return
-            val progress = backEvent.progress
-            container.translationX = -initialWidth * progress
-        }
-
-        override fun handleOnBackCancelled() {
-            val container = findViewById<View>(R.id.hotspot_container) ?: return
-            container.animate()
-                .translationX(0f)
-                .setDuration(150L)
-                .setInterpolator(FastOutSlowInInterpolator())
-                .start()
-        }
-
-        override fun handleOnBackPressed() {
-            closeHotspotScreen()
         }
     }
 
@@ -200,8 +141,6 @@ class MainActivity : AppCompatActivity() {
             NotchAwareness.updateAllHeaders(this)
             insets
         }
-        onBackPressedDispatcher.addCallback(this, settingsBackCallback)
-        onBackPressedDispatcher.addCallback(this, hotspotBackCallback)
         loadRefreshInterval()
         initializeMetricCards()
         setupSettingsScreen(savedInstanceState)
@@ -209,7 +148,7 @@ class MainActivity : AppCompatActivity() {
 
         btnSettings = findViewById(R.id.settings_button)
         btnSettings?.setOnClickListener {
-            openSettingsScreen()
+            settingsViewController.openScreen(this)
         }
 
         val cardNetwork = findViewById<View>(R.id.card_network)
@@ -218,8 +157,8 @@ class MainActivity : AppCompatActivity() {
             val diff = now - lastNetworkCardTapTime
             if (diff in 50L..400L) {
                 lastNetworkCardTapTime = 0L
-                if (!isHotspotOpen) {
-                    openHotspotScreen()
+                if (!hotspotViewController.isOpen) {
+                    hotspotViewController.openScreen(this)
                 }
             } else {
                 lastNetworkCardTapTime = now
@@ -227,26 +166,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<View>(R.id.dashboard)?.let { dashboard ->
-            setupDashboardSwipeToOpen(dashboard)
+            DrawerNavigationHelper.setupDashboardSwipeToOpen(
+                this, dashboard, settingsViewController, hotspotViewController
+            )
         }
 
         if (savedInstanceState?.getBoolean(KEY_SETTINGS_OPEN) == true) {
-            findViewById<View>(R.id.settings_container)?.let { container ->
-                container.visibility = View.VISIBLE
-                container.translationX = 0f
-                settingsBackCallback.isEnabled = true
-                isSettingsOpen = true
-                btnSettings?.rotation = 90f
-            }
+            settingsViewController.restoreOpenState(this)
         }
 
         if (savedInstanceState?.getBoolean(KEY_HOTSPOT_OPEN) == true) {
-            findViewById<View>(R.id.hotspot_container)?.let { container ->
-                container.visibility = View.VISIBLE
-                container.translationX = 0f
-                hotspotBackCallback.isEnabled = true
-                isHotspotOpen = true
-            }
+            hotspotViewController.restoreOpenState(this)
         }
 
         if (savedInstanceState == null) {
@@ -338,7 +268,7 @@ class MainActivity : AppCompatActivity() {
         val fromWidgetDoubleTap = intent.getBooleanExtra(BatteryWidget.EXTRA_CLOSE_SETTINGS, false)
         if (fromWidgetDoubleTap) {
             intent.removeExtra(BatteryWidget.EXTRA_CLOSE_SETTINGS)
-            closeSettingsScreen(animate = false)
+            settingsViewController.closeScreen(this, animate = false)
         }
     }
 
@@ -361,11 +291,11 @@ class MainActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         val container = findViewById<View>(R.id.settings_container)
-        if (container != null && container.visibility == View.VISIBLE) {
+        if (settingsViewController.isOpen || (container != null && container.visibility == View.VISIBLE)) {
             outState.putBoolean(KEY_SETTINGS_OPEN, true)
         }
         val hotspotContainer = findViewById<View>(R.id.hotspot_container)
-        if (isHotspotOpen || (hotspotContainer != null && hotspotContainer.visibility == View.VISIBLE)) {
+        if (hotspotViewController.isOpen || (hotspotContainer != null && hotspotContainer.visibility == View.VISIBLE)) {
             outState.putBoolean(KEY_HOTSPOT_OPEN, true)
         }
         val dropdownLanguage = findViewById<View>(R.id.dropdown_language)
@@ -464,11 +394,8 @@ class MainActivity : AppCompatActivity() {
         applyThickChinPadding()
 
         val hotspotContainer = findViewById<View>(R.id.hotspot_container)
-        if (isHotspotOpen || (hotspotContainer != null && hotspotContainer.visibility == View.VISIBLE)) {
-            hotspotContainer?.visibility = View.VISIBLE
-            hotspotContainer?.translationX = 0f
-            isHotspotOpen = true
-            hotspotBackCallback.isEnabled = true
+        if (hotspotViewController.isOpen || (hotspotContainer != null && hotspotContainer.visibility == View.VISIBLE)) {
+            hotspotViewController.restoreOpenState(this)
         }
 
         applyGraphBackgrounds(OledThemeAllInOne.getEffectiveThemeForGraph(this))
@@ -571,189 +498,6 @@ class MainActivity : AppCompatActivity() {
 
             AppCompatDelegate.setApplicationLocales(appLocales)
             refreshWidgets()
-        }
-    }
-
-    internal fun openHotspotScreen() {
-        val container = findViewById<View>(R.id.hotspot_container) ?: return
-        isHotspotOpen = true
-        container.visibility = View.VISIBLE
-        val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
-        container.translationX = -width
-        container.animate()
-            .translationX(0f)
-            .setDuration(280L)
-            .setInterpolator(FastOutSlowInInterpolator())
-            .withLayer()
-            .start()
-        hotspotBackCallback.isEnabled = true
-        NotchAwareness.updateHotspotHeaderLayout(this)
-    }
-
-    internal fun closeHotspotScreen(animate: Boolean = true) {
-        val container = findViewById<View>(R.id.hotspot_container) ?: return
-        if (container.visibility != View.VISIBLE) return
-        isHotspotOpen = false
-        hotspotBackCallback.isEnabled = false
-        if (animate) {
-            val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
-            container.animate()
-                .translationX(-width)
-                .setDuration(280L)
-                .setInterpolator(FastOutSlowInInterpolator())
-                .withLayer()
-                .withEndAction {
-                    container.visibility = View.GONE
-                }
-                .start()
-        } else {
-            container.animate().cancel()
-            container.visibility = View.GONE
-            container.translationX = 0f
-        }
-    }
-
-    private fun openSettingsScreen() {
-        val container = findViewById<View>(R.id.settings_container) ?: return
-        isSettingsOpen = true
-        container.visibility = View.VISIBLE
-        val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
-        container.translationX = width
-        container.animate()
-            .translationX(0f)
-            .setDuration(280L)
-            .setInterpolator(FastOutSlowInInterpolator())
-            .withLayer()
-            .start()
-        btnSettings?.animate()
-            ?.rotation(90f)
-            ?.setDuration(280L)
-            ?.setInterpolator(FastOutSlowInInterpolator())
-            ?.start()
-        settingsBackCallback.isEnabled = true
-        NotchAwareness.updateSettingsHeaderLayout(this)
-    }
-
-    internal fun closeSettingsScreen(animate: Boolean = true) {
-        settingsViewController.flushThickChinCommit()
-        val container = findViewById<View>(R.id.settings_container) ?: return
-        if (container.visibility != View.VISIBLE) return
-        isSettingsOpen = false
-        settingsBackCallback.isEnabled = false
-        if (animate) {
-            val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
-            container.animate()
-                .translationX(width)
-                .setDuration(280L)
-                .setInterpolator(FastOutSlowInInterpolator())
-                .withLayer()
-                .withEndAction {
-                    container.visibility = View.GONE
-                }
-                .start()
-            btnSettings?.animate()
-                ?.rotation(0f)
-                ?.setDuration(280L)
-                ?.setInterpolator(FastOutSlowInInterpolator())
-                ?.start()
-        } else {
-            container.animate().cancel()
-            container.visibility = View.GONE
-            container.translationX = 0f
-            btnSettings?.animate()?.cancel()
-            btnSettings?.rotation = 0f
-        }
-    }
-
-    private fun setupDashboardSwipeToOpen(dashboardView: View) {
-        val containerSettings = findViewById<View>(R.id.settings_container)
-        val containerHotspot = findViewById<View>(R.id.hotspot_container)
-        val dashboard = dashboardView as? DashboardLayout
-
-        if (dashboard != null) {
-            dashboard.swipeSensitivity = 1f
-            dashboard.canSwipe = { !isSettingsOpen && !isHotspotOpen }
-            dashboard.dualSwipeListener = object : DashboardLayout.DualSwipeListener {
-                override fun onSwipeStart(direction: DashboardLayout.SwipeDirection) {
-                    val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: 1080f
-                    if (direction == DashboardLayout.SwipeDirection.LEFT_TO_SETTINGS) {
-                        containerSettings?.visibility = View.VISIBLE
-                        containerSettings?.translationX = screenWidth
-                        btnSettings?.rotation = 0f
-                    } else if (direction == DashboardLayout.SwipeDirection.RIGHT_TO_HOTSPOT) {
-                        containerHotspot?.visibility = View.VISIBLE
-                        containerHotspot?.translationX = -screenWidth
-                    }
-                }
-
-                override fun onSwipeProgress(direction: DashboardLayout.SwipeDirection, dx: Float, targetX: Float) {
-                    val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: 1080f
-                    if (direction == DashboardLayout.SwipeDirection.LEFT_TO_SETTINGS) {
-                        containerSettings?.visibility = View.VISIBLE
-                        containerSettings?.translationX = targetX
-                        val progress = (1f - (targetX / screenWidth)).coerceIn(0f, 1f)
-                        btnSettings?.rotation = progress * 90f
-                    } else if (direction == DashboardLayout.SwipeDirection.RIGHT_TO_HOTSPOT) {
-                        containerHotspot?.visibility = View.VISIBLE
-                        containerHotspot?.translationX = targetX
-                    }
-                }
-
-                override fun onSwipeEnd(direction: DashboardLayout.SwipeDirection, shouldOpen: Boolean) {
-                    val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: 1080f
-                    if (direction == DashboardLayout.SwipeDirection.LEFT_TO_SETTINGS) {
-                        if (shouldOpen) {
-                            isSettingsOpen = true
-                            containerSettings?.animate()
-                                ?.translationX(0f)
-                                ?.setDuration(200L)
-                                ?.setInterpolator(FastOutSlowInInterpolator())
-                                ?.withLayer()
-                                ?.start()
-                            btnSettings?.animate()
-                                ?.rotation(90f)
-                                ?.setDuration(200L)
-                                ?.setInterpolator(FastOutSlowInInterpolator())
-                                ?.start()
-                            settingsBackCallback.isEnabled = true
-                        } else {
-                            isSettingsOpen = false
-                            containerSettings?.animate()
-                                ?.translationX(screenWidth)
-                                ?.setDuration(200L)
-                                ?.setInterpolator(FastOutSlowInInterpolator())
-                                ?.withLayer()
-                                ?.withEndAction { containerSettings.visibility = View.GONE }
-                                ?.start()
-                            btnSettings?.animate()
-                                ?.rotation(0f)
-                                ?.setDuration(200L)
-                                ?.setInterpolator(FastOutSlowInInterpolator())
-                                ?.start()
-                        }
-                    } else if (direction == DashboardLayout.SwipeDirection.RIGHT_TO_HOTSPOT) {
-                        if (shouldOpen) {
-                            isHotspotOpen = true
-                            containerHotspot?.animate()
-                                ?.translationX(0f)
-                                ?.setDuration(200L)
-                                ?.setInterpolator(FastOutSlowInInterpolator())
-                                ?.withLayer()
-                                ?.start()
-                            hotspotBackCallback.isEnabled = true
-                        } else {
-                            isHotspotOpen = false
-                            containerHotspot?.animate()
-                                ?.translationX(-screenWidth)
-                                ?.setDuration(200L)
-                                ?.setInterpolator(FastOutSlowInInterpolator())
-                                ?.withLayer()
-                                ?.withEndAction { containerHotspot.visibility = View.GONE }
-                                ?.start()
-                        }
-                    }
-                }
-            }
         }
     }
 

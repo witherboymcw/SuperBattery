@@ -12,6 +12,8 @@ import android.widget.ImageView
 import android.widget.RadioButton
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.activity.BackEventCompat
+import androidx.activity.OnBackPressedCallback
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import java.util.Locale
 
@@ -19,11 +21,90 @@ internal class HotspotViewController {
 
     private var activityRef: MainActivity? = null
     private var selectedDeviceMac: String? = null
+    var isOpen: Boolean = false
+
+    val backCallback = object : OnBackPressedCallback(false) {
+        private var initialWidth = 0f
+
+        override fun handleOnBackStarted(backEvent: BackEventCompat) {
+            val container = activityRef?.findViewById<View>(R.id.hotspot_container) ?: return
+            initialWidth = container.width.toFloat().takeIf { it > 0f } ?: 1080f
+        }
+
+        override fun handleOnBackProgressed(backEvent: BackEventCompat) {
+            val container = activityRef?.findViewById<View>(R.id.hotspot_container) ?: return
+            val progress = backEvent.progress
+            container.translationX = -initialWidth * progress
+        }
+
+        override fun handleOnBackCancelled() {
+            val container = activityRef?.findViewById<View>(R.id.hotspot_container) ?: return
+            container.animate()
+                .translationX(0f)
+                .setDuration(150L)
+                .setInterpolator(FastOutSlowInInterpolator())
+                .start()
+        }
+
+        override fun handleOnBackPressed() {
+            val act = activityRef ?: return
+            closeScreen(act)
+        }
+    }
+
+    fun openScreen(activity: MainActivity) {
+        val container = activity.findViewById<View>(R.id.hotspot_container) ?: return
+        isOpen = true
+        container.visibility = View.VISIBLE
+        val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
+        container.translationX = -width
+        container.animate()
+            .translationX(0f)
+            .setDuration(280L)
+            .setInterpolator(FastOutSlowInInterpolator())
+            .withLayer()
+            .start()
+        backCallback.isEnabled = true
+        NotchAwareness.updateHotspotHeaderLayout(activity)
+    }
+
+    fun closeScreen(activity: MainActivity, animate: Boolean = true) {
+        val container = activity.findViewById<View>(R.id.hotspot_container) ?: return
+        if (container.visibility != View.VISIBLE) return
+        isOpen = false
+        backCallback.isEnabled = false
+        if (animate) {
+            val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
+            container.animate()
+                .translationX(-width)
+                .setDuration(280L)
+                .setInterpolator(FastOutSlowInInterpolator())
+                .withLayer()
+                .withEndAction {
+                    container.visibility = View.GONE
+                }
+                .start()
+        } else {
+            container.animate().cancel()
+            container.visibility = View.GONE
+            container.translationX = 0f
+        }
+    }
+
+    fun restoreOpenState(activity: MainActivity) {
+        val container = activity.findViewById<View>(R.id.hotspot_container) ?: return
+        container.visibility = View.VISIBLE
+        container.translationX = 0f
+        backCallback.isEnabled = true
+        isOpen = true
+    }
 
     private fun getTargetLayoutRes(): Int = R.layout.layout_hotspot
 
     fun bind(activity: MainActivity, savedInstanceState: Bundle? = null) {
         this.activityRef = activity
+        activity.onBackPressedDispatcher.addCallback(activity, backCallback)
+
         val targetLayout = getTargetLayoutRes()
         val currentContainer = activity.findViewById<ViewGroup>(R.id.hotspot_container) ?: return
         val parentView = currentContainer.parent as? ViewGroup
@@ -52,7 +133,7 @@ internal class HotspotViewController {
 
             // Back button tap
             findViewById<View>(R.id.hotspot_back_button)?.setOnClickListener {
-                closeHotspotScreen()
+                closeScreen(this)
             }
 
             // Swipe left callback to close hotspot container
@@ -63,7 +144,7 @@ internal class HotspotViewController {
 
                 override fun onSwipeEnd(shouldClose: Boolean) {
                     if (shouldClose) {
-                        closeHotspotScreen()
+                        closeScreen(this@with)
                     } else {
                         swipeContainer.animate()
                             .translationX(0f)
