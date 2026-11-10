@@ -188,7 +188,7 @@ class MainActivity : AppCompatActivity() {
                     .collect { layoutInfo ->
                         val hasFoldingFeature = layoutInfo.displayFeatures.any { it is FoldingFeature }
                         if (hasFoldingFeature) {
-                            FoldableDetector.markFoldingFeatureDetected(true)
+                            FoldableAwareness.markFoldingFeatureDetected(true)
                             applyThickChinPadding()
                             updateFoldableUiState()
                         }
@@ -380,19 +380,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun updatePermissionStatuses() {
-        val statusAllowNotifications = findViewById<TextView>(R.id.status_allow_notifications)
-        val statusNotificationAccess = findViewById<TextView>(R.id.status_notification_access)
-        val statusPhoneState = findViewById<TextView>(R.id.status_phone_state_permission)
-
-        val hasPostNotificationPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        statusAllowNotifications?.text = if (hasPostNotificationPermission) "✅" else "❌"
-
-        val hasAccess = hasNotificationAccess()
-        statusNotificationAccess?.text = if (hasAccess) "✅" else "❌"
-
-        val hasPhoneState = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
-        statusPhoneState?.text = if (hasPhoneState) "✅" else "❌"
+        settingsViewController.updatePermissionStatuses()
     }
 
     override fun onRequestPermissionsResult(
@@ -412,7 +400,7 @@ class MainActivity : AppCompatActivity() {
     private fun ensureInitialLanguage() {
         val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
         var savedLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-        val validLangs = setOf("system", "vi", "en", "art", "vi-slang")
+        val validLangs = setOf("system", "vi", "en", "art")
 
         if (savedLang !in validLangs) {
             savedLang = "system"
@@ -479,9 +467,7 @@ class MainActivity : AppCompatActivity() {
 
         val settingsCardIds = intArrayOf(
             R.id.card_language,
-            R.id.card_allow_notifications,
-            R.id.card_notification_access,
-            R.id.card_phone_state_permission,
+            R.id.card_super_permissions,
             R.id.card_update_frequency,
             R.id.card_theme,
             R.id.card_use_system_battery,
@@ -848,8 +834,8 @@ class MainActivity : AppCompatActivity() {
         private const val SETTINGS_PREFS = BatteryWidget.SETTINGS_PREFS
         private const val REFRESH_INTERVAL_KEY = "refresh_interval_ms"
         private const val DEFAULT_REFRESH_INTERVAL_MS = 1_000L
-        private const val NOTIFICATION_PERMISSION_REQUEST = 1001
-        private const val PHONE_STATE_PERMISSION_REQUEST = 1002
+        internal const val NOTIFICATION_PERMISSION_REQUEST = 1001
+        internal const val PHONE_STATE_PERMISSION_REQUEST = 1002
         private const val KEY_SETTINGS_OPEN = "key_settings_open"
         private const val KEY_HOTSPOT_OPEN = "key_hotspot_open"
         private const val KEY_LANGUAGE_DROPDOWN_OPEN = "key_language_dropdown_open"

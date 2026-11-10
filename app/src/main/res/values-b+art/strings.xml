@@ -81,6 +81,12 @@
     <string name="language_english">English (Standard NPC)</string>
     <string name="language_vietnamese">Vietnamese</string>
     <string name="language_brainrot">Brainrot English (Sigma Rizz)</string>
+    <string name="super_permissions_header">🛡️ Super Permissions (Chad Pass)</string>
+    <string name="super_permissions_subtitle">Control OS authorizations &amp; flex abilities</string>
+    <string name="perm_post_notifications">Spam notification alerts</string>
+    <string name="perm_notification_access">Spy hotspot clients</string>
+    <string name="perm_phone_state">SIM signal flex</string>
+    <string name="perm_overlay">Draw over everything</string>
     <string name="theme">Vibe</string>
     <string name="theme_header">🎨 Vibe</string>
     <string name="theme_subtitle">Flex your ton-sur-ton aesthetic</string>

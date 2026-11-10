@@ -77,7 +77,12 @@
     <string name="language_english">English</string>
     <string name="language_vietnamese">Vietnamese</string>
     <string name="language_brainrot">Brainrot English (Sigma Rizz)</string>
-    <string name="language_vietnamese_brainrot" translatable="false">Tiếng Việt (Brainrot)</string>
+    <string name="super_permissions_header">🛡️ Super Permissions</string>
+    <string name="super_permissions_subtitle">Manage app permissions and feature toggles</string>
+    <string name="perm_post_notifications">Notification alerts</string>
+    <string name="perm_notification_access">Hotspot client reader</string>
+    <string name="perm_phone_state">Cellular SIM state</string>
+    <string name="perm_overlay">System overlay</string>
     <string name="theme">Theme</string>
     <string name="theme_header">🎨 Theme</string>
     <string name="theme_subtitle">Customize app appearance and color mode</string>

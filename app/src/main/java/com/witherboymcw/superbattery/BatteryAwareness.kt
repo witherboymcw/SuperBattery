@@ -67,7 +67,6 @@ fun getBatteryPowerInfo(context: Context): BatteryPowerInfo? {
 }
 
 object BatteryMath {
-    // Single conservative voltage-to-charge curve, compressed to 3550–4140 mV.
     private val DISCHARGE_VOLTAGES = intArrayOf(
         4140, 4133, 4126, 4118, 4111, 4104, 4097, 4090, 4083, 4076,
         4069, 4062, 4055, 4048, 4041, 4034, 4028, 4021, 4014, 4007,

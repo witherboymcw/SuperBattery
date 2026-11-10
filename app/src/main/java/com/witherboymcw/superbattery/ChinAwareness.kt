@@ -123,7 +123,7 @@ object ChinAwareness {
 
         val savedTheme = prefs.getString(SettingsViewController.APP_THEME_KEY, "system") ?: "system"
         val isNight = (activity.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        val isFoldable = FoldableDetector.isFoldableDevice(activity)
+        val isFoldable = FoldableAwareness.isFoldableDevice(activity)
         val density = activity.resources.displayMetrics.density
 
         val rawLevel = overrideLevel ?: activity.thickChinOverrideLevel ?: getThickChinLevel(activity)
@@ -183,7 +183,7 @@ object ChinAwareness {
      * Hides the thick chin setting card if the device is a foldable device.
      */
     fun checkFoldableChinVisibility(activity: MainActivity) {
-        if (FoldableDetector.isFoldableDevice(activity)) {
+        if (FoldableAwareness.isFoldableDevice(activity)) {
             activity.findViewById<View>(R.id.card_thick_chin)?.visibility = View.GONE
         }
     }

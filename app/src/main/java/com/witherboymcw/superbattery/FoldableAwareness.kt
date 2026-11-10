@@ -5,7 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Build
 
-object FoldableDetector {
+object FoldableAwareness {
 
     @Volatile
     private var isFoldingFeatureDetected: Boolean = false

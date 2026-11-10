@@ -76,6 +76,12 @@
     <string name="language_english">Tiếng Anh (English)</string>
     <string name="language_vietnamese">Tiếng Việt</string>
     <string name="language_brainrot">Tiếng Anh Brainrot</string>
+    <string name="super_permissions_header">🛡️ Super Permissions</string>
+    <string name="super_permissions_subtitle">Quản lý quyền hệ thống và cờ sử dụng ứng dụng</string>
+    <string name="perm_post_notifications">Quyền gửi thông báo</string>
+    <string name="perm_notification_access">Quyền đọc thông báo Hotspot</string>
+    <string name="perm_phone_state">Quyền trạng thái điện thoại</string>
+    <string name="perm_overlay">Quyền hiển thị trên ứng dụng khác</string>
     <string name="theme">Giao diện</string>
     <string name="theme_header">🎨 Giao diện</string>
     <string name="theme_subtitle">Chỉnh giao diện và chế độ màu sắc ứng dụng</string>

@@ -2,25 +2,49 @@ package com.witherboymcw.superbattery
 
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
-import android.widget.RadioGroup
-import android.widget.SeekBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
-import com.google.android.material.checkbox.MaterialCheckBox
+import com.witherboymcw.superbattery.settings.Frequency
+import com.witherboymcw.superbattery.settings.Language
+import com.witherboymcw.superbattery.settings.Notch
+import com.witherboymcw.superbattery.settings.Oled
+import com.witherboymcw.superbattery.settings.Permissions
+import com.witherboymcw.superbattery.settings.UnitRAM
+import com.witherboymcw.superbattery.settings.UnitTEMP
+import com.witherboymcw.superbattery.settings.Theme
+import com.witherboymcw.superbattery.settings.ThickChin
+import com.witherboymcw.superbattery.settings.UseSysBatt
+import com.witherboymcw.superbattery.settings.UnitVOLT
 
 internal class SettingsViewController {
     private var activityRef: MainActivity? = null
     var isOpen: Boolean = false
-    var pendingThickChinLevel: Int? = null
+
+    var permissionsCard: Permissions? = null
+        private set
+    var languageCard: Language? = null
+        private set
+    var frequencyCard: Frequency? = null
+        private set
+    var themeCard: Theme? = null
+        private set
+    var useSysBattCard: UseSysBatt? = null
+        private set
+    var unitVOLTCard: UnitVOLT? = null
+        private set
+    var unitRAMCard: UnitRAM? = null
+        private set
+    var unitTEMPCard: UnitTEMP? = null
+        private set
+    var thickChinCard: ThickChin? = null
+        private set
+    var notchCard: Notch? = null
+        private set
+    var oledCard: Oled? = null
         private set
 
     val backCallback = object : OnBackPressedCallback(false) {
@@ -74,7 +98,7 @@ internal class SettingsViewController {
     }
 
     fun closeScreen(activity: MainActivity, animate: Boolean = true) {
-        flushThickChinCommit()
+        thickChinCard?.flushCommit()
         val container = activity.findViewById<View>(R.id.settings_container) ?: return
         if (container.visibility != View.VISIBLE) return
         isOpen = false
@@ -104,6 +128,15 @@ internal class SettingsViewController {
         }
     }
 
+    fun flushThickChinCommit() {
+        thickChinCard?.flushCommit()
+    }
+
+    fun unbind() {
+        backCallback.remove()
+        activityRef = null
+    }
+
     fun restoreOpenState(activity: MainActivity) {
         val container = activity.findViewById<View>(R.id.settings_container) ?: return
         container.visibility = View.VISIBLE
@@ -112,26 +145,6 @@ internal class SettingsViewController {
         isOpen = true
         activity.btnSettings?.rotation = 90f
     }
-
-    private val commitHandler = Handler(Looper.getMainLooper())
-    private val commitRunnable = Runnable {
-        flushThickChinCommit()
-    }
-
-    fun scheduleThickChinCommit() {
-        commitHandler.removeCallbacks(commitRunnable)
-        commitHandler.postDelayed(commitRunnable, 2000L)
-    }
-
-    fun flushThickChinCommit() {
-        commitHandler.removeCallbacks(commitRunnable)
-        val level = pendingThickChinLevel ?: return
-        pendingThickChinLevel = null
-        val act = activityRef ?: return
-        act.thickChinOverrideLevel = null
-        ChinAwareness.saveThickChinLevel(act, level)
-    }
-
 
     private fun getTargetLayoutRes(): Int = R.layout.layout_settings
 
@@ -160,850 +173,283 @@ internal class SettingsViewController {
         activity.applySettingsCardTheme()
 
         with(activity) {
-        ChinAwareness.checkFoldableChinVisibility(this)
+            ChinAwareness.checkFoldableChinVisibility(this)
 
-        val swipeContainer = findViewById<android.view.ViewGroup>(R.id.settings_container) ?: return
-        swipeContainer.isClickable = true
-        swipeContainer.isFocusable = true
+            val swipeContainer = findViewById<android.view.ViewGroup>(R.id.settings_container) ?: return
+            swipeContainer.isClickable = true
+            swipeContainer.isFocusable = true
 
-        // Top-left back button
-        findViewById<View>(R.id.settings_back_button)?.setOnClickListener {
-            closeScreen(this)
-        }
-
-        // Swipe right callback from SwipeBackFrameLayout
-        (swipeContainer as? SwipeBackFrameLayout)?.swipeListener = object : SwipeBackFrameLayout.SwipeListener {
-            override fun onSwipeProgress(translationX: Float) {
-                swipeContainer.translationX = translationX
-                val widthVal = swipeContainer.width.toFloat().takeIf { it > 0 } ?: 1080f
-                val progress = (1f - (translationX / widthVal)).coerceIn(0f, 1f)
-                btnSettings?.rotation = progress * 90f
+            // Top-left back button
+            findViewById<View>(R.id.settings_back_button)?.setOnClickListener {
+                closeScreen(this)
             }
 
-            override fun onSwipeEnd(shouldClose: Boolean) {
-                if (shouldClose) {
-                    closeScreen(this@with)
-                } else {
-                    swipeContainer.animate()
-                        .translationX(0f)
-                        .setDuration(200L)
-                        .setInterpolator(FastOutSlowInInterpolator())
-                        .withLayer()
-                        .start()
-                    btnSettings?.animate()
-                        ?.rotation(90f)
-                        ?.setDuration(200L)
-                        ?.setInterpolator(FastOutSlowInInterpolator())
-                        ?.start()
+            // Swipe right callback from SwipeBackFrameLayout
+            (swipeContainer as? SwipeBackFrameLayout)?.swipeListener = object : SwipeBackFrameLayout.SwipeListener {
+                override fun onSwipeProgress(translationX: Float) {
+                    swipeContainer.translationX = translationX
+                    val widthVal = swipeContainer.width.toFloat().takeIf { it > 0 } ?: 1080f
+                    val progress = (1f - (translationX / widthVal)).coerceIn(0f, 1f)
+                    btnSettings?.rotation = progress * 90f
                 }
-            }
-        }
 
-        // 1. Language selector dropdown
-        val headerLanguage = findViewById<View>(R.id.header_language)
-        val dropdownLanguage = findViewById<View>(R.id.dropdown_language)
-        val arrowLanguage = findViewById<ImageView>(R.id.arrow_language)
-        val selectedLanguageText = findViewById<TextView>(R.id.selected_language_text)
-
-        headerLanguage?.setOnClickListener {
-            val isExpanded = dropdownLanguage?.visibility == View.VISIBLE
-            dropdownLanguage?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowLanguage?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_LANGUAGE_DROPDOWN_OPEN) == true) {
-            dropdownLanguage?.visibility = View.VISIBLE
-            arrowLanguage?.rotation = 180f
-        }
-
-        val langGroup = findViewById<RadioGroup>(R.id.language_radio_group)
-
-        val savedLang = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, android.content.Context.MODE_PRIVATE)
-            .getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-
-        when (savedLang) {
-            "vi" -> {
-                langGroup?.check(R.id.lang_vietnamese)
-                selectedLanguageText?.text = getString(R.string.language_vietnamese)
-            }
-            "en" -> {
-                langGroup?.check(R.id.lang_english)
-                selectedLanguageText?.text = getString(R.string.language_english)
-            }
-            "art", "en-0rot", "en-x-brainrot", "en-brainrot", "en-BR" -> {
-                langGroup?.check(R.id.lang_brainrot)
-                selectedLanguageText?.text = getString(R.string.language_brainrot)
-            }
-            "vi-slang" -> {
-                langGroup?.check(R.id.lang_vietnamese_brainrot)
-                selectedLanguageText?.text = getString(R.string.language_vietnamese_brainrot)
-            }
-            else -> {
-                langGroup?.check(R.id.lang_system)
-                selectedLanguageText?.text = getString(R.string.at_system)
-            }
-        }
-
-        langGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetLang = when (checkedId) {
-                R.id.lang_vietnamese -> "vi"
-                R.id.lang_english -> "en"
-                R.id.lang_brainrot -> "art"
-                R.id.lang_vietnamese_brainrot -> "vi-slang"
-                else -> "system"
-            }
-            selectedLanguageText?.text = when (targetLang) {
-                "vi" -> getString(R.string.language_vietnamese)
-                "en" -> getString(R.string.language_english)
-                "art" -> getString(R.string.language_brainrot)
-                "vi-slang" -> getString(R.string.language_vietnamese_brainrot)
-                else -> getString(R.string.at_system)
-            }
-            setAppLanguage(targetLang)
-        }
-
-        // 2. Allow notifications
-        findViewById<View>(R.id.card_allow_notifications)?.setOnClickListener {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_REQUEST)
-            } else {
-                Toast.makeText(activity, R.string.notification_access_enabled, Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        // 3. Manage notification access
-        findViewById<View>(R.id.card_notification_access)?.setOnClickListener {
-            openNotificationAccessSettings()
-        }
-
-        // 3.5 Read phone state permission
-        findViewById<View>(R.id.card_phone_state_permission)?.setOnClickListener {
-            if (checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(android.Manifest.permission.READ_PHONE_STATE), PHONE_STATE_PERMISSION_REQUEST)
-            } else {
-                Toast.makeText(activity, R.string.permission_already_granted, Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        // 4. Update frequency dropdown
-        val headerFrequency = findViewById<View>(R.id.header_update_frequency)
-        val dropdownFrequency = findViewById<View>(R.id.dropdown_update_frequency)
-        val arrowFrequency = findViewById<ImageView>(R.id.arrow_update_frequency)
-        val selectedFrequencyText = findViewById<TextView>(R.id.selected_frequency_text)
-
-        headerFrequency?.setOnClickListener {
-            val isExpanded = dropdownFrequency?.visibility == View.VISIBLE
-            dropdownFrequency?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowFrequency?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_FREQUENCY_DROPDOWN_OPEN) == true) {
-            dropdownFrequency?.visibility = View.VISIBLE
-            arrowFrequency?.rotation = 180f
-        }
-
-        val freqGroup = findViewById<RadioGroup>(R.id.frequency_radio_group)
-        val initialFreqRes = when (refreshIntervalMs) {
-            500L -> {
-                freqGroup?.check(R.id.freq_500)
-                R.string.update_every_half_second
-            }
-            1_000L -> {
-                freqGroup?.check(R.id.freq_1000)
-                R.string.update_every_second
-            }
-            else -> {
-                freqGroup?.check(R.id.freq_2000)
-                R.string.update_every_two_seconds
-            }
-        }
-        selectedFrequencyText?.text = getString(initialFreqRes)
-
-        freqGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val selectedMs = when (checkedId) {
-                R.id.freq_500 -> 500L
-                R.id.freq_1000 -> 1_000L
-                R.id.freq_2000 -> 2_000L
-                else -> 2_000L
-            }
-            val textRes = when (selectedMs) {
-                500L -> R.string.update_every_half_second
-                1_000L -> R.string.update_every_second
-                else -> R.string.update_every_two_seconds
-            }
-            selectedFrequencyText?.text = getString(textRes)
-            refreshIntervalMs = selectedMs
-            getSharedPreferences(SETTINGS_PREFS, android.content.Context.MODE_PRIVATE).edit()
-                .putLong(REFRESH_INTERVAL_KEY, selectedMs)
-                .apply()
-            handler.removeCallbacks(refreshDashboard)
-            handler.post(refreshDashboard)
-        }
-
-        // 5. Theme dropdown
-        val headerTheme = findViewById<View>(R.id.header_theme)
-        val dropdownTheme = findViewById<View>(R.id.dropdown_theme)
-        val arrowTheme = findViewById<ImageView>(R.id.arrow_theme)
-        val selectedThemeText = findViewById<TextView>(R.id.selected_theme_text)
-
-        headerTheme?.setOnClickListener {
-            val isExpanded = dropdownTheme?.visibility == View.VISIBLE
-            dropdownTheme?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowTheme?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_THEME_DROPDOWN_OPEN) == true) {
-            dropdownTheme?.visibility = View.VISIBLE
-            arrowTheme?.rotation = 180f
-        }
-
-        val themeGroup = findViewById<RadioGroup>(R.id.theme_radio_group)
-
-        val prefs = getSharedPreferences(SETTINGS_PREFS, android.content.Context.MODE_PRIVATE)
-        val currentTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
-
-        when (currentTheme) {
-            "light" -> {
-                themeGroup?.check(R.id.theme_light)
-                selectedThemeText?.text = getString(R.string.theme_light)
-            }
-            "dark" -> {
-                themeGroup?.check(R.id.theme_dark)
-                selectedThemeText?.text = getString(R.string.theme_dark)
-            }
-            "oled" -> {
-                themeGroup?.check(R.id.theme_oled)
-                selectedThemeText?.text = getString(R.string.theme_oled)
-            }
-            else -> {
-                themeGroup?.check(R.id.theme_system)
-                selectedThemeText?.text = getString(R.string.at_system)
-            }
-        }
-
-        themeGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetTheme = when (checkedId) {
-                R.id.theme_light -> "light"
-                R.id.theme_dark -> "dark"
-                R.id.theme_oled -> "oled"
-                else -> "system"
-            }
-            val textRes = when (targetTheme) {
-                "light" -> R.string.theme_light
-                "dark" -> R.string.theme_dark
-                "oled" -> R.string.theme_oled
-                else -> R.string.at_system
-            }
-            selectedThemeText?.text = getString(textRes)
-
-            val activeTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
-            if (activeTheme != targetTheme) {
-                prefs.edit().putString(APP_THEME_KEY, targetTheme).apply()
-                val mode = when (targetTheme) {
-                    "light" -> AppCompatDelegate.MODE_NIGHT_NO
-                    "dark", "oled" -> AppCompatDelegate.MODE_NIGHT_YES
-                    else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                }
-                AppCompatDelegate.setDefaultNightMode(mode)
-                activity.recreate()
-            }
-        }
-
-        // 6. Use system battery counter
-        val checkboxSystemBattery = findViewById<MaterialCheckBox>(R.id.checkbox_use_system_battery)
-        val cardSystemBattery = findViewById<View>(R.id.card_use_system_battery)
-
-        checkboxSystemBattery?.isChecked = SettingsHelper.isUseSystemBatteryCounter(activity)
-
-        cardSystemBattery?.setOnClickListener {
-            val newValue = !(checkboxSystemBattery?.isChecked ?: false)
-            checkboxSystemBattery?.isChecked = newValue
-            getSharedPreferences(SETTINGS_PREFS, android.content.Context.MODE_PRIVATE).edit()
-                .putBoolean(BatteryWidget.USE_SYSTEM_BATTERY_KEY, newValue)
-                .apply()
-            updateDashboard()
-            refreshWidgets()
-        }
-
-        // 7. Voltage unit dropdown
-        val headerVoltageUnit = findViewById<View>(R.id.header_voltage_unit)
-        val dropdownVoltageUnit = findViewById<View>(R.id.dropdown_voltage_unit)
-        val arrowVoltageUnit = findViewById<ImageView>(R.id.arrow_voltage_unit)
-        val selectedVoltageUnitText = findViewById<TextView>(R.id.selected_voltage_unit_text)
-
-        headerVoltageUnit?.setOnClickListener {
-            val isExpanded = dropdownVoltageUnit?.visibility == View.VISIBLE
-            dropdownVoltageUnit?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowVoltageUnit?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_VOLTAGE_UNIT_DROPDOWN_OPEN) == true) {
-            dropdownVoltageUnit?.visibility = View.VISIBLE
-            arrowVoltageUnit?.rotation = 180f
-        }
-
-        val voltageUnitGroup = findViewById<RadioGroup>(R.id.voltage_unit_radio_group)
-
-        val currentVoltageUnit = SettingsHelper.getVoltageUnit(activity)
-        when (currentVoltageUnit) {
-            VoltageUnit.V -> {
-                voltageUnitGroup?.check(R.id.voltage_unit_v)
-                selectedVoltageUnitText?.text = getString(R.string.voltage_unit_v)
-            }
-            else -> {
-                voltageUnitGroup?.check(R.id.voltage_unit_mv)
-                selectedVoltageUnitText?.text = getString(R.string.voltage_unit_mv)
-            }
-        }
-
-        voltageUnitGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetUnit = when (checkedId) {
-                R.id.voltage_unit_v -> VoltageUnit.V
-                else -> VoltageUnit.MV
-            }
-            val textRes = when (targetUnit) {
-                VoltageUnit.V -> R.string.voltage_unit_v
-                else -> R.string.voltage_unit_mv
-            }
-            selectedVoltageUnitText?.text = getString(textRes)
-
-            getSharedPreferences(SETTINGS_PREFS, android.content.Context.MODE_PRIVATE).edit()
-                .putString(BatteryWidget.VOLTAGE_UNIT_KEY, targetUnit.code)
-                .apply()
-            updateDashboard()
-            refreshWidgets()
-        }
-
-        // 8. RAM unit dropdown
-        val headerRamUnit = findViewById<View>(R.id.header_ram_unit)
-        val dropdownRamUnit = findViewById<View>(R.id.dropdown_ram_unit)
-        val arrowRamUnit = findViewById<ImageView>(R.id.arrow_ram_unit)
-        val selectedRamUnitText = findViewById<TextView>(R.id.selected_ram_unit_text)
-
-        headerRamUnit?.setOnClickListener {
-            val isExpanded = dropdownRamUnit?.visibility == View.VISIBLE
-            dropdownRamUnit?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowRamUnit?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_RAM_UNIT_DROPDOWN_OPEN) == true) {
-            dropdownRamUnit?.visibility = View.VISIBLE
-            arrowRamUnit?.rotation = 180f
-        }
-
-        val ramUnitGroup = findViewById<RadioGroup>(R.id.ram_unit_radio_group)
-
-        val currentRamUnit = SettingsHelper.getRamUnit(activity)
-        when (currentRamUnit) {
-            RamUnit.GB -> {
-                ramUnitGroup?.check(R.id.ram_unit_gb)
-                selectedRamUnitText?.text = getString(R.string.ram_unit_gb)
-            }
-            else -> {
-                ramUnitGroup?.check(R.id.ram_unit_mb)
-                selectedRamUnitText?.text = getString(R.string.ram_unit_mb)
-            }
-        }
-
-        ramUnitGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetUnit = when (checkedId) {
-                R.id.ram_unit_gb -> RamUnit.GB
-                else -> RamUnit.MB
-            }
-            val textRes = when (targetUnit) {
-                RamUnit.GB -> R.string.ram_unit_gb
-                else -> R.string.ram_unit_mb
-            }
-            selectedRamUnitText?.text = getString(textRes)
-
-            getSharedPreferences(SETTINGS_PREFS, android.content.Context.MODE_PRIVATE).edit()
-                .putString(BatteryWidget.RAM_UNIT_KEY, targetUnit.code)
-                .apply()
-            updateDashboard()
-            refreshWidgets()
-        }
-
-        // 9. Temperature unit dropdown
-        val headerTempUnit = findViewById<View>(R.id.header_temp_unit)
-        val dropdownTempUnit = findViewById<View>(R.id.dropdown_temp_unit)
-        val arrowTempUnit = findViewById<ImageView>(R.id.arrow_temp_unit)
-        val selectedTempUnitText = findViewById<TextView>(R.id.selected_temp_unit_text)
-
-        headerTempUnit?.setOnClickListener {
-            val isExpanded = dropdownTempUnit?.visibility == View.VISIBLE
-            dropdownTempUnit?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowTempUnit?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_TEMP_UNIT_DROPDOWN_OPEN) == true) {
-            dropdownTempUnit?.visibility = View.VISIBLE
-            arrowTempUnit?.rotation = 180f
-        }
-
-        val tempUnitGroup = findViewById<RadioGroup>(R.id.temp_unit_radio_group)
-
-        val currentTempUnit = SettingsHelper.getTemperatureUnit(activity)
-        when (currentTempUnit) {
-            TempUnit.FAHRENHEIT -> {
-                tempUnitGroup?.check(R.id.temp_unit_fahrenheit)
-                selectedTempUnitText?.text = getString(R.string.temp_unit_fahrenheit)
-            }
-            TempUnit.KELVIN -> {
-                tempUnitGroup?.check(R.id.temp_unit_kelvin)
-                selectedTempUnitText?.text = getString(R.string.temp_unit_kelvin)
-            }
-            else -> {
-                tempUnitGroup?.check(R.id.temp_unit_celsius)
-                selectedTempUnitText?.text = getString(R.string.temp_unit_celsius)
-            }
-        }
-
-        tempUnitGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetUnit = when (checkedId) {
-                R.id.temp_unit_fahrenheit -> TempUnit.FAHRENHEIT
-                R.id.temp_unit_kelvin -> TempUnit.KELVIN
-                else -> TempUnit.CELSIUS
-            }
-            val textRes = when (targetUnit) {
-                TempUnit.FAHRENHEIT -> R.string.temp_unit_fahrenheit
-                TempUnit.KELVIN -> R.string.temp_unit_kelvin
-                else -> R.string.temp_unit_celsius
-            }
-            selectedTempUnitText?.text = getString(textRes)
-
-            getSharedPreferences(SETTINGS_PREFS, android.content.Context.MODE_PRIVATE).edit()
-                .putString(BatteryWidget.TEMP_UNIT_KEY, targetUnit.code)
-                .apply()
-            updateDashboard()
-            refreshWidgets()
-        }
-
-        // 10. Thick chin mode dropdown
-        setupThickChinSettings(activity, savedInstanceState)
-
-        val settingsScrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_view)
-        val settingsScrollLeft = findViewById<android.widget.ScrollView>(R.id.settings_scroll_left)
-        val settingsScrollRight = findViewById<android.widget.ScrollView>(R.id.settings_scroll_right)
-
-        fun setupScrollFlush(view: View?) {
-            view ?: return
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                view.setOnScrollChangeListener { _, _, _, _, _ ->
-                    if (pendingThickChinLevel != null) {
-                        flushThickChinCommit()
-                    }
-                }
-            } else {
-                view.viewTreeObserver?.addOnScrollChangedListener {
-                    if (pendingThickChinLevel != null) {
-                        flushThickChinCommit()
+                override fun onSwipeEnd(shouldClose: Boolean) {
+                    if (shouldClose) {
+                        closeScreen(this@with)
+                    } else {
+                        swipeContainer.animate()
+                            .translationX(0f)
+                            .setDuration(200L)
+                            .setInterpolator(FastOutSlowInInterpolator())
+                            .withLayer()
+                            .start()
+                        btnSettings?.animate()
+                            ?.rotation(90f)
+                            ?.setDuration(200L)
+                            ?.setInterpolator(FastOutSlowInInterpolator())
+                            ?.start()
                     }
                 }
             }
-        }
 
-        setupScrollFlush(settingsScrollView)
-        setupScrollFlush(settingsScrollLeft)
-        setupScrollFlush(settingsScrollRight)
+            // Initialize 11 Component Cards
+            val pCard = Permissions(this).also { permissionsCard = it }
+            val lCard = Language(this).also { languageCard = it }
+            val fCard = Frequency(this).also { frequencyCard = it }
+            val tCard = Theme(this).also { themeCard = it }
+            val uCard = UseSysBatt(this).also { useSysBattCard = it }
+            val vCard = UnitVOLT(this).also { unitVOLTCard = it }
+            val rCard = UnitRAM(this).also { unitRAMCard = it }
+            val tempCard = UnitTEMP(this).also { unitTEMPCard = it }
+            val chinCard = ThickChin(this).also { thickChinCard = it }
+            val nCard = Notch(this).also { notchCard = it }
+            val oCard = Oled(this).also { oledCard = it }
 
-        // 12. Assume OLED dropdown
-        // Customize Notch
-        val headerNotch = findViewById<View>(R.id.header_notch)
-        val dropdownNotch = findViewById<View>(R.id.dropdown_notch)
-        val arrowNotch = findViewById<ImageView>(R.id.arrow_notch)
-        val selectedNotchText = findViewById<TextView>(R.id.selected_notch_text)
-        val notchModeGroup = findViewById<RadioGroup>(R.id.notch_mode_radio_group)
-        val notchPosContainer = findViewById<View>(R.id.notch_position_container)
-        val notchPosGroup = findViewById<RadioGroup>(R.id.notch_position_radio_group)
-        val btnSetNotchPos = findViewById<android.widget.Button>(R.id.btn_set_notch_position)
-
-        if (headerNotch != null && dropdownNotch != null && arrowNotch != null && selectedNotchText != null) {
-            val notchMode = prefs.getInt(NotchAwareness.KEY_NOTCH_CUSTOM_MODE, NotchAwareness.MODE_SYSTEM)
-            when (notchMode) {
-                NotchAwareness.MODE_SYSTEM -> notchModeGroup?.check(R.id.notch_mode_system)
-                NotchAwareness.MODE_FORCE -> notchModeGroup?.check(R.id.notch_mode_force)
-                NotchAwareness.MODE_IGNORE -> notchModeGroup?.check(R.id.notch_mode_ignore)
+            // Bind each card
+            pCard.bind(savedInstanceState)
+            lCard.bind(savedInstanceState) { targetLang ->
+                setAppLanguage(targetLang)
             }
-
-            fun updateNotchText() {
-                val mode = prefs.getInt(NotchAwareness.KEY_NOTCH_CUSTOM_MODE, NotchAwareness.MODE_SYSTEM)
-                selectedNotchText.text = when(mode) {
-                    NotchAwareness.MODE_FORCE -> getString(R.string.notch_mode_force)
-                    NotchAwareness.MODE_IGNORE -> getString(R.string.notch_mode_ignore)
-                    else -> getString(R.string.notch_mode_system)
-                }
-                notchPosContainer?.visibility = if (mode == NotchAwareness.MODE_FORCE) View.VISIBLE else View.GONE
+            fCard.bind(
+                savedInstanceState,
+                refreshIntervalMs,
+                handler,
+                refreshDashboard
+            ) { selectedMs ->
+                refreshIntervalMs = selectedMs
             }
-            updateNotchText()
-
-            val isCenter = prefs.getBoolean(NotchAwareness.KEY_NOTCH_IS_CENTER, true)
-            if (isCenter) {
-                notchPosGroup?.check(R.id.notch_pos_center)
-            } else {
-                notchPosGroup?.check(R.id.notch_pos_not_center)
+            tCard.bind(savedInstanceState)
+            uCard.bind {
+                updateDashboard()
+                refreshWidgets()
             }
-
-            notchModeGroup?.setOnCheckedChangeListener { _, checkedId ->
-                val mode = when(checkedId) {
-                    R.id.notch_mode_force -> NotchAwareness.MODE_FORCE
-                    R.id.notch_mode_ignore -> NotchAwareness.MODE_IGNORE
-                    else -> NotchAwareness.MODE_SYSTEM
-                }
-                prefs.edit().putInt(NotchAwareness.KEY_NOTCH_CUSTOM_MODE, mode).apply()
-                updateNotchText()
-                NotchAwareness.updateAllHeaders(activity)
+            vCard.bind(savedInstanceState) {
+                updateDashboard()
+                refreshWidgets()
             }
-
-            notchPosGroup?.setOnCheckedChangeListener { _, checkedId ->
-                prefs.edit().putBoolean(NotchAwareness.KEY_NOTCH_IS_CENTER, checkedId == R.id.notch_pos_center).apply()
-                NotchAwareness.updateAllHeaders(activity)
+            rCard.bind(savedInstanceState) {
+                updateDashboard()
+                refreshWidgets()
             }
-
-            btnSetNotchPos?.setOnClickListener {
-                NotchAwareness.showNotchPositionOverlay(activity)
+            tempCard.bind(savedInstanceState) {
+                updateDashboard()
+                refreshWidgets()
             }
+            chinCard.bind(savedInstanceState)
+            nCard.bind(savedInstanceState)
+            oCard.bind(savedInstanceState)
 
-            val isNotchOpen = savedInstanceState?.getBoolean(KEY_NOTCH_DROPDOWN_OPEN, false) ?: false
-            if (isNotchOpen) {
-                dropdownNotch.visibility = View.VISIBLE
-                arrowNotch.rotation = 180f
-            }
+            // Setup scroll flush for ThickChin
+            val settingsScrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_view)
+            val settingsScrollLeft = findViewById<android.widget.ScrollView>(R.id.settings_scroll_left)
+            val settingsScrollRight = findViewById<android.widget.ScrollView>(R.id.settings_scroll_right)
 
-            headerNotch.setOnClickListener {
-                if (dropdownNotch.visibility == View.VISIBLE) {
-                    dropdownNotch.visibility = View.GONE
-                    arrowNotch.animate().rotation(0f).setDuration(200).start()
+            fun setupScrollFlush(view: View?) {
+                view ?: return
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    view.setOnScrollChangeListener { _, _, _, _, _ ->
+                        chinCard.flushCommit()
+                    }
                 } else {
-                    dropdownNotch.visibility = View.VISIBLE
-                    arrowNotch.animate().rotation(180f).setDuration(200).start()
+                    view.viewTreeObserver?.addOnScrollChangedListener {
+                        chinCard.flushCommit()
+                    }
                 }
             }
-        }
-        val headerAssumeOled = findViewById<View>(R.id.header_assume_oled)
-        val dropdownAssumeOled = findViewById<View>(R.id.dropdown_assume_oled)
-        val arrowAssumeOled = findViewById<ImageView>(R.id.arrow_assume_oled)
-        val selectedAssumeOledText = findViewById<TextView>(R.id.selected_assume_oled_text)
 
-        headerAssumeOled?.setOnClickListener {
-            val isExpanded = dropdownAssumeOled?.visibility == View.VISIBLE
-            dropdownAssumeOled?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowAssumeOled?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
+            setupScrollFlush(settingsScrollView)
+            setupScrollFlush(settingsScrollLeft)
+            setupScrollFlush(settingsScrollRight)
 
-        if (savedInstanceState?.getBoolean(KEY_ASSUME_OLED_DROPDOWN_OPEN) == true) {
-            dropdownAssumeOled?.visibility = View.VISIBLE
-            arrowAssumeOled?.rotation = 180f
-        }
+            // Landscape two-column settings setup
+            val headerLanguage = findViewById<View>(R.id.header_language)
+            val dropdownLanguage = findViewById<View>(R.id.dropdown_language)
+            val arrowLanguage = findViewById<ImageView>(R.id.arrow_language)
 
-        val assumeOledGroup = findViewById<RadioGroup>(R.id.assume_oled_radio_group)
-        val currentAssumeOled = prefs.getString(OledThemeAllInOne.ASSUME_OLED_KEY, OledThemeAllInOne.OPTION_NONE) ?: OledThemeAllInOne.OPTION_NONE
+            val headerSuperPermissions = findViewById<View>(R.id.header_super_permissions)
+            val dropdownSuperPermissions = findViewById<View>(R.id.dropdown_super_permissions)
+            val arrowSuperPermissions = findViewById<ImageView>(R.id.arrow_super_permissions)
 
-        when (currentAssumeOled) {
-            OledThemeAllInOne.OPTION_OLED -> {
-                assumeOledGroup?.check(R.id.assume_oled_force_oled)
-                selectedAssumeOledText?.text = getString(R.string.assume_oled_opt_oled)
-            }
-            OledThemeAllInOne.OPTION_NOT_OLED -> {
-                assumeOledGroup?.check(R.id.assume_oled_not_oled)
-                selectedAssumeOledText?.text = getString(R.string.assume_oled_opt_not_oled)
-            }
-            else -> {
-                assumeOledGroup?.check(R.id.assume_oled_none)
-                selectedAssumeOledText?.text = getString(R.string.assume_oled_opt_none)
-            }
-        }
+            val headerFrequency = findViewById<View>(R.id.header_update_frequency)
+            val dropdownFrequency = findViewById<View>(R.id.dropdown_update_frequency)
+            val arrowFrequency = findViewById<ImageView>(R.id.arrow_update_frequency)
 
-        assumeOledGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetValue = when (checkedId) {
-                R.id.assume_oled_force_oled -> OledThemeAllInOne.OPTION_OLED
-                R.id.assume_oled_not_oled -> OledThemeAllInOne.OPTION_NOT_OLED
-                else -> OledThemeAllInOne.OPTION_NONE
-            }
-            val textRes = when (targetValue) {
-                OledThemeAllInOne.OPTION_OLED -> R.string.assume_oled_opt_oled
-                OledThemeAllInOne.OPTION_NOT_OLED -> R.string.assume_oled_opt_not_oled
-                else -> R.string.assume_oled_opt_none
-            }
-            selectedAssumeOledText?.text = getString(textRes)
+            val headerTheme = findViewById<View>(R.id.header_theme)
+            val dropdownTheme = findViewById<View>(R.id.dropdown_theme)
+            val arrowTheme = findViewById<ImageView>(R.id.arrow_theme)
 
-            val activeValue = prefs.getString(OledThemeAllInOne.ASSUME_OLED_KEY, OledThemeAllInOne.OPTION_NONE) ?: OledThemeAllInOne.OPTION_NONE
-            if (activeValue != targetValue) {
-                prefs.edit().putString(OledThemeAllInOne.ASSUME_OLED_KEY, targetValue).apply()
-                activity.recreate()
-            }
-        }
+            val headerVoltageUnit = findViewById<View>(R.id.header_voltage_unit)
+            val dropdownVoltageUnit = findViewById<View>(R.id.dropdown_voltage_unit)
+            val arrowVoltageUnit = findViewById<ImageView>(R.id.arrow_voltage_unit)
 
-        // Landscape two-column settings options setup
-        val headerThickChin = findViewById<View>(R.id.header_thick_chin)
-        val dropdownThickChin = findViewById<View>(R.id.dropdown_thick_chin)
-        val arrowThickChin = findViewById<ImageView>(R.id.arrow_thick_chin)
-        val settingsDetailTitle = findViewById<TextView>(R.id.settings_detail_title)
-        if (settingsDetailTitle != null) {
-            val dropdowns = listOf(
-                dropdownLanguage,
-                dropdownFrequency,
-                dropdownTheme,
-                dropdownVoltageUnit,
-                dropdownRamUnit,
-                dropdownTempUnit,
-                dropdownThickChin,
-                dropdownNotch,
-                dropdownAssumeOled
-            )
-            val arrows = listOf(
-                arrowLanguage,
-                arrowFrequency,
-                arrowTheme,
-                arrowVoltageUnit,
-                arrowRamUnit,
-                arrowTempUnit,
-                arrowThickChin,
-                arrowNotch,
-                arrowAssumeOled
-            )
+            val headerRamUnit = findViewById<View>(R.id.header_ram_unit)
+            val dropdownRamUnit = findViewById<View>(R.id.dropdown_ram_unit)
+            val arrowRamUnit = findViewById<ImageView>(R.id.arrow_ram_unit)
 
-            fun selectSection(activeDropdown: View?, activeArrow: ImageView?, titleRes: Int) {
-                flushThickChinCommit()
-                dropdowns.forEach { it?.visibility = View.GONE }
-                arrows.forEach { it?.rotation = 0f }
-                activeDropdown?.visibility = View.VISIBLE
-                activeArrow?.rotation = 180f
-                settingsDetailTitle.setText(titleRes)
+            val headerTempUnit = findViewById<View>(R.id.header_temp_unit)
+            val dropdownTempUnit = findViewById<View>(R.id.dropdown_temp_unit)
+            val arrowTempUnit = findViewById<ImageView>(R.id.arrow_temp_unit)
+
+            val headerThickChin = findViewById<View>(R.id.header_thick_chin)
+            val dropdownThickChin = findViewById<View>(R.id.dropdown_thick_chin)
+            val arrowThickChin = findViewById<ImageView>(R.id.arrow_thick_chin)
+
+            val headerNotch = findViewById<View>(R.id.header_notch)
+            val dropdownNotch = findViewById<View>(R.id.dropdown_notch)
+            val arrowNotch = findViewById<ImageView>(R.id.arrow_notch)
+
+            val headerAssumeOled = findViewById<View>(R.id.header_assume_oled)
+            val dropdownAssumeOled = findViewById<View>(R.id.dropdown_assume_oled)
+            val arrowAssumeOled = findViewById<ImageView>(R.id.arrow_assume_oled)
+
+            val settingsDetailTitle = findViewById<TextView>(R.id.settings_detail_title)
+
+            if (settingsDetailTitle != null) {
+                val dropdowns = listOf(
+                    dropdownLanguage,
+                    dropdownSuperPermissions,
+                    dropdownFrequency,
+                    dropdownTheme,
+                    dropdownVoltageUnit,
+                    dropdownRamUnit,
+                    dropdownTempUnit,
+                    dropdownThickChin,
+                    dropdownNotch,
+                    dropdownAssumeOled
+                )
+                val arrows = listOf(
+                    arrowLanguage,
+                    arrowSuperPermissions,
+                    arrowFrequency,
+                    arrowTheme,
+                    arrowVoltageUnit,
+                    arrowRamUnit,
+                    arrowTempUnit,
+                    arrowThickChin,
+                    arrowNotch,
+                    arrowAssumeOled
+                )
+
+                fun selectSection(activeDropdown: View?, activeArrow: ImageView?, titleRes: Int) {
+                    chinCard.flushCommit()
+                    dropdowns.forEach { it?.visibility = View.GONE }
+                    arrows.forEach { it?.rotation = 0f }
+                    activeDropdown?.visibility = View.VISIBLE
+                    activeArrow?.rotation = 180f
+                    settingsDetailTitle.setText(titleRes)
+                }
+
+                headerLanguage?.setOnClickListener {
+                    selectSection(dropdownLanguage, arrowLanguage, R.string.language)
+                }
+                headerSuperPermissions?.setOnClickListener {
+                    selectSection(dropdownSuperPermissions, arrowSuperPermissions, R.string.super_permissions_header)
+                }
+                headerFrequency?.setOnClickListener {
+                    selectSection(dropdownFrequency, arrowFrequency, R.string.update_frequency)
+                }
+                headerTheme?.setOnClickListener {
+                    selectSection(dropdownTheme, arrowTheme, R.string.theme_header)
+                }
+                headerVoltageUnit?.setOnClickListener {
+                    selectSection(dropdownVoltageUnit, arrowVoltageUnit, R.string.voltage_unit_header)
+                }
+                headerRamUnit?.setOnClickListener {
+                    selectSection(dropdownRamUnit, arrowRamUnit, R.string.ram_unit_header)
+                }
+                headerTempUnit?.setOnClickListener {
+                    selectSection(dropdownTempUnit, arrowTempUnit, R.string.temp_unit_header)
+                }
+                headerThickChin?.setOnClickListener {
+                    selectSection(dropdownThickChin, arrowThickChin, R.string.thick_chin_header)
+                }
+                headerNotch?.setOnClickListener {
+                    selectSection(dropdownNotch, arrowNotch, R.string.notch_header)
+                }
+                headerAssumeOled?.setOnClickListener {
+                    selectSection(dropdownAssumeOled, arrowAssumeOled, R.string.assume_oled_header)
+                }
+
+                val restoredSection = when {
+                    savedInstanceState?.getBoolean(Permissions.KEY_SUPER_PERMISSIONS_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownSuperPermissions, arrowSuperPermissions, R.string.super_permissions_header)
+                    savedInstanceState?.getBoolean(Frequency.KEY_FREQUENCY_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownFrequency, arrowFrequency, R.string.update_frequency)
+                    savedInstanceState?.getBoolean(Theme.KEY_THEME_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownTheme, arrowTheme, R.string.theme_header)
+                    savedInstanceState?.getBoolean(UnitVOLT.KEY_VOLTAGE_UNIT_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownVoltageUnit, arrowVoltageUnit, R.string.voltage_unit_header)
+                    savedInstanceState?.getBoolean(UnitRAM.KEY_RAM_UNIT_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownRamUnit, arrowRamUnit, R.string.ram_unit_header)
+                    savedInstanceState?.getBoolean(UnitTEMP.KEY_TEMP_UNIT_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownTempUnit, arrowTempUnit, R.string.temp_unit_header)
+                    savedInstanceState?.getBoolean(ChinAwareness.KEY_THICK_CHIN_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownThickChin, arrowThickChin, R.string.thick_chin_header)
+                    savedInstanceState?.getBoolean(Notch.KEY_NOTCH_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownNotch, arrowNotch, R.string.notch_header)
+                    savedInstanceState?.getBoolean(Oled.KEY_ASSUME_OLED_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownAssumeOled, arrowAssumeOled, R.string.assume_oled_header)
+                    else ->
+                        Triple(dropdownLanguage, arrowLanguage, R.string.language)
+                }
+                selectSection(restoredSection.first, restoredSection.second, restoredSection.third)
             }
 
-            headerLanguage?.setOnClickListener {
-                selectSection(dropdownLanguage, arrowLanguage, R.string.language)
+            val savedScrollY = savedInstanceState?.getInt(KEY_SETTINGS_SCROLL_Y, -1) ?: -1
+            if (savedScrollY >= 0) {
+                val scrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_view)
+                    ?: findViewById<android.widget.ScrollView>(R.id.settings_scroll_left)
+                scrollView?.post {
+                    scrollView.scrollTo(0, savedScrollY)
+                }
             }
-            headerFrequency?.setOnClickListener {
-                selectSection(dropdownFrequency, arrowFrequency, R.string.update_frequency)
+            val savedRightScrollY = savedInstanceState?.getInt(KEY_SETTINGS_SCROLL_RIGHT_Y, -1) ?: -1
+            if (savedRightScrollY >= 0) {
+                val rightScrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_right)
+                rightScrollView?.post {
+                    rightScrollView.scrollTo(0, savedRightScrollY)
+                }
             }
-            headerTheme?.setOnClickListener {
-                selectSection(dropdownTheme, arrowTheme, R.string.theme_header)
-            }
-            headerVoltageUnit?.setOnClickListener {
-                selectSection(dropdownVoltageUnit, arrowVoltageUnit, R.string.voltage_unit_header)
-            }
-            headerRamUnit?.setOnClickListener {
-                selectSection(dropdownRamUnit, arrowRamUnit, R.string.ram_unit_header)
-            }
-            headerTempUnit?.setOnClickListener {
-                selectSection(dropdownTempUnit, arrowTempUnit, R.string.temp_unit_header)
-            }
-            headerThickChin?.setOnClickListener {
-                selectSection(dropdownThickChin, arrowThickChin, R.string.thick_chin_header)
-            }
-            headerNotch?.setOnClickListener {
-                selectSection(dropdownNotch, arrowNotch, R.string.notch_header)
-            }
-            headerAssumeOled?.setOnClickListener {
-                selectSection(dropdownAssumeOled, arrowAssumeOled, R.string.assume_oled_header)
-            }
-
-            // Initially show restored section or default to Language
-            val restoredSection = when {
-                savedInstanceState?.getBoolean(KEY_FREQUENCY_DROPDOWN_OPEN) == true ->
-                    Triple(dropdownFrequency, arrowFrequency, R.string.update_frequency)
-                savedInstanceState?.getBoolean(KEY_THEME_DROPDOWN_OPEN) == true ->
-                    Triple(dropdownTheme, arrowTheme, R.string.theme_header)
-                savedInstanceState?.getBoolean(KEY_VOLTAGE_UNIT_DROPDOWN_OPEN) == true ->
-                    Triple(dropdownVoltageUnit, arrowVoltageUnit, R.string.voltage_unit_header)
-                savedInstanceState?.getBoolean(KEY_RAM_UNIT_DROPDOWN_OPEN) == true ->
-                    Triple(dropdownRamUnit, arrowRamUnit, R.string.ram_unit_header)
-                savedInstanceState?.getBoolean(KEY_TEMP_UNIT_DROPDOWN_OPEN) == true ->
-                    Triple(dropdownTempUnit, arrowTempUnit, R.string.temp_unit_header)
-                savedInstanceState?.getBoolean(KEY_THICK_CHIN_DROPDOWN_OPEN) == true ->
-                    Triple(dropdownThickChin, arrowThickChin, R.string.thick_chin_header)
-                savedInstanceState?.getBoolean(KEY_NOTCH_DROPDOWN_OPEN) == true ->
-                    Triple(dropdownNotch, arrowNotch, R.string.notch_header)
-                savedInstanceState?.getBoolean(KEY_ASSUME_OLED_DROPDOWN_OPEN) == true ->
-                    Triple(dropdownAssumeOled, arrowAssumeOled, R.string.assume_oled_header)
-                else ->
-                    Triple(dropdownLanguage, arrowLanguage, R.string.language)
-            }
-            selectSection(restoredSection.first, restoredSection.second, restoredSection.third)
-        }
-
-        val savedScrollY = savedInstanceState?.getInt(KEY_SETTINGS_SCROLL_Y, -1) ?: -1
-        if (savedScrollY >= 0) {
-            val scrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_view)
-                ?: findViewById<android.widget.ScrollView>(R.id.settings_scroll_left)
-            scrollView?.post {
-                scrollView.scrollTo(0, savedScrollY)
-            }
-        }
-        val savedRightScrollY = savedInstanceState?.getInt(KEY_SETTINGS_SCROLL_RIGHT_Y, -1) ?: -1
-        if (savedRightScrollY >= 0) {
-            val rightScrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_right)
-            rightScrollView?.post {
-                rightScrollView.scrollTo(0, savedRightScrollY)
-            }
-        }
-
-        updatePermissionStatuses()
-        NotchAwareness.updateAllHeaders(activity)
         }
     }
 
-    private fun setupThickChinSettings(activity: MainActivity, savedInstanceState: Bundle?) {
-        if (FoldableDetector.isFoldableDevice(activity)) {
-            activity.findViewById<View>(R.id.card_thick_chin)?.visibility = View.GONE
-            return
-        }
-
-        val headerThickChin = activity.findViewById<View>(R.id.header_thick_chin)
-        val dropdownThickChin = activity.findViewById<View>(R.id.dropdown_thick_chin)
-        val arrowThickChin = activity.findViewById<ImageView>(R.id.arrow_thick_chin)
-        val selectedThickChinText = activity.findViewById<TextView>(R.id.selected_thick_chin_text)
-        val thickChinSeekBar = activity.findViewById<SeekBar>(R.id.thick_chin_seekbar)
-        val btnMinus10 = activity.findViewById<View>(R.id.btn_thick_chin_minus_10)
-        val btnMinus1 = activity.findViewById<View>(R.id.btn_thick_chin_minus_1)
-        val btnPlus1 = activity.findViewById<View>(R.id.btn_thick_chin_plus_1)
-        val btnPlus10 = activity.findViewById<View>(R.id.btn_thick_chin_plus_10)
-        val btnQuick0 = activity.findViewById<View>(R.id.btn_thick_chin_quick_0)
-        val btnQuick256 = activity.findViewById<View>(R.id.btn_thick_chin_quick_256)
-
-        headerThickChin?.setOnClickListener {
-            val isExpanded = dropdownThickChin?.visibility == View.VISIBLE
-            dropdownThickChin?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowThickChin?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(ChinAwareness.KEY_THICK_CHIN_DROPDOWN_OPEN) == true) {
-            dropdownThickChin?.visibility = View.VISIBLE
-            arrowThickChin?.rotation = 180f
-        }
-
-        val savedThickChinLevel = ChinAwareness.getThickChinLevel(activity)
-        pendingThickChinLevel = savedThickChinLevel
-
-        fun updateThickChin(newLevel: Int, updateSeekBar: Boolean = true) {
-            val level = newLevel.coerceIn(ChinAwareness.MIN_CHIN_LEVEL, ChinAwareness.MAX_CHIN_LEVEL)
-            pendingThickChinLevel = level
-            activity.thickChinOverrideLevel = level
-            selectedThickChinText?.text = level.toString()
-            if (updateSeekBar && thickChinSeekBar?.progress != level) {
-                thickChinSeekBar?.progress = level
-            }
-            activity.applyThickChinPadding(level)
-            scheduleThickChinCommit()
-        }
-
-        selectedThickChinText?.text = savedThickChinLevel.toString()
-        if (thickChinSeekBar?.progress != savedThickChinLevel) {
-            thickChinSeekBar?.progress = savedThickChinLevel
-        }
-
-        fun setupRepeatButton(button: View?, delta: Int) {
-            button ?: return
-            var repeatCount = 0
-            val repeatRunnable = object : Runnable {
-                override fun run() {
-                    if (!button.isAttachedToWindow) {
-                        commitHandler.removeCallbacks(this)
-                        return
-                    }
-                    repeatCount++
-                    val current = pendingThickChinLevel ?: ChinAwareness.getThickChinLevel(activity)
-                    updateThickChin(current + delta)
-                    val nextDelay = if (repeatCount < 3) 500L else 250L
-                    commitHandler.postDelayed(this, nextDelay)
-                }
-            }
-
-            button.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) {}
-                override fun onViewDetachedFromWindow(v: View) {
-                    commitHandler.removeCallbacks(repeatRunnable)
-                }
-            })
-
-            button.setOnTouchListener { v, event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        v.parent?.requestDisallowInterceptTouchEvent(true)
-                        repeatCount = 0
-                        val current = pendingThickChinLevel ?: ChinAwareness.getThickChinLevel(activity)
-                        updateThickChin(current + delta)
-                        commitHandler.postDelayed(repeatRunnable, 500L)
-                        true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        if (event.x < 0 || event.x > v.width || event.y < 0 || event.y > v.height) {
-                            commitHandler.removeCallbacks(repeatRunnable)
-                            v.parent?.requestDisallowInterceptTouchEvent(false)
-                        }
-                        false
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        commitHandler.removeCallbacks(repeatRunnable)
-                        v.parent?.requestDisallowInterceptTouchEvent(false)
-                        if (event.action == MotionEvent.ACTION_UP) {
-                            v.performClick()
-                        }
-                        scheduleThickChinCommit()
-                        true
-                    }
-                    else -> false
-                }
-            }
-        }
-
-        setupRepeatButton(btnMinus10, -10)
-        setupRepeatButton(btnMinus1, -1)
-        setupRepeatButton(btnPlus1, 1)
-        setupRepeatButton(btnPlus10, 10)
-
-        btnQuick0?.setOnClickListener { updateThickChin(0) }
-        btnQuick256?.setOnClickListener { updateThickChin(256) }
-
-        thickChinSeekBar?.setOnTouchListener { v, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> v.parent?.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> v.parent?.requestDisallowInterceptTouchEvent(false)
-            }
-            false
-        }
-
-        thickChinSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    updateThickChin(progress, updateSeekBar = false)
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                commitHandler.removeCallbacks(commitRunnable)
-            }
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                scheduleThickChinCommit()
-            }
-        })
-    }
-
-    fun unbind() {
-        flushThickChinCommit()
-        commitHandler.removeCallbacks(commitRunnable)
-        activityRef = null
+    fun updatePermissionStatuses() {
+        permissionsCard?.updateStatuses()
     }
 
     companion object {
-        const val KEY_LANGUAGE_DROPDOWN_OPEN = "key_language_dropdown_open"
-        const val KEY_FREQUENCY_DROPDOWN_OPEN = "key_frequency_dropdown_open"
-        const val KEY_THEME_DROPDOWN_OPEN = "key_theme_dropdown_open"
-        const val KEY_TEMP_UNIT_DROPDOWN_OPEN = "key_temp_unit_dropdown_open"
-        const val KEY_VOLTAGE_UNIT_DROPDOWN_OPEN = "key_voltage_unit_dropdown_open"
-        const val KEY_RAM_UNIT_DROPDOWN_OPEN = "key_ram_unit_dropdown_open"
-        const val KEY_THICK_CHIN_DROPDOWN_OPEN = ChinAwareness.KEY_THICK_CHIN_DROPDOWN_OPEN
-        const val KEY_ASSUME_OLED_DROPDOWN_OPEN = OledThemeAllInOne.KEY_ASSUME_OLED_DROPDOWN_OPEN
-        const val KEY_NOTCH_DROPDOWN_OPEN = "key_notch_dropdown_open"
+        const val KEY_SETTINGS_OPEN = "key_settings_open"
+        const val KEY_LANGUAGE_DROPDOWN_OPEN = Language.KEY_LANGUAGE_DROPDOWN_OPEN
+        const val KEY_FREQUENCY_DROPDOWN_OPEN = Frequency.KEY_FREQUENCY_DROPDOWN_OPEN
+        const val KEY_THEME_DROPDOWN_OPEN = Theme.KEY_THEME_DROPDOWN_OPEN
+        const val KEY_TEMP_UNIT_DROPDOWN_OPEN = UnitTEMP.KEY_TEMP_UNIT_DROPDOWN_OPEN
+        const val KEY_VOLTAGE_UNIT_DROPDOWN_OPEN = UnitVOLT.KEY_VOLTAGE_UNIT_DROPDOWN_OPEN
+        const val KEY_RAM_UNIT_DROPDOWN_OPEN = UnitRAM.KEY_RAM_UNIT_DROPDOWN_OPEN
+        const val KEY_NOTCH_DROPDOWN_OPEN = Notch.KEY_NOTCH_DROPDOWN_OPEN
+        const val KEY_ASSUME_OLED_DROPDOWN_OPEN = Oled.KEY_ASSUME_OLED_DROPDOWN_OPEN
         const val KEY_SETTINGS_SCROLL_Y = "key_settings_scroll_y"
         const val KEY_SETTINGS_SCROLL_RIGHT_Y = "key_settings_scroll_right_y"
-        const val SETTINGS_PREFS = BatteryWidget.SETTINGS_PREFS
         const val REFRESH_INTERVAL_KEY = "refresh_interval_ms"
-        const val APP_THEME_KEY = "app_theme"
-        const val ASSUME_OLED_KEY = OledThemeAllInOne.ASSUME_OLED_KEY
-        const val NOTIFICATION_PERMISSION_REQUEST = 1001
-        const val PHONE_STATE_PERMISSION_REQUEST = 1002
+        const val APP_THEME_KEY = Theme.APP_THEME_KEY
     }
 }

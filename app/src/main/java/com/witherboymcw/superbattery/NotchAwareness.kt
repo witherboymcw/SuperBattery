@@ -493,7 +493,7 @@ object NotchAwareness {
             updateAllHeaders(activity)
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(activity)) {
+        if (!com.witherboymcw.superbattery.settings.Permissions.isOverlayEnabled(activity)) {
             try {
                 activity.startActivity(Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,

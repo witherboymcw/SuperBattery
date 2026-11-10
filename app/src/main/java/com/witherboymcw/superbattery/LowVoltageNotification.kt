@@ -22,9 +22,7 @@ internal object LowVoltageNotification {
     fun send(context: Context, voltageMv: Int) {
         val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         if (preferences.getBoolean(PREF_ALERT_ACTIVE, false)) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) return
+        if (!com.witherboymcw.superbattery.settings.Permissions.isPostNotificationsEnabled(context)) return
 
         val manager = NotificationManagerCompat.from(context)
         createChannel(context)

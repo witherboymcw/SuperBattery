@@ -390,12 +390,7 @@ class SystemMonitorManager(context: Context) {
     fun isSimReady(): Boolean {
         return try {
             val tm = appContext.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
-            val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                ContextCompat.checkSelfPermission(
-                    appContext,
-                    android.Manifest.permission.READ_PHONE_STATE
-                ) == PackageManager.PERMISSION_GRANTED
-            } else true
+            val hasPermission = com.witherboymcw.superbattery.settings.Permissions.isPhoneStateEnabled(appContext)
 
             if (tm != null && hasPermission) {
                 tm.simState == TelephonyManager.SIM_STATE_READY
