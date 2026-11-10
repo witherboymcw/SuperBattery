@@ -1,7 +1,6 @@
 package com.witherboymcw.superbattery
 
 import android.content.Context
-import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -349,34 +348,8 @@ internal class HotspotViewController {
     }
 
     private fun applyCardTheme(cardView: View) {
-        val card = cardView as? com.google.android.material.card.MaterialCardView ?: return
         val act = activityRef ?: return
-        val prefs = act.getSharedPreferences(SettingsViewController.SETTINGS_PREFS, Context.MODE_PRIVATE)
-        val savedTheme = prefs.getString(SettingsViewController.APP_THEME_KEY, "system") ?: "system"
-        val assumeOled = prefs.getString(SettingsViewController.ASSUME_OLED_KEY, "none") ?: "none"
-        val isEffectiveOled = when (assumeOled) {
-            "oled" -> true
-            "not_oled" -> false
-            else -> OledDetector.isGuaranteedOled(act)
-        }
-        val isOled = savedTheme == "oled" || (savedTheme == "system" && isEffectiveOled && ((act.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES))
-
-        val strokeWidthPx = (act.resources.displayMetrics.density * 1f).toInt()
-        val defaultSurface = com.google.android.material.color.MaterialColors.getColor(
-            act, com.google.android.material.R.attr.colorSurface, Color.TRANSPARENT
-        )
-        val outlineColor = com.google.android.material.color.MaterialColors.getColor(
-            act, com.google.android.material.R.attr.colorOutline, Color.GRAY
-        )
-
-        card.strokeColor = outlineColor
-        if (isOled) {
-            card.setCardBackgroundColor(Color.TRANSPARENT)
-            card.strokeWidth = strokeWidthPx
-        } else {
-            card.setCardBackgroundColor(defaultSurface)
-            card.strokeWidth = 0
-        }
+        OledThemeAllInOne.applyCardTheme(cardView, act)
     }
 
     private fun getLocalizedStatus(context: Context, client: HotspotClient): String {

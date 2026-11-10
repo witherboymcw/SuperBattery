@@ -6,9 +6,9 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Color
 import android.os.BatteryManager
 import android.widget.RemoteViews
-import android.graphics.Color
 
 class BatteryDetailsWidget : AppWidgetProvider() {
 

@@ -1,7 +1,9 @@
 package com.witherboymcw.superbattery
-import android.os.Build
 
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
@@ -15,27 +17,28 @@ import com.google.android.material.checkbox.MaterialCheckBox
 
 internal class SettingsViewController {
     private var activityRef: MainActivity? = null
-    internal var pendingThickChinLevel: Int? = null
-    private val thickChinCommitHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val thickChinCommitRunnable = Runnable { flushThickChinCommit() }
+    var pendingThickChinLevel: Int? = null
+        private set
 
-    internal fun scheduleThickChinCommit() {
-        thickChinCommitHandler.removeCallbacks(thickChinCommitRunnable)
-        thickChinCommitHandler.postDelayed(thickChinCommitRunnable, 2000L)
+    private val commitHandler = Handler(Looper.getMainLooper())
+    private val commitRunnable = Runnable {
+        flushThickChinCommit()
     }
 
-    internal fun flushThickChinCommit() {
-        thickChinCommitHandler.removeCallbacks(thickChinCommitRunnable)
+    fun scheduleThickChinCommit() {
+        commitHandler.removeCallbacks(commitRunnable)
+        commitHandler.postDelayed(commitRunnable, 2000L)
+    }
+
+    fun flushThickChinCommit() {
+        commitHandler.removeCallbacks(commitRunnable)
         val level = pendingThickChinLevel ?: return
         pendingThickChinLevel = null
         val act = activityRef ?: return
         act.thickChinOverrideLevel = null
-        val prefs = act.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, android.content.Context.MODE_PRIVATE)
-        val saved = prefs.getInt(THICK_CHIN_LEVEL_KEY, -1)
-        if (saved != level) {
-            prefs.edit().putInt(THICK_CHIN_LEVEL_KEY, level).apply()
-        }
+        ChinAwareness.saveThickChinLevel(act, level)
     }
+
 
     private fun getTargetLayoutRes(): Int = R.layout.layout_settings
 
@@ -62,9 +65,7 @@ internal class SettingsViewController {
         activity.applySettingsCardTheme()
 
         with(activity) {
-        if (FoldableDetector.isFoldableDevice(this)) {
-            findViewById<View>(R.id.card_thick_chin)?.visibility = View.GONE
-        }
+        ChinAwareness.checkFoldableChinVisibility(this)
 
         val swipeContainer = findViewById<android.view.ViewGroup>(R.id.settings_container) ?: return
         swipeContainer.isClickable = true
@@ -485,138 +486,7 @@ internal class SettingsViewController {
         }
 
         // 10. Thick chin mode dropdown
-        val headerThickChin = findViewById<View>(R.id.header_thick_chin)
-        val dropdownThickChin = findViewById<View>(R.id.dropdown_thick_chin)
-        val arrowThickChin = findViewById<ImageView>(R.id.arrow_thick_chin)
-        val selectedThickChinText = findViewById<TextView>(R.id.selected_thick_chin_text)
-        val thickChinSeekBar = findViewById<SeekBar>(R.id.thick_chin_seekbar)
-        val btnMinus10 = findViewById<View>(R.id.btn_thick_chin_minus_10)
-        val btnMinus1 = findViewById<View>(R.id.btn_thick_chin_minus_1)
-        val btnPlus1 = findViewById<View>(R.id.btn_thick_chin_plus_1)
-        val btnPlus10 = findViewById<View>(R.id.btn_thick_chin_plus_10)
-        val btnQuick0 = findViewById<View>(R.id.btn_thick_chin_quick_0)
-        val btnQuick256 = findViewById<View>(R.id.btn_thick_chin_quick_256)
-
-        headerThickChin?.setOnClickListener {
-            val isExpanded = dropdownThickChin?.visibility == View.VISIBLE
-            dropdownThickChin?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowThickChin?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_THICK_CHIN_DROPDOWN_OPEN) == true) {
-            dropdownThickChin?.visibility = View.VISIBLE
-            arrowThickChin?.rotation = 180f
-        }
-
-        val savedThickChinLevel = prefs.getInt(THICK_CHIN_LEVEL_KEY, 0).coerceIn(0, 256)
-        pendingThickChinLevel = savedThickChinLevel
-
-        fun updateThickChin(newLevel: Int, updateSeekBar: Boolean = true) {
-            val level = newLevel.coerceIn(0, 256)
-            pendingThickChinLevel = level
-            selectedThickChinText?.text = level.toString()
-            if (updateSeekBar && thickChinSeekBar?.progress != level) {
-                thickChinSeekBar?.progress = level
-            }
-            activity.applyThickChinPadding(level)
-            scheduleThickChinCommit()
-        }
-
-        selectedThickChinText?.text = savedThickChinLevel.toString()
-        if (thickChinSeekBar?.progress != savedThickChinLevel) {
-            thickChinSeekBar?.progress = savedThickChinLevel
-        }
-
-        fun setupRepeatButton(button: View?, delta: Int) {
-            button ?: return
-            var repeatCount = 0
-            val repeatRunnable = object : Runnable {
-                override fun run() {
-                    if (!button.isAttachedToWindow) {
-                        handler.removeCallbacks(this)
-                        return
-                    }
-                    repeatCount++
-                    val current = pendingThickChinLevel ?: prefs.getInt(THICK_CHIN_LEVEL_KEY, 0)
-                    updateThickChin(current + delta)
-                    val nextDelay = if (repeatCount < 3) 500L else 250L
-                    handler.postDelayed(this, nextDelay)
-                }
-            }
-
-            button.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) {}
-                override fun onViewDetachedFromWindow(v: View) {
-                    handler.removeCallbacks(repeatRunnable)
-                }
-            })
-
-            button.setOnTouchListener { v, event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        v.parent?.requestDisallowInterceptTouchEvent(true)
-                        repeatCount = 0
-                        val current = pendingThickChinLevel ?: prefs.getInt(THICK_CHIN_LEVEL_KEY, 0)
-                        updateThickChin(current + delta)
-                        handler.postDelayed(repeatRunnable, 500L)
-                        true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        if (event.x < 0 || event.x > v.width || event.y < 0 || event.y > v.height) {
-                            handler.removeCallbacks(repeatRunnable)
-                            v.parent?.requestDisallowInterceptTouchEvent(false)
-                        }
-                        false
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        handler.removeCallbacks(repeatRunnable)
-                        v.parent?.requestDisallowInterceptTouchEvent(false)
-                        if (event.action == MotionEvent.ACTION_UP) {
-                            v.performClick()
-                        }
-                        scheduleThickChinCommit()
-                        true
-                    }
-                    else -> false
-                }
-            }
-        }
-
-        setupRepeatButton(btnMinus10, -10)
-        setupRepeatButton(btnMinus1, -1)
-        setupRepeatButton(btnPlus1, 1)
-        setupRepeatButton(btnPlus10, 10)
-
-        btnQuick0?.setOnClickListener {
-            updateThickChin(0)
-        }
-        btnQuick256?.setOnClickListener {
-            updateThickChin(256)
-        }
-
-        thickChinSeekBar?.setOnTouchListener { v, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> v.parent?.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> v.parent?.requestDisallowInterceptTouchEvent(false)
-            }
-            false
-        }
-
-        thickChinSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    updateThickChin(progress, updateSeekBar = false)
-                }
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                thickChinCommitHandler.removeCallbacks(thickChinCommitRunnable)
-            }
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                scheduleThickChinCommit()
-            }
-        })
+        setupThickChinSettings(activity, savedInstanceState)
 
         val settingsScrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_view)
         val settingsScrollLeft = findViewById<android.widget.ScrollView>(R.id.settings_scroll_left)
@@ -733,14 +603,14 @@ internal class SettingsViewController {
         }
 
         val assumeOledGroup = findViewById<RadioGroup>(R.id.assume_oled_radio_group)
-        val currentAssumeOled = prefs.getString(ASSUME_OLED_KEY, "none") ?: "none"
+        val currentAssumeOled = prefs.getString(OledThemeAllInOne.ASSUME_OLED_KEY, OledThemeAllInOne.OPTION_NONE) ?: OledThemeAllInOne.OPTION_NONE
 
         when (currentAssumeOled) {
-            "oled" -> {
+            OledThemeAllInOne.OPTION_OLED -> {
                 assumeOledGroup?.check(R.id.assume_oled_force_oled)
                 selectedAssumeOledText?.text = getString(R.string.assume_oled_opt_oled)
             }
-            "not_oled" -> {
+            OledThemeAllInOne.OPTION_NOT_OLED -> {
                 assumeOledGroup?.check(R.id.assume_oled_not_oled)
                 selectedAssumeOledText?.text = getString(R.string.assume_oled_opt_not_oled)
             }
@@ -752,25 +622,28 @@ internal class SettingsViewController {
 
         assumeOledGroup?.setOnCheckedChangeListener { _, checkedId ->
             val targetValue = when (checkedId) {
-                R.id.assume_oled_force_oled -> "oled"
-                R.id.assume_oled_not_oled -> "not_oled"
-                else -> "none"
+                R.id.assume_oled_force_oled -> OledThemeAllInOne.OPTION_OLED
+                R.id.assume_oled_not_oled -> OledThemeAllInOne.OPTION_NOT_OLED
+                else -> OledThemeAllInOne.OPTION_NONE
             }
             val textRes = when (targetValue) {
-                "oled" -> R.string.assume_oled_opt_oled
-                "not_oled" -> R.string.assume_oled_opt_not_oled
+                OledThemeAllInOne.OPTION_OLED -> R.string.assume_oled_opt_oled
+                OledThemeAllInOne.OPTION_NOT_OLED -> R.string.assume_oled_opt_not_oled
                 else -> R.string.assume_oled_opt_none
             }
             selectedAssumeOledText?.text = getString(textRes)
 
-            val activeValue = prefs.getString(ASSUME_OLED_KEY, "none") ?: "none"
+            val activeValue = prefs.getString(OledThemeAllInOne.ASSUME_OLED_KEY, OledThemeAllInOne.OPTION_NONE) ?: OledThemeAllInOne.OPTION_NONE
             if (activeValue != targetValue) {
-                prefs.edit().putString(ASSUME_OLED_KEY, targetValue).apply()
+                prefs.edit().putString(OledThemeAllInOne.ASSUME_OLED_KEY, targetValue).apply()
                 activity.recreate()
             }
         }
 
         // Landscape two-column settings options setup
+        val headerThickChin = findViewById<View>(R.id.header_thick_chin)
+        val dropdownThickChin = findViewById<View>(R.id.dropdown_thick_chin)
+        val arrowThickChin = findViewById<ImageView>(R.id.arrow_thick_chin)
         val settingsDetailTitle = findViewById<TextView>(R.id.settings_detail_title)
         if (settingsDetailTitle != null) {
             val dropdowns = listOf(
@@ -878,9 +751,144 @@ internal class SettingsViewController {
         }
     }
 
+    private fun setupThickChinSettings(activity: MainActivity, savedInstanceState: Bundle?) {
+        if (FoldableDetector.isFoldableDevice(activity)) {
+            activity.findViewById<View>(R.id.card_thick_chin)?.visibility = View.GONE
+            return
+        }
+
+        val headerThickChin = activity.findViewById<View>(R.id.header_thick_chin)
+        val dropdownThickChin = activity.findViewById<View>(R.id.dropdown_thick_chin)
+        val arrowThickChin = activity.findViewById<ImageView>(R.id.arrow_thick_chin)
+        val selectedThickChinText = activity.findViewById<TextView>(R.id.selected_thick_chin_text)
+        val thickChinSeekBar = activity.findViewById<SeekBar>(R.id.thick_chin_seekbar)
+        val btnMinus10 = activity.findViewById<View>(R.id.btn_thick_chin_minus_10)
+        val btnMinus1 = activity.findViewById<View>(R.id.btn_thick_chin_minus_1)
+        val btnPlus1 = activity.findViewById<View>(R.id.btn_thick_chin_plus_1)
+        val btnPlus10 = activity.findViewById<View>(R.id.btn_thick_chin_plus_10)
+        val btnQuick0 = activity.findViewById<View>(R.id.btn_thick_chin_quick_0)
+        val btnQuick256 = activity.findViewById<View>(R.id.btn_thick_chin_quick_256)
+
+        headerThickChin?.setOnClickListener {
+            val isExpanded = dropdownThickChin?.visibility == View.VISIBLE
+            dropdownThickChin?.visibility = if (isExpanded) View.GONE else View.VISIBLE
+            arrowThickChin?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
+        }
+
+        if (savedInstanceState?.getBoolean(ChinAwareness.KEY_THICK_CHIN_DROPDOWN_OPEN) == true) {
+            dropdownThickChin?.visibility = View.VISIBLE
+            arrowThickChin?.rotation = 180f
+        }
+
+        val savedThickChinLevel = ChinAwareness.getThickChinLevel(activity)
+        pendingThickChinLevel = savedThickChinLevel
+
+        fun updateThickChin(newLevel: Int, updateSeekBar: Boolean = true) {
+            val level = newLevel.coerceIn(ChinAwareness.MIN_CHIN_LEVEL, ChinAwareness.MAX_CHIN_LEVEL)
+            pendingThickChinLevel = level
+            activity.thickChinOverrideLevel = level
+            selectedThickChinText?.text = level.toString()
+            if (updateSeekBar && thickChinSeekBar?.progress != level) {
+                thickChinSeekBar?.progress = level
+            }
+            activity.applyThickChinPadding(level)
+            scheduleThickChinCommit()
+        }
+
+        selectedThickChinText?.text = savedThickChinLevel.toString()
+        if (thickChinSeekBar?.progress != savedThickChinLevel) {
+            thickChinSeekBar?.progress = savedThickChinLevel
+        }
+
+        fun setupRepeatButton(button: View?, delta: Int) {
+            button ?: return
+            var repeatCount = 0
+            val repeatRunnable = object : Runnable {
+                override fun run() {
+                    if (!button.isAttachedToWindow) {
+                        commitHandler.removeCallbacks(this)
+                        return
+                    }
+                    repeatCount++
+                    val current = pendingThickChinLevel ?: ChinAwareness.getThickChinLevel(activity)
+                    updateThickChin(current + delta)
+                    val nextDelay = if (repeatCount < 3) 500L else 250L
+                    commitHandler.postDelayed(this, nextDelay)
+                }
+            }
+
+            button.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {}
+                override fun onViewDetachedFromWindow(v: View) {
+                    commitHandler.removeCallbacks(repeatRunnable)
+                }
+            })
+
+            button.setOnTouchListener { v, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        v.parent?.requestDisallowInterceptTouchEvent(true)
+                        repeatCount = 0
+                        val current = pendingThickChinLevel ?: ChinAwareness.getThickChinLevel(activity)
+                        updateThickChin(current + delta)
+                        commitHandler.postDelayed(repeatRunnable, 500L)
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (event.x < 0 || event.x > v.width || event.y < 0 || event.y > v.height) {
+                            commitHandler.removeCallbacks(repeatRunnable)
+                            v.parent?.requestDisallowInterceptTouchEvent(false)
+                        }
+                        false
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        commitHandler.removeCallbacks(repeatRunnable)
+                        v.parent?.requestDisallowInterceptTouchEvent(false)
+                        if (event.action == MotionEvent.ACTION_UP) {
+                            v.performClick()
+                        }
+                        scheduleThickChinCommit()
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
+
+        setupRepeatButton(btnMinus10, -10)
+        setupRepeatButton(btnMinus1, -1)
+        setupRepeatButton(btnPlus1, 1)
+        setupRepeatButton(btnPlus10, 10)
+
+        btnQuick0?.setOnClickListener { updateThickChin(0) }
+        btnQuick256?.setOnClickListener { updateThickChin(256) }
+
+        thickChinSeekBar?.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> v.parent?.requestDisallowInterceptTouchEvent(true)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> v.parent?.requestDisallowInterceptTouchEvent(false)
+            }
+            false
+        }
+
+        thickChinSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    updateThickChin(progress, updateSeekBar = false)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                commitHandler.removeCallbacks(commitRunnable)
+            }
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                scheduleThickChinCommit()
+            }
+        })
+    }
+
     fun unbind() {
         flushThickChinCommit()
-        thickChinCommitHandler.removeCallbacksAndMessages(null)
+        commitHandler.removeCallbacks(commitRunnable)
         activityRef = null
     }
 
@@ -891,16 +899,15 @@ internal class SettingsViewController {
         const val KEY_TEMP_UNIT_DROPDOWN_OPEN = "key_temp_unit_dropdown_open"
         const val KEY_VOLTAGE_UNIT_DROPDOWN_OPEN = "key_voltage_unit_dropdown_open"
         const val KEY_RAM_UNIT_DROPDOWN_OPEN = "key_ram_unit_dropdown_open"
-        const val KEY_THICK_CHIN_DROPDOWN_OPEN = "key_thick_chin_dropdown_open"
-        const val KEY_ASSUME_OLED_DROPDOWN_OPEN = "key_assume_oled_dropdown_open"
+        const val KEY_THICK_CHIN_DROPDOWN_OPEN = ChinAwareness.KEY_THICK_CHIN_DROPDOWN_OPEN
+        const val KEY_ASSUME_OLED_DROPDOWN_OPEN = OledThemeAllInOne.KEY_ASSUME_OLED_DROPDOWN_OPEN
         const val KEY_NOTCH_DROPDOWN_OPEN = "key_notch_dropdown_open"
         const val KEY_SETTINGS_SCROLL_Y = "key_settings_scroll_y"
         const val KEY_SETTINGS_SCROLL_RIGHT_Y = "key_settings_scroll_right_y"
         const val SETTINGS_PREFS = BatteryWidget.SETTINGS_PREFS
         const val REFRESH_INTERVAL_KEY = "refresh_interval_ms"
         const val APP_THEME_KEY = "app_theme"
-        const val ASSUME_OLED_KEY = "assume_oled"
-        const val THICK_CHIN_LEVEL_KEY = "thick_chin_level"
+        const val ASSUME_OLED_KEY = OledThemeAllInOne.ASSUME_OLED_KEY
         const val NOTIFICATION_PERMISSION_REQUEST = 1001
         const val PHONE_STATE_PERMISSION_REQUEST = 1002
     }

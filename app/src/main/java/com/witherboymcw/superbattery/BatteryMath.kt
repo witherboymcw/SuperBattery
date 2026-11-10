@@ -2,9 +2,9 @@ package com.witherboymcw.superbattery
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.BatteryManager
 import android.os.SystemClock
-import android.graphics.Color
 import java.util.Locale
 
 data class BatteryPowerInfo(
