@@ -222,4 +222,13 @@ class ExampleUnitTest {
         assertFalse(viewModel.isVoltageShiftedHigh)
         assertEquals(Pair(3300f, 4300f), viewModel.getVoltageBoundsMv())
     }
+
+    @Test
+    fun testCornerAwarenessHelperDynamicRadiusCalculation() {
+        val density = 2.0f
+        val expectedDefaultRadiusPx = 12f * density
+
+        val radiusWithNullInsets = CornerAwarenessHelper.calculateDynamicCornerRadius(null, density)
+        assertEquals(expectedDefaultRadiusPx, radiusWithNullInsets, 0.001f)
+    }
 }

@@ -189,4 +189,8 @@ class DashboardLayout @JvmOverloads constructor(
         super.performClick()
         return true
     }
+
+    fun applyAsymmetricCorners(insets: androidx.core.view.WindowInsetsCompat) {
+        CornerAwarenessHelper.applyAsymmetricCorners(this, insets)
+    }
 }

@@ -137,7 +137,7 @@ class MainActivity : AppCompatActivity() {
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
             view.setPadding(navBars.left, 0, navBars.right, navBars.bottom)
             applyThickChinPadding()
-            applyAsymmetricCorners(insets)
+            CornerAwarenessHelper.applyAsymmetricCorners(this, insets)
             NotchAwareness.updateAllHeaders(this)
             insets
         }
@@ -211,57 +211,7 @@ class MainActivity : AppCompatActivity() {
         updateDashboard()
     }
 
-    private fun applyAsymmetricCorners(insets: WindowInsetsCompat) {
-        val defaultRadius = 12f * resources.displayMetrics.density
-        var dynamicRadiusPx = defaultRadius
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val windowInsets = insets.toWindowInsets()
-            if (windowInsets != null) {
-                val corner = windowInsets.getRoundedCorner(android.view.RoundedCorner.POSITION_TOP_LEFT)
-                if (corner != null) {
-                    val screenRadiusPx = corner.radius.toFloat()
-                    val calculatedRadius = screenRadiusPx - (16f * resources.displayMetrics.density)
-                    if (calculatedRadius >= defaultRadius) {
-                        dynamicRadiusPx = calculatedRadius
-                    }
-                }
-            }
-        }
-
-        val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-
-        val cardBattery = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_battery)
-        val cardNetwork = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_network)
-        val cardVoltage = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_voltage_graph)
-        val cardRam = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_ram_graph)
-        val cardTemp = findViewById<com.google.android.material.card.MaterialCardView>(R.id.card_temperature_graph)
-
-        val setCorners = { card: com.google.android.material.card.MaterialCardView?, tl: Float, tr: Float, br: Float, bl: Float ->
-            card?.let {
-                it.shapeAppearanceModel = it.shapeAppearanceModel.toBuilder()
-                    .setTopLeftCornerSize(tl)
-                    .setTopRightCornerSize(tr)
-                    .setBottomRightCornerSize(br)
-                    .setBottomLeftCornerSize(bl)
-                    .build()
-            }
-        }
-
-        if (isPortrait) {
-            setCorners(cardBattery, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
-            setCorners(cardNetwork, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
-            setCorners(cardVoltage, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
-            setCorners(cardRam, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
-            setCorners(cardTemp, defaultRadius, defaultRadius, dynamicRadiusPx, dynamicRadiusPx)
-        } else {
-            setCorners(cardBattery, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
-            setCorners(cardNetwork, defaultRadius, defaultRadius, defaultRadius, defaultRadius)
-            setCorners(cardVoltage, defaultRadius, defaultRadius, defaultRadius, dynamicRadiusPx)
-            setCorners(cardRam, defaultRadius, dynamicRadiusPx, defaultRadius, defaultRadius)
-            setCorners(cardTemp, defaultRadius, defaultRadius, dynamicRadiusPx, defaultRadius)
-        }
-    }
 
     private fun handleWidgetIntent(intent: Intent?) {
         if (intent == null) return
