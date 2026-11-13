@@ -78,7 +78,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/hotspot_title"
                     android:padding="8dp"
-                    android:src="@drawable/ic_arrow_forward"
+                    android:src="@drawable/ic_arrow_back"
                     app:tint="?attr/colorControlNormal" />
             </FrameLayout>
 

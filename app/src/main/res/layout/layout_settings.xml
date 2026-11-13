@@ -1658,7 +1658,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/settings"
                 android:padding="10dp"
-                android:src="@drawable/ic_arrow_back"
+                android:src="@drawable/ic_arrow_forward"
                 app:tint="?attr/colorControlNormal" />
         </com.google.android.material.card.MaterialCardView>
 
