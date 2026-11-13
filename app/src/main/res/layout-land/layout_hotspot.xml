@@ -35,12 +35,12 @@
             android:paddingEnd="8dp"
             android:paddingBottom="24dp">
 
-            <LinearLayout
-                android:id="@+id/hotspot_cards_left_container"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/hotspot_recycler_view"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clipChildren="false"
-                android:orientation="vertical" />
+                android:nestedScrollingEnabled="false" />
         </ScrollView>
 
         <!-- Column 2 (Right): Selected Device Detail Panel (Non-scrollable, spans to bottom) -->

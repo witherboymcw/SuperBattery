@@ -472,8 +472,7 @@ class MainActivity : AppCompatActivity() {
     internal fun applyHotspotCardTheme() {
         val isOled = OledThemeAllInOne.isOledThemeActive(this)
 
-        OledThemeAllInOne.applyCardThemeToContainer(findViewById(R.id.hotspot_cards_container), this, isOled = isOled)
-        OledThemeAllInOne.applyCardThemeToContainer(findViewById(R.id.hotspot_cards_left_container), this, isOled = isOled)
+        OledThemeAllInOne.applyCardThemeToContainer(findViewById(R.id.hotspot_recycler_view), this, isOled = isOled)
         OledThemeAllInOne.applyCardTheme(findViewById<com.google.android.material.card.MaterialCardView>(R.id.hotspot_detail_card), this, isOled = isOled)
         OledThemeAllInOne.applySolidCardTheme(findViewById(R.id.card_hotspot_back), this)
     }

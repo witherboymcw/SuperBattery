@@ -1,6 +1,9 @@
 package com.witherboymcw.superbattery.screens.hotspot
 
 import android.content.Context
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 
 object HotspotManager {
@@ -8,11 +11,15 @@ object HotspotManager {
     private const val KEY_PERSISTED_CLIENTS = "persisted_hotspot_clients"
 
     private val clientMap = LinkedHashMap<String, HotspotClient>()
+    private val _clientsState = MutableStateFlow<List<HotspotClient>>(emptyList())
+    val clientsState: StateFlow<List<HotspotClient>> = _clientsState.asStateFlow()
 
     @Synchronized
     fun loadPersistedClients(context: Context): List<HotspotClient> {
         if (clientMap.isNotEmpty()) {
-            return clientMap.values.toList()
+            val list = clientMap.values.toList()
+            _clientsState.value = list
+            return list
         }
 
         val prefs = context.getSharedPreferences(PREFS_HOTSPOT, Context.MODE_PRIVATE)
@@ -42,7 +49,9 @@ object HotspotManager {
             savePersistedClients(context)
         }
 
-        return clientMap.values.toList()
+        val list = clientMap.values.toList()
+        _clientsState.value = list
+        return list
     }
 
     @Synchronized
@@ -53,6 +62,7 @@ object HotspotManager {
         }
         val prefs = context.getSharedPreferences(PREFS_HOTSPOT, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_PERSISTED_CLIENTS, array.toString()).apply()
+        _clientsState.value = clientMap.values.toList()
     }
 
     @Synchronized
@@ -63,7 +73,7 @@ object HotspotManager {
             clientMap[key]
         } ?: return
 
-        client.isDenied = isDenied
+        clientMap[key] = client.copy(isDenied = isDenied)
 
         if (isDenied) {
             val cmdIptables = "iptables -I FORWARD -m mac --mac-source ${client.mac} -j DROP"
@@ -85,7 +95,8 @@ object HotspotManager {
             clientMap[key]
         } ?: return
 
-        client.customAlias = customAlias?.trim()?.takeIf { it.isNotBlank() }
+        val trimmedAlias = customAlias?.trim()?.takeIf { it.isNotBlank() }
+        clientMap[key] = client.copy(customAlias = trimmedAlias)
         savePersistedClients(context)
     }
 

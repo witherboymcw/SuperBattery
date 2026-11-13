@@ -2,15 +2,18 @@ package com.witherboymcw.superbattery.screens.hotspot
 
 import org.json.JSONObject
 
+/**
+ * Immutable data model representing a connected or persisted hotspot client device.
+ */
 data class HotspotClient(
     val mac: String,
     val deviceName: String,
-    var customAlias: String? = null,
-    var ipAddress: String,
-    var isDenied: Boolean = false,
-    var totalDataBytes: Long = 0L,
-    var lastConnectedTimeMs: Long = 0L,
-    var isCurrentlyOnline: Boolean = false
+    val customAlias: String? = null,
+    val ipAddress: String,
+    val isDenied: Boolean = false,
+    val totalDataBytes: Long = 0L,
+    val lastConnectedTimeMs: Long = 0L,
+    val isCurrentlyOnline: Boolean = false
 ) {
     val displayName: String
         get() = customAlias?.takeIf { it.isNotBlank() } ?: deviceName

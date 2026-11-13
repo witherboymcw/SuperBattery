@@ -44,12 +44,12 @@
                 android:textStyle="bold" />
 
             <!-- Container for 20 Hotspot Device Cards -->
-            <LinearLayout
-                android:id="@+id/hotspot_cards_container"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/hotspot_recycler_view"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clipChildren="false"
-                android:orientation="vertical" />
+                android:nestedScrollingEnabled="false" />
         </LinearLayout>
     </ScrollView>
 
