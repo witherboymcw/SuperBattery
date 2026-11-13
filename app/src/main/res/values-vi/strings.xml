@@ -37,6 +37,7 @@
 
     <string name="network_unavailable">Không khả dụng</string>
     <string name="voltage_title">Điện áp</string>
+    <string name="charging_true">Đang sạc</string>
     <string name="ram_title">RAM đã sử dụng</string>
 
 

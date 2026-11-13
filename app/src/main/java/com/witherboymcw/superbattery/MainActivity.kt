@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity() {
             refreshIntervalState.value = value
         }
 
+    private var tvVoltageTitle: TextView? = null
     private var tvVoltageCurrent: TextView? = null
     private var tvTemperatureCurrent: TextView? = null
     private var tvRamCurrent: TextView? = null
@@ -540,6 +541,7 @@ class MainActivity : AppCompatActivity() {
         ivNetworkBluetooth = findViewById(R.id.iv_network_bluetooth)
         ivNetworkSim1 = findViewById(R.id.iv_network_sim_1)
 
+        tvVoltageTitle = findViewById(R.id.tv_voltage_title)
         tvVoltagePower = findViewById(R.id.tv_voltage_power)
         tvRamUsageDetail = findViewById(R.id.tv_ram_usage_detail)
         tvTemperatureStatus = findViewById(R.id.tv_temperature_status)
@@ -714,9 +716,18 @@ class MainActivity : AppCompatActivity() {
         tvTemperatureCurrent?.text =
             SettingsHelper.formatDashboardTemperature(this, temperatureC)
 
-        // 1. Voltage power
+        // 1. Voltage power and title
         val powerInfo = getBatteryPowerInfo(this)
         tvVoltagePower?.text = powerInfo?.getCurrentPowerString(this) ?: dash
+
+        val signedWatts = if (powerInfo != null) {
+            if (powerInfo.isCharging) powerInfo.powerWatts else -powerInfo.powerWatts
+        } else 0f
+        val isWattsPositive = signedWatts > 0f
+
+        tvVoltageTitle?.setText(
+            if (isUseSystemBattery && isWattsPositive) R.string.charging_true else R.string.voltage_title
+        )
 
         if (voltageMv > 0) dashboardViewModel.addVoltageSample(voltageMv.toFloat(), sampleTime)
         if (battery != null) dashboardViewModel.addTemperatureSample(temperatureC, sampleTime)
