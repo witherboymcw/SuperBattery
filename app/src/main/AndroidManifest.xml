@@ -24,7 +24,7 @@
         tools:targetApi="tiramisu">
 
         <receiver
-            android:name=".BatteryWidget"
+            android:name=".widgets.BatteryWidget"
             android:exported="true"
             android:label="@string/battery_widget_name">
             <intent-filter>
@@ -40,7 +40,7 @@
         </receiver>
 
         <receiver
-            android:name=".BatteryDetailsWidget"
+            android:name=".widgets.BatteryDetailsWidget"
             android:exported="true"
             android:label="@string/battery_details_widget_name">
             <intent-filter>
@@ -52,7 +52,7 @@
         </receiver>
 
         <receiver
-            android:name=".CalendarWidgetProvider"
+            android:name=".widgets.CalendarWidgetProvider"
             android:exported="true"
             android:label="@string/calendar_widget_name">
             <intent-filter>
@@ -68,7 +68,7 @@
         </receiver>
 
         <receiver
-            android:name=".SuperWidgetProvider"
+            android:name=".widgets.SuperWidgetProvider"
             android:exported="true"
             android:label="@string/super_widget_name">
             <intent-filter>
@@ -84,12 +84,12 @@
         </receiver>
 
         <service
-            android:name=".BatteryMonitorService"
+            android:name=".battery.BatteryMonitorService"
             android:exported="false" />
 
         <!-- Dịch vụ đọc thông báo trạng thái Hotspot của hệ thống -->
         <service
-            android:name=".HotspotNotificationListener"
+            android:name=".screens.hotspot.HotspotNotificationListener"
             android:label="@string/notification_listener_label"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
@@ -109,6 +109,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Transparent Trampoline Activity for Widget Click Gestures -->
+        <activity
+            android:name=".widgets.WidgetTapTrampolineActivity"
+            android:theme="@style/Theme.SuperBattery.TranslucentTrampoline"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.witherboymcw.superbattery.trampoline"
+            android:launchMode="singleInstance"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -25,6 +25,10 @@ class SuperWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
+        if (intent.action == BatteryWidget.ACTION_MANUAL_REFRESH) {
+            BatteryWidget.handleWidgetTap(context)
+            BatteryWidget.updateAllWidgets(context, AppWidgetManager.getInstance(context))
+        }
         when (intent.action) {
             Intent.ACTION_DATE_CHANGED,
             "android.intent.action.TIME_SET",
@@ -80,17 +84,16 @@ class SuperWidgetProvider : AppWidgetProvider() {
                 val voltageUnit = SettingsHelper.getVoltageUnit(context)
                 setTextViewText(R.id.super_voltage, if (voltage > 0) SettingsHelper.formatVoltage(voltage, voltageUnit) else "—")
             }
-            val refreshIntent = Intent(context, BatteryWidget::class.java).apply {
-                action = BatteryWidget.ACTION_MANUAL_REFRESH
-                setPackage(context.packageName)
+            val tapIntent = Intent(context, WidgetTapTrampolineActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
             }
-            val refreshPendingIntent = PendingIntent.getBroadcast(
+            val tapPendingIntent = PendingIntent.getActivity(
                 context,
-                appWidgetId,
-                refreshIntent,
+                300_000 + appWidgetId,
+                tapIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.super_widget_root, refreshPendingIntent)
+            views.setOnClickPendingIntent(R.id.super_widget_root, tapPendingIntent)
             manager.updateAppWidget(appWidgetId, views)
         }
     }

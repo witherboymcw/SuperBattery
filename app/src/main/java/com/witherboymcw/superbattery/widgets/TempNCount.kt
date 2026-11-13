@@ -58,12 +58,16 @@ class BatteryWidget : AppWidgetProvider() {
         const val VOLTAGE_UNIT_KEY = "voltage_unit"
         const val RAM_UNIT_KEY = "ram_unit"
 
-        private var lastWidgetTapTimestampMs: Long = 0L
+        internal var lastWidgetTapTimestampMs: Long = 0L
+
+        internal fun isDoubleTap(nowMs: Long, lastTapMs: Long): Boolean {
+            val interval = nowMs - lastTapMs
+            return interval in 50..400
+        }
 
         internal fun handleWidgetTap(context: Context) {
             val now = SystemClock.elapsedRealtime()
-            val interval = now - lastWidgetTapTimestampMs
-            if (interval in 50..400) {
+            if (isDoubleTap(now, lastWidgetTapTimestampMs)) {
                 lastWidgetTapTimestampMs = 0L
                 val mainIntent = Intent(context, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -93,17 +97,16 @@ class BatteryWidget : AppWidgetProvider() {
             val voltageUnit = SettingsHelper.getVoltageUnit(context)
             views.setTextViewText(R.id.appwidget_voltage, SettingsHelper.formatVoltage(smoothedVoltageMv, voltageUnit))
 
-            val refreshIntent = Intent(context, BatteryWidget::class.java).apply {
-                action = ACTION_MANUAL_REFRESH
-                setPackage(context.packageName)
+            val tapIntent = Intent(context, WidgetTapTrampolineActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
             }
-            val refreshPendingIntent = PendingIntent.getBroadcast(
+            val tapPendingIntent = PendingIntent.getActivity(
                 context,
                 appWidgetId,
-                refreshIntent,
+                tapIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.widget_root, refreshPendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_root, tapPendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }

@@ -181,9 +181,7 @@ class MainActivity : AppCompatActivity() {
             hotspotViewController.restoreOpenState(this)
         }
 
-        if (savedInstanceState == null) {
-            handleWidgetIntent(intent)
-        }
+        handleWidgetIntent(intent)
 
         updateFoldableUiState()
         lifecycleScope.launch {
@@ -245,6 +243,7 @@ class MainActivity : AppCompatActivity() {
         if (fromWidgetDoubleTap) {
             intent.removeExtra(BatteryWidget.EXTRA_CLOSE_SETTINGS)
             settingsViewController.closeScreen(this, animate = false)
+            hotspotViewController.closeScreen(this, animate = false)
         }
     }
 

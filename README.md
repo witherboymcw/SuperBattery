@@ -63,6 +63,7 @@ _"With a high-capacity custom cell attached, why not use it as an emergency back
    * TECNO Camon 40 4G
    * Redmi Note 12 Pro Plus 5G
    * Redmi Note 14 Pro 5G
+   * OPPO Find X8
 5. Screens with aspect ratios wider/shorter than 9:19.5, devices oriented in landscape mode, and those with navigation buttons on, **will require vertical scrolling** on the main dashboard screen.
 
 ---
@@ -77,8 +78,7 @@ This application is strictly calibrated around specific hardware dynamics. Note 
   * The lower cut-off is anchored at **3550 mV** to protect the Li-ion cell from deep discharge and prevent transient voltage dips under 4G RF power bursts from abruptly resetting the device.
 * **Hotspot Client Counter Mechanism:**
   * The widget determines active connected client counts by **reading system notification strings**.
-  * **System Requirement:** The device **must run MIUI 14 with the system language set to English (US/UK)** to parse matching system string tokens (`"Tethering or hotspot active"`, `"connected devices"`).
-  * Other OEM skins (including Xiaomi HyperOS or AOSP) are currently untested.
+  * Other OEM skins (including Samsung OneUI or AOSP) are currently untested.
 * **Thermal Threshold:**
   * Triggers an urgent system warning notification if the battery temperature hits **≥ 45°C (113°F)**.
 * **Lunar Calendar Engine:**

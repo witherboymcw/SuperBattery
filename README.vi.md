@@ -64,6 +64,7 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
    * TECNO Camon 40 4G
    * Redmi Note 12 Pro Plus 5G
    * Redmi Note 14 Pro 5G
+   * OPPO Find X8
 5. Các thiết bị có màn hình tỉ lệ ngắn hơn 9x19,5, các thiết bị đang xoay ngang màn hình, và các thiết bị đang bật nút điều hướng hệ thống **chắc chắn** sẽ phải cuộn trang trên màn hình app chính.
 
 ---
@@ -78,8 +79,7 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
   * Ngưỡng xả cạn dừng ở **3550 mV** nhằm bảo vệ cell pin và tránh hiện tượng sụt áp làm sập nguồn đột ngột khi modem 4G phát sóng công suất cao.
 * **Cơ chế đếm thiết bị Hotspot:**
   * Widget nhận diện số máy kết nối bằng cách **đọc thông báo hệ thống**, vì vậy nó cần được cấp quyền này.
-  * Thiết bị **bắt buộc** phải chạy MIUI 14 và cài đặt ngôn ngữ hệ thống là Tiếng Anh - Anh/Mĩ (English - UK/US) để đọc chính xác các chuỗi thông báo (`"Tethering or hotspot active"`, `"connected devices"`).
-  * Chưa thử nghiệm trên bất kì giao diện nào khác.
+  * Chưa thử nghiệm trên bất kì giao diện nào khác, như Samsung OneUI.
 * **Ngưỡng nhiệt độ:**
   * Hệ thống sẽ kích hoạt cảnh báo nguy cấp khi nhiệt độ pin chạm ngưỡng **≥ 45°C**.
 * **Âm lịch:**

@@ -62,17 +62,16 @@ class BatteryDetailsWidget : AppWidgetProvider() {
                 DeviceConnectionCounter.displayText(context)
             )
 
-            val refreshIntent = Intent(context, BatteryWidget::class.java).apply {
-                action = BatteryWidget.ACTION_MANUAL_REFRESH
-                setPackage(context.packageName)
+            val tapIntent = Intent(context, WidgetTapTrampolineActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
             }
-            val refreshPendingIntent = PendingIntent.getBroadcast(
+            val tapPendingIntent = PendingIntent.getActivity(
                 context,
-                appWidgetId,
-                refreshIntent,
+                200_000 + appWidgetId,
+                tapIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.widget_details_root, refreshPendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_details_root, tapPendingIntent)
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
 

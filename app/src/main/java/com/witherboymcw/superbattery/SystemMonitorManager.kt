@@ -1,27 +1,17 @@
 package com.witherboymcw.superbattery
 
-import android.app.NotificationManager
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.media.AudioManager
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
-import android.net.TrafficStats
-import android.os.BatteryManager
 import android.os.Build
-import android.os.SystemClock
-import android.telephony.ServiceState
-import android.telephony.TelephonyCallback
-import android.telephony.TelephonyManager
-import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import com.witherboymcw.superbattery.monitors.AudioRingerSource
+import com.witherboymcw.superbattery.monitors.BatteryMonitorSource
+import com.witherboymcw.superbattery.monitors.ConnectivityMonitorSource
+import com.witherboymcw.superbattery.monitors.NetworkTrafficSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,21 +62,21 @@ data class NetworkSpeed(
 )
 
 /**
- * SystemMonitorManager is an independent manager responsible for:
- * 1. Listening to system state changes (Bluetooth, SIM, Ringer Mode, Battery, Wi-Fi).
- * 2. Monitoring network traffic (TrafficStats) and calculating network download/upload rates.
- * 3. Exposing Kotlin StateFlow / Flow for reactive UI state collection without memory leaks.
- * 4. Handling SIM State via TelephonyCallback (API 31+) and BroadcastReceiver fallback.
- * 5. Throttling and deduplicating updates to minimize CPU/GPU overhead.
+ * SystemMonitorManager is an independent coordinator responsible for orchestrating dedicated
+ * source modules ([BatteryMonitorSource], [NetworkTrafficSource], [ConnectivityMonitorSource], [AudioRingerSource])
+ * and exposing reactive Kotlin StateFlows for UI state collection without memory leaks.
  */
 class SystemMonitorManager(context: Context) {
 
-    // Prevent Activity Context memory leaks by converting to applicationContext immediately
     private val appContext: Context = context.applicationContext
+
+    private val batterySource = BatteryMonitorSource()
+    private val networkTrafficSource = NetworkTrafficSource()
+    private val connectivitySource = ConnectivityMonitorSource()
+    private val ringerSource = AudioRingerSource()
 
     private var isMonitoring = false
 
-    // Reactive StateFlows for Kotlin Coroutines / Flow UI layer consumption
     private val _bluetoothState = MutableStateFlow(isBluetoothEnabled())
     val bluetoothState: StateFlow<Boolean> = _bluetoothState.asStateFlow()
 
@@ -104,15 +94,6 @@ class SystemMonitorManager(context: Context) {
 
     private val _networkSpeedState = MutableStateFlow(NetworkSpeed())
     val networkSpeedState: StateFlow<NetworkSpeed> = _networkSpeedState.asStateFlow()
-
-    private var telephonyCallback: Any? = null
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
-
-    private var previousRx = -1L
-    private var previousTx = -1L
-    private var previousNetworkTime = 0L
-    private var lastNonZeroRxRate: Long? = null
-    private var lastNonZeroTxRate: Long? = null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
@@ -148,18 +129,10 @@ class SystemMonitorManager(context: Context) {
         }
     }
 
-    private fun resetNetworkStats() {
-        previousRx = -1L
-        previousTx = -1L
-        previousNetworkTime = 0L
-        lastNonZeroRxRate = null
-        lastNonZeroTxRate = null
-    }
-
     fun startMonitoring() {
         if (isMonitoring) return
 
-        resetNetworkStats()
+        networkTrafficSource.resetNetworkStats()
 
         _bluetoothState.value = isBluetoothEnabled()
         _ringerModeState.value = getRingerMode()
@@ -185,15 +158,23 @@ class SystemMonitorManager(context: Context) {
                 ContextCompat.RECEIVER_EXPORTED
             )
             isMonitoring = true
-        } catch (_: Exception) {
-            // Fallback or ignore if registration fails
-        }
+        } catch (_: Exception) {}
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            registerTelephonyCallback()
+            connectivitySource.registerTelephonyCallback(appContext) {
+                val isReady = isSimReady()
+                if (_simState.value != isReady) {
+                    _simState.value = isReady
+                }
+            }
         }
 
-        registerWifiCallback()
+        connectivitySource.registerWifiCallback(appContext) { isConnected ->
+            if (_wifiState.value != isConnected) {
+                _wifiState.value = isConnected
+            }
+        }
+
         updateNetworkSpeed()
     }
 
@@ -201,266 +182,41 @@ class SystemMonitorManager(context: Context) {
         if (!isMonitoring) return
         try {
             appContext.unregisterReceiver(receiver)
-        } catch (_: Exception) {
-            // Receiver was already unregistered or not registered
-        }
+        } catch (_: Exception) {}
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            unregisterTelephonyCallback()
+            connectivitySource.unregisterTelephonyCallback(appContext)
         }
 
-        unregisterWifiCallback()
-
-        resetNetworkStats()
+        connectivitySource.unregisterWifiCallback(appContext)
+        networkTrafficSource.resetNetworkStats()
 
         isMonitoring = false
     }
 
-    @RequiresApi(Build.VERSION_CODES.S)
-    private fun registerTelephonyCallback() {
-        try {
-            val tm = appContext.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager ?: return
-            val callback = object : TelephonyCallback(), TelephonyCallback.ServiceStateListener {
-                override fun onServiceStateChanged(serviceState: ServiceState) {
-                    val isReady = isSimReady()
-                    if (_simState.value != isReady) {
-                        _simState.value = isReady
-                    }
-                }
-            }
-            telephonyCallback = callback
-            tm.registerTelephonyCallback(appContext.mainExecutor, callback)
-        } catch (_: Exception) {}
-    }
-
-    @RequiresApi(Build.VERSION_CODES.S)
-    private fun unregisterTelephonyCallback() {
-        try {
-            val callback = telephonyCallback as? TelephonyCallback ?: return
-            val tm = appContext.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager ?: return
-            tm.unregisterTelephonyCallback(callback)
-            telephonyCallback = null
-        } catch (_: Exception) {}
-    }
-
-    // --- Wi-Fi Monitoring ---
-
-    fun isWifiConnected(): Boolean {
-        return try {
-            val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val network = cm?.activeNetwork ?: return false
-                val capabilities = cm.getNetworkCapabilities(network) ?: return false
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-            } else {
-                @Suppress("DEPRECATION")
-                val info = cm?.activeNetworkInfo
-                @Suppress("DEPRECATION")
-                info != null && info.isConnected && info.type == ConnectivityManager.TYPE_WIFI
-            }
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun registerWifiCallback() {
-        try {
-            if (networkCallback != null) return
-            val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
-            val request = NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .build()
-
-            val callback = object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    if (!_wifiState.value) {
-                        _wifiState.value = true
-                    }
-                }
-
-                override fun onLost(network: Network) {
-                    if (_wifiState.value) {
-                        _wifiState.value = false
-                    }
-                }
-            }
-            networkCallback = callback
-            cm.registerNetworkCallback(request, callback)
-        } catch (_: Exception) {
-            _wifiState.value = false
-        }
-    }
-
-    private fun unregisterWifiCallback() {
-        networkCallback?.let { callback ->
-            try {
-                val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-                cm?.unregisterNetworkCallback(callback)
-            } catch (_: Exception) {}
-            networkCallback = null
-        }
-    }
-
-    // --- Network Traffic Monitoring ---
+    fun isWifiConnected(): Boolean = connectivitySource.isWifiConnected(appContext)
 
     fun updateNetworkSpeed(): NetworkSpeed {
-        val rx = TrafficStats.getTotalRxBytes()
-        val tx = TrafficStats.getTotalTxBytes()
-        val now = SystemClock.elapsedRealtime()
-
-        if (rx == TrafficStats.UNSUPPORTED.toLong() || tx == TrafficStats.UNSUPPORTED.toLong()) {
-            val speed = NetworkSpeed(rxRate = 0L, txRate = 0L, totalRxBytes = rx, totalTxBytes = tx, isSupported = false)
-            _networkSpeedState.value = speed
-            return speed
-        }
-
-        val elapsedSeconds = if (previousNetworkTime > 0L) {
-            ((now - previousNetworkTime).coerceAtLeast(1L)) / 1000f
-        } else 1f
-
-        val rxRate = if (previousRx >= 0 && rx >= previousRx) ((rx - previousRx) / elapsedSeconds).toLong() else 0L
-        val txRate = if (previousTx >= 0 && tx >= previousTx) ((tx - previousTx) / elapsedSeconds).toLong() else 0L
-
-        previousRx = rx
-        previousTx = tx
-        previousNetworkTime = now
-
-        val displayedTxRate = if (txRate > 0L) {
-            lastNonZeroTxRate = txRate
-            txRate
-        } else {
-            lastNonZeroTxRate ?: 0L
-        }
-
-        val displayedRxRate = if (rxRate > 0L) {
-            lastNonZeroRxRate = rxRate
-            rxRate
-        } else {
-            lastNonZeroRxRate ?: 0L
-        }
-
-        val speed = NetworkSpeed(
-            rxRate = displayedRxRate,
-            txRate = displayedTxRate,
-            totalRxBytes = rx,
-            totalTxBytes = tx,
-            isSupported = true
-        )
+        val speed = networkTrafficSource.updateNetworkSpeed()
         _networkSpeedState.value = speed
         return speed
     }
 
-    // --- Bluetooth Monitoring ---
+    fun isBluetoothEnabled(): Boolean = connectivitySource.isBluetoothEnabled(appContext)
 
-    fun isBluetoothEnabled(): Boolean {
-        return try {
-            val bm = appContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-            val adapter = bm?.adapter ?: @Suppress("DEPRECATION") BluetoothAdapter.getDefaultAdapter()
-            adapter != null && adapter.isEnabled
-        } catch (_: Exception) {
-            false
-        }
-    }
+    fun isSimReady(): Boolean = connectivitySource.isSimReady(appContext)
 
-    // --- SIM Card Monitoring ---
-
-    fun isSimReady(): Boolean {
-        return try {
-            val tm = appContext.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
-            val hasPermission = com.witherboymcw.superbattery.settings.Permissions.isPhoneStateEnabled(appContext)
-
-            if (tm != null && hasPermission) {
-                tm.simState == TelephonyManager.SIM_STATE_READY
-            } else {
-                false
-            }
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    // --- Ringer Mode Monitoring & Operations ---
-
-    fun getRingerMode(): Int {
-        return try {
-            val am = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-            am?.ringerMode ?: AudioManager.RINGER_MODE_NORMAL
-        } catch (_: Exception) {
-            AudioManager.RINGER_MODE_NORMAL
-        }
-    }
+    fun getRingerMode(): Int = ringerSource.getRingerMode(appContext)
 
     fun toggleRingerMode(onPermissionRequired: (() -> Unit)? = null): Int {
-        val am = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-            ?: return AudioManager.RINGER_MODE_NORMAL
-
-        val currentMode = am.ringerMode
-        val nextMode = when (currentMode) {
-            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
-            AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
-            else -> AudioManager.RINGER_MODE_NORMAL
-        }
-
-        if (nextMode == AudioManager.RINGER_MODE_SILENT && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            if (notificationManager?.isNotificationPolicyAccessGranted == false) {
-                onPermissionRequired?.invoke()
-                try {
-                    am.ringerMode = AudioManager.RINGER_MODE_NORMAL
-                } catch (_: Exception) {}
-                val normal = AudioManager.RINGER_MODE_NORMAL
-                _ringerModeState.value = normal
-                return normal
-            }
-        }
-
-        try {
-            am.ringerMode = nextMode
-        } catch (_: Exception) {
-            // Guard against missing permissions
-        }
-
-        val updated = am.ringerMode
+        val updated = ringerSource.toggleRingerMode(appContext, onPermissionRequired)
         _ringerModeState.value = updated
         return updated
     }
 
-    // --- Battery Monitoring ---
+    fun getBatteryIntent(): Intent? = batterySource.getBatteryIntent(appContext)
 
-    fun getBatteryIntent(): Intent? {
-        return try {
-            ContextCompat.registerReceiver(
-                appContext,
-                null,
-                IntentFilter(Intent.ACTION_BATTERY_CHANGED),
-                ContextCompat.RECEIVER_EXPORTED
-            )
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    fun getBatteryInfo(): BatteryInfo {
-        val batteryIntent = getBatteryIntent()
-        val voltageMv = batteryIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
-        val tempRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
-        val temperatureC = tempRaw / 10f
-        val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-        val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-        val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                status == BatteryManager.BATTERY_STATUS_FULL
-
-        return BatteryInfo(
-            voltageMv = voltageMv,
-            temperatureC = temperatureC,
-            level = level,
-            scale = scale,
-            status = status,
-            isCharging = isCharging,
-            rawIntent = batteryIntent
-        )
-    }
+    fun getBatteryInfo(): BatteryInfo = batterySource.getBatteryInfo(appContext)
 
     companion object {
         private const val ACTION_SIM_STATE_CHANGED = "android.intent.action.SIM_STATE_CHANGED"
