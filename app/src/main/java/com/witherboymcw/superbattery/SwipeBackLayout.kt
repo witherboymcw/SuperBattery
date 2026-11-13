@@ -1,13 +1,10 @@
 package com.witherboymcw.superbattery
 
 import android.content.Context
-import android.content.res.Configuration
 import android.util.AttributeSet
 import android.view.MotionEvent
-import android.view.VelocityTracker
-import android.view.ViewConfiguration
 import android.widget.FrameLayout
-import kotlin.math.abs
+import com.witherboymcw.superbattery.templates.DrawerGestureHelper
 
 open class SwipeBackFrameLayout @JvmOverloads constructor(
     context: Context,
@@ -32,27 +29,13 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
     private var startX = 0f
     private var startY = 0f
     private var isSwiping = false
-    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat() * 0.25f
-    private val minFlingVelocity = ViewConfiguration.get(context).scaledMinimumFlingVelocity.toFloat()
-    private var velocityTracker: VelocityTracker? = null
-
-    private fun addMovement(ev: MotionEvent) {
-        if (velocityTracker == null) {
-            velocityTracker = VelocityTracker.obtain()
-        }
-        velocityTracker?.addMovement(ev)
-    }
-
-    private fun recycleVelocityTracker() {
-        velocityTracker?.recycle()
-        velocityTracker = null
-    }
+    private val gestureHelper = DrawerGestureHelper(context)
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         if (ev.action == MotionEvent.ACTION_DOWN) {
-            recycleVelocityTracker()
+            gestureHelper.recycleVelocityTracker()
         }
-        addMovement(ev)
+        gestureHelper.addMovement(ev)
 
         when (ev.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -61,34 +44,36 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
                 isSwiping = false
             }
             MotionEvent.ACTION_MOVE -> {
-                val rawDx = if (swipeDirection == SWIPE_DIRECTION_LEFT) startX - ev.rawX else ev.rawX - startX
+                val dx = ev.rawX - startX
                 val dy = ev.rawY - startY
-                val effectiveDx = rawDx * swipeSensitivity
-                if (!isSwiping && effectiveDx > touchSlop && abs(rawDx) > abs(dy)) {
-                    isSwiping = true
-                    parent?.requestDisallowInterceptTouchEvent(true)
+                val rawDx = if (swipeDirection == SWIPE_DIRECTION_LEFT) -dx else dx
+                if (!isSwiping && rawDx > 0 && gestureHelper.isHorizontalSwipe(rawDx, dy, swipeSensitivity)) {
+                    if (!gestureHelper.isTouchInInteractiveChild(this, ev.rawX, ev.rawY)) {
+                        isSwiping = true
+                        parent?.requestDisallowInterceptTouchEvent(true)
+                    }
                 }
             }
         }
-        
+
         val result = isSwiping || super.onInterceptTouchEvent(ev)
-        
+
         if (ev.action == MotionEvent.ACTION_UP || ev.action == MotionEvent.ACTION_CANCEL) {
             isSwiping = false
-            recycleVelocityTracker()
+            gestureHelper.recycleVelocityTracker()
         }
-        
+
         return result
     }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
         if (ev.action == MotionEvent.ACTION_DOWN) {
-            recycleVelocityTracker()
+            gestureHelper.recycleVelocityTracker()
         }
-        addMovement(ev)
-        
+        gestureHelper.addMovement(ev)
+
         var handled = false
-        
+
         when (ev.action) {
             MotionEvent.ACTION_DOWN -> {
                 handled = true // Need to handle DOWN to receive MOVE
@@ -107,24 +92,18 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
                     val rawDx = if (swipeDirection == SWIPE_DIRECTION_LEFT) startX - ev.rawX else ev.rawX - startX
                     val dx = (rawDx * swipeSensitivity).coerceAtLeast(0f)
                     val widthVal = width.toFloat().takeIf { it > 0 } ?: 1080f
-                    val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                    val threshold = if (isLandscape) 0.18f else 0.40f
-                    
+                    val threshold = gestureHelper.getSwipeThreshold(context)
+
                     var isFling = false
                     if (ev.action == MotionEvent.ACTION_UP) {
-                        velocityTracker?.computeCurrentVelocity(1000)
-                        val xVelocity = velocityTracker?.xVelocity ?: 0f
-                        if (swipeDirection == SWIPE_DIRECTION_LEFT) {
-                            if (xVelocity < -(minFlingVelocity * 0.25f)) {
-                                isFling = true
-                            }
+                        val xVelocity = gestureHelper.computeXVelocity(1000)
+                        isFling = if (swipeDirection == SWIPE_DIRECTION_LEFT) {
+                            gestureHelper.isFlingLeft(xVelocity)
                         } else {
-                            if (xVelocity > (minFlingVelocity * 0.25f)) {
-                                isFling = true
-                            }
+                            gestureHelper.isFlingRight(xVelocity)
                         }
                     }
-                    
+
                     val shouldClose = isFling || dx > widthVal * threshold
                     swipeListener?.onSwipeEnd(shouldClose)
                     isSwiping = false
@@ -134,11 +113,11 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
                 }
             }
         }
-        
+
         if (ev.action == MotionEvent.ACTION_UP || ev.action == MotionEvent.ACTION_CANCEL) {
-            recycleVelocityTracker()
+            gestureHelper.recycleVelocityTracker()
         }
-        
+
         return handled || super.onTouchEvent(ev)
     }
 

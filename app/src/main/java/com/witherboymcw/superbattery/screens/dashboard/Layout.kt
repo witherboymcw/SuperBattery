@@ -1,14 +1,11 @@
 package com.witherboymcw.superbattery.screens.dashboard
 
 import android.content.Context
-import android.content.res.Configuration
 import android.util.AttributeSet
 import android.view.MotionEvent
-import android.view.VelocityTracker
-import android.view.ViewConfiguration
 import android.widget.LinearLayout
 import com.witherboymcw.superbattery.awareness.CornerAwareness
-import kotlin.math.abs
+import com.witherboymcw.superbattery.templates.DrawerGestureHelper
 
 class DashboardLayout @JvmOverloads constructor(
     context: Context,
@@ -42,31 +39,17 @@ class DashboardLayout @JvmOverloads constructor(
     private var startX = 0f
     private var startY = 0f
     private var currentDirection = SwipeDirection.NONE
-    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat() * 0.25f
-    private val minFlingVelocity = ViewConfiguration.get(context).scaledMinimumFlingVelocity.toFloat()
-    private var velocityTracker: VelocityTracker? = null
-
-    private fun addMovement(ev: MotionEvent) {
-        if (velocityTracker == null) {
-            velocityTracker = VelocityTracker.obtain()
-        }
-        velocityTracker?.addMovement(ev)
-    }
-
-    private fun recycleVelocityTracker() {
-        velocityTracker?.recycle()
-        velocityTracker = null
-    }
+    private val gestureHelper = DrawerGestureHelper(context)
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         if (canSwipe?.invoke() == false) {
             return super.onInterceptTouchEvent(ev)
         }
         if (ev.action == MotionEvent.ACTION_DOWN) {
-            recycleVelocityTracker()
+            gestureHelper.recycleVelocityTracker()
         }
-        addMovement(ev)
-        
+        gestureHelper.addMovement(ev)
+
         when (ev.action) {
             MotionEvent.ACTION_DOWN -> {
                 startX = ev.rawX
@@ -77,26 +60,28 @@ class DashboardLayout @JvmOverloads constructor(
                 val dx = ev.rawX - startX
                 val dy = ev.rawY - startY
                 val effectiveDx = dx * swipeSensitivity
-                if (currentDirection == SwipeDirection.NONE && abs(dx) > touchSlop && abs(dx) > abs(dy)) {
-                    if (effectiveDx < 0) {
-                        currentDirection = SwipeDirection.LEFT_TO_SETTINGS
-                    } else {
-                        currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
-                    }
-                    parent?.requestDisallowInterceptTouchEvent(true)
-                    dualSwipeListener?.onSwipeStart(currentDirection)
-                    if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
-                        swipeListener?.onSwipeStart()
+                if (currentDirection == SwipeDirection.NONE && gestureHelper.isHorizontalSwipe(dx, dy, swipeSensitivity)) {
+                    if (!gestureHelper.isTouchInInteractiveChild(this, ev.rawX, ev.rawY)) {
+                        if (effectiveDx < 0) {
+                            currentDirection = SwipeDirection.LEFT_TO_SETTINGS
+                        } else {
+                            currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
+                        }
+                        parent?.requestDisallowInterceptTouchEvent(true)
+                        dualSwipeListener?.onSwipeStart(currentDirection)
+                        if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
+                            swipeListener?.onSwipeStart()
+                        }
                     }
                 }
             }
         }
-        
+
         val result = currentDirection != SwipeDirection.NONE || super.onInterceptTouchEvent(ev)
-        
+
         if (ev.action == MotionEvent.ACTION_UP || ev.action == MotionEvent.ACTION_CANCEL) {
             currentDirection = SwipeDirection.NONE
-            recycleVelocityTracker()
+            gestureHelper.recycleVelocityTracker()
         }
         return result
     }
@@ -106,13 +91,13 @@ class DashboardLayout @JvmOverloads constructor(
             return super.onTouchEvent(ev)
         }
         if (ev.action == MotionEvent.ACTION_DOWN) {
-            recycleVelocityTracker()
+            gestureHelper.recycleVelocityTracker()
         }
-        addMovement(ev)
-        
+        gestureHelper.addMovement(ev)
+
         val screenWidth = width.toFloat().takeIf { it > 0 } ?: 1080f
         var handled = false
-        
+
         when (ev.action) {
             MotionEvent.ACTION_DOWN -> {
                 startX = ev.rawX
@@ -125,16 +110,18 @@ class DashboardLayout @JvmOverloads constructor(
                 val dy = ev.rawY - startY
                 val effectiveDx = dx * swipeSensitivity
 
-                if (currentDirection == SwipeDirection.NONE && abs(dx) > touchSlop && abs(dx) > abs(dy)) {
-                    if (effectiveDx < 0) {
-                        currentDirection = SwipeDirection.LEFT_TO_SETTINGS
-                    } else {
-                        currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
-                    }
-                    parent?.requestDisallowInterceptTouchEvent(true)
-                    dualSwipeListener?.onSwipeStart(currentDirection)
-                    if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
-                        swipeListener?.onSwipeStart()
+                if (currentDirection == SwipeDirection.NONE && gestureHelper.isHorizontalSwipe(dx, dy, swipeSensitivity)) {
+                    if (!gestureHelper.isTouchInInteractiveChild(this, ev.rawX, ev.rawY)) {
+                        if (effectiveDx < 0) {
+                            currentDirection = SwipeDirection.LEFT_TO_SETTINGS
+                        } else {
+                            currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
+                        }
+                        parent?.requestDisallowInterceptTouchEvent(true)
+                        dualSwipeListener?.onSwipeStart(currentDirection)
+                        if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
+                            swipeListener?.onSwipeStart()
+                        }
                     }
                 }
 
@@ -152,21 +139,19 @@ class DashboardLayout @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (currentDirection != SwipeDirection.NONE) {
                     val effectiveDx = (ev.rawX - startX) * swipeSensitivity
-                    val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                    val threshold = if (isLandscape) 0.18f else 0.40f
+                    val threshold = gestureHelper.getSwipeThreshold(context)
 
-                    velocityTracker?.computeCurrentVelocity(1000)
-                    val xVelocity = velocityTracker?.xVelocity ?: 0f
+                    val xVelocity = gestureHelper.computeXVelocity(1000)
 
                     if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
                         val currentX = (screenWidth + effectiveDx).coerceIn(0f, screenWidth)
-                        val isFling = ev.action == MotionEvent.ACTION_UP && xVelocity < -(minFlingVelocity * 0.25f)
+                        val isFling = ev.action == MotionEvent.ACTION_UP && gestureHelper.isFlingLeft(xVelocity)
                         val shouldOpen = isFling || currentX < screenWidth * (1f - threshold)
                         dualSwipeListener?.onSwipeEnd(currentDirection, shouldOpen)
                         swipeListener?.onSwipeEnd(shouldOpen)
                     } else if (currentDirection == SwipeDirection.RIGHT_TO_HOTSPOT) {
                         val currentX = (-screenWidth + effectiveDx).coerceIn(-screenWidth, 0f)
-                        val isFling = ev.action == MotionEvent.ACTION_UP && xVelocity > (minFlingVelocity * 0.25f)
+                        val isFling = ev.action == MotionEvent.ACTION_UP && gestureHelper.isFlingRight(xVelocity)
                         val shouldOpen = isFling || currentX > -screenWidth * (1f - threshold)
                         dualSwipeListener?.onSwipeEnd(currentDirection, shouldOpen)
                     }
@@ -178,11 +163,11 @@ class DashboardLayout @JvmOverloads constructor(
                 }
             }
         }
-        
+
         if (ev.action == MotionEvent.ACTION_UP || ev.action == MotionEvent.ACTION_CANCEL) {
-            recycleVelocityTracker()
+            gestureHelper.recycleVelocityTracker()
         }
-        
+
         return handled || super.onTouchEvent(ev)
     }
 
