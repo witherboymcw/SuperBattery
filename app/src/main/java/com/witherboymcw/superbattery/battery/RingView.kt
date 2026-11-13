@@ -50,7 +50,7 @@ class BatteryRingView @JvmOverloads constructor(
 
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = Color.rgb(0, 230, 118)
+        color = com.witherboymcw.superbattery.templates.MetricColors.COLOR_GREEN
         strokeCap = Paint.Cap.ROUND
         strokeWidth = this@BatteryRingView.strokeWidth
     }

@@ -34,6 +34,8 @@ import com.witherboymcw.superbattery.awareness.CornerAwareness
 import com.witherboymcw.superbattery.awareness.FoldableAwareness
 import com.witherboymcw.superbattery.awareness.NotchAwareness
 import com.witherboymcw.superbattery.awareness.getBatteryPowerInfo
+import com.witherboymcw.superbattery.templates.MetricColors
+import com.witherboymcw.superbattery.templates.MetricGraphBinder
 import com.witherboymcw.superbattery.widgets.BatteryDetailsWidget
 import com.witherboymcw.superbattery.widgets.BatteryWidget
 import androidx.core.os.LocaleListCompat
@@ -549,56 +551,9 @@ class MainActivity : AppCompatActivity() {
         setupRingerModeControls()
         setupNetworkCardIndicators()
 
-        val headerVoltage: View? = findViewById(R.id.header_voltage_graph)
-        voltageGraph?.onAxisOffsetsChanged = { leftOffset, rightOffset, plotWidth ->
-            headerVoltage?.setPaddingRelative(
-                leftOffset.toInt(),
-                headerVoltage.paddingTop,
-                rightOffset.toInt(),
-                headerVoltage.paddingBottom
-            )
-            val margin20s = (plotWidth / 3f).toInt()
-            (tvVoltagePower?.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
-                if (lp.marginEnd != margin20s) {
-                    lp.marginEnd = margin20s
-                    tvVoltagePower?.layoutParams = lp
-                }
-            }
-        }
-
-        val headerRam: View? = findViewById(R.id.header_ram_graph)
-        ramGraph?.onAxisOffsetsChanged = { leftOffset, rightOffset, plotWidth ->
-            headerRam?.setPaddingRelative(
-                leftOffset.toInt(),
-                headerRam.paddingTop,
-                rightOffset.toInt(),
-                headerRam.paddingBottom
-            )
-            val margin20s = (plotWidth / 3f).toInt()
-            (tvRamCurrent?.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
-                if (lp.marginEnd != margin20s) {
-                    lp.marginEnd = margin20s
-                    tvRamCurrent?.layoutParams = lp
-                }
-            }
-        }
-
-        val headerTemp: View? = findViewById(R.id.header_temperature_graph)
-        tempGraph?.onAxisOffsetsChanged = { leftOffset, rightOffset, plotWidth ->
-            headerTemp?.setPaddingRelative(
-                leftOffset.toInt(),
-                headerTemp.paddingTop,
-                rightOffset.toInt(),
-                headerTemp.paddingBottom
-            )
-            val margin20s = (plotWidth / 3f).toInt()
-            (tvTemperatureStatus?.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
-                if (lp.marginEnd != margin20s) {
-                    lp.marginEnd = margin20s
-                    tvTemperatureStatus?.layoutParams = lp
-                }
-            }
-        }
+        MetricGraphBinder.bindHeaderOffsets(voltageGraph, findViewById(R.id.header_voltage_graph), tvVoltagePower)
+        MetricGraphBinder.bindHeaderOffsets(ramGraph, findViewById(R.id.header_ram_graph), tvRamCurrent)
+        MetricGraphBinder.bindHeaderOffsets(tempGraph, findViewById(R.id.header_temperature_graph), tvTemperatureStatus)
     }
 
     private fun setupRingerModeControls() {
@@ -653,7 +608,7 @@ class MainActivity : AppCompatActivity() {
         ivNetworkSim1?.alpha = if (isReady) 1.0f else 0.3f
     }
 
-    private fun setBatteryCard(titleId: Int, value: String, percent: Int = 0, color: Int = Color.rgb(0, 230, 118)) {
+    private fun setBatteryCard(titleId: Int, value: String, percent: Int = 0, color: Int = MetricColors.COLOR_GREEN) {
         cardBatteryTitle?.text = getString(titleId)
         cardBatteryValue?.text = value
         batteryRing?.setProgressAndColor(percent, color)
@@ -752,11 +707,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 3. Temperature status
-        val statusRes = when {
-            temperatureC <= 40f -> R.string.temp_status_nominal
-            temperatureC < 45f -> R.string.temp_status_hot
-            else -> R.string.temp_status_critical
-        }
+        val statusRes = MetricColors.getTemperatureStatusRes(temperatureC)
         tvTemperatureStatus?.text = getString(statusRes)
 
         systemMonitorManager.updateNetworkSpeed()
@@ -768,47 +719,62 @@ class MainActivity : AppCompatActivity() {
             VoltageUnit.V -> Triple(minVoltageMv / 1000f, maxVoltageMv / 1000f, " " + getString(R.string.unit_v))
         }
         val voltageDecimalPlaces = if (voltageUnit == VoltageUnit.V) 2 else 0
-        voltageGraph?.setHistory(
-            dashboardViewModel.voltageHistory, minVoltage, maxVoltage, voltageSuffix, sampleTime,
+        MetricGraphBinder.updateGraph(
+            graph = voltageGraph,
+            samples = dashboardViewModel.voltageHistory,
+            minValue = minVoltage,
+            maxValue = maxVoltage,
+            suffix = voltageSuffix,
+            currentTimeMs = sampleTime,
             decimalPlaces = voltageDecimalPlaces,
-            valueTransform = { rawMv -> SettingsHelper.convertVoltage(rawMv, voltageUnit) }
-        ) { voltage ->
-            val rawMv = SettingsHelper.convertToVoltageMv(voltage, voltageUnit).toInt()
-            val percent = BatteryMath.getBatteryPercentage(isUseSystemBattery, battery, rawMv)
-            BatteryMath.percentageColor(percent)
-        }
+            valueTransform = { rawMv -> SettingsHelper.convertVoltage(rawMv, voltageUnit) },
+            valueColor = { voltage ->
+                val rawMv = SettingsHelper.convertToVoltageMv(voltage, voltageUnit).toInt()
+                val percent = BatteryMath.getBatteryPercentage(isUseSystemBattery, battery, rawMv)
+                MetricColors.getBatteryColor(percent)
+            }
+        )
 
         val maxRam = SettingsHelper.convertRam(totalMb.toFloat(), ramUnit).coerceAtLeast(0.1f)
         val ramSuffix = " " + getString(if (ramUnit == RamUnit.GB) R.string.unit_gb else R.string.unit_mb)
         val ramDecimalPlaces = if (ramUnit == RamUnit.GB) 1 else 0
 
-        ramGraph?.setHistory(
-            dashboardViewModel.ramHistory, 0f, maxRam, ramSuffix, sampleTime,
+        MetricGraphBinder.updateGraph(
+            graph = ramGraph,
+            samples = dashboardViewModel.ramHistory,
+            minValue = 0f,
+            maxValue = maxRam,
+            suffix = ramSuffix,
+            currentTimeMs = sampleTime,
             decimalPlaces = ramDecimalPlaces,
-            valueTransform = { rawMb -> SettingsHelper.convertRam(rawMb, ramUnit) }
-        ) { ramVal ->
-            val ramMb = SettingsHelper.convertToRamMb(ramVal, ramUnit)
-            val ramUsedPercent = if (totalMb > 0) ramMb * 100f / totalMb else 0f
-            when {
-                ramUsedPercent >= 90f -> Color.rgb(255, 82, 82)
-                ramUsedPercent >= 80f -> Color.rgb(255, 179, 0)
-                else -> Color.rgb(0, 230, 118)
+            valueTransform = { rawMb -> SettingsHelper.convertRam(rawMb, ramUnit) },
+            valueColor = { ramVal ->
+                val ramMb = SettingsHelper.convertToRamMb(ramVal, ramUnit)
+                val ramUsedPercent = if (totalMb > 0) ramMb * 100f / totalMb else 0f
+                MetricColors.getRamColor(ramUsedPercent)
             }
-        }
+        )
+
         val tempUnit = SettingsHelper.getTemperatureUnit(this)
         val (minTemp, maxTemp, tempSuffix) = when (tempUnit) {
             TempUnit.CELSIUS -> Triple(0f, 60f, getString(R.string.unit_celsius))
             TempUnit.FAHRENHEIT -> Triple(32f, 140f, getString(R.string.unit_fahrenheit))
             TempUnit.KELVIN -> Triple(273f, 333f, " " + getString(R.string.unit_kelvin))
         }
-        tempGraph?.setHistory(
-            dashboardViewModel.temperatureHistory, minTemp, maxTemp, tempSuffix, sampleTime,
+        MetricGraphBinder.updateGraph(
+            graph = tempGraph,
+            samples = dashboardViewModel.temperatureHistory,
+            minValue = minTemp,
+            maxValue = maxTemp,
+            suffix = tempSuffix,
+            currentTimeMs = sampleTime,
             decimalPlaces = 0,
-            valueTransform = { rawC -> SettingsHelper.convertTemperature(rawC, tempUnit) }
-        ) { tempVal ->
-            val celsius = SettingsHelper.convertToCelsius(tempVal, tempUnit)
-            BatteryDetailsWidget.temperatureColor(celsius)
-        }
+            valueTransform = { rawC -> SettingsHelper.convertTemperature(rawC, tempUnit) },
+            valueColor = { tempVal ->
+                val celsius = SettingsHelper.convertToCelsius(tempVal, tempUnit)
+                MetricColors.getTemperatureColor(celsius)
+            }
+        )
     }
 
     private fun updateNetworkSpeedUi(speed: NetworkSpeed = systemMonitorManager.networkSpeedState.value) {

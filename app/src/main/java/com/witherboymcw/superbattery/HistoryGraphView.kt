@@ -30,7 +30,7 @@ class HistoryGraphView @JvmOverloads constructor(
     }
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = Color.rgb(0, 230, 118)
+        color = com.witherboymcw.superbattery.templates.MetricColors.COLOR_GREEN
     }
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE

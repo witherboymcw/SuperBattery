@@ -171,9 +171,5 @@ object BatteryMath {
         return 0
     }
 
-    fun percentageColor(percent: Int): Int = when {
-        percent >= 20 -> Color.rgb(0, 230, 118)
-        percent <= 10 -> Color.rgb(255, 82, 82)
-        else -> Color.rgb(255, 179, 0)
-    }
+    fun percentageColor(percent: Int): Int = com.witherboymcw.superbattery.templates.MetricColors.getBatteryColor(percent)
 }

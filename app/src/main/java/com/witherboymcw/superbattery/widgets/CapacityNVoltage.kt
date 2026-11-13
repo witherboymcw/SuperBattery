@@ -76,10 +76,7 @@ class BatteryDetailsWidget : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
 
-        internal fun temperatureColor(tempCelsius: Float): Int = when {
-            tempCelsius <= 40f -> Color.rgb(0, 230, 118)
-            tempCelsius < 45f -> Color.rgb(255, 179, 0)
-            else -> Color.rgb(255, 82, 82)
-        }
+        internal fun temperatureColor(tempCelsius: Float): Int =
+            com.witherboymcw.superbattery.templates.MetricColors.getTemperatureColor(tempCelsius)
     }
 }
