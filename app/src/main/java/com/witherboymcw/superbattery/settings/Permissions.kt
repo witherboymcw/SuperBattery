@@ -13,9 +13,9 @@ import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import com.witherboymcw.superbattery.BatteryWidget
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.widgets.BatteryWidget
 
 class Permissions(private val activity: MainActivity) {
 

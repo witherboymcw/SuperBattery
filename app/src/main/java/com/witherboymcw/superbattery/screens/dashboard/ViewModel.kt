@@ -1,6 +1,8 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.screens.dashboard
 
 import androidx.lifecycle.ViewModel
+import com.witherboymcw.superbattery.HistoryGraphView
+import com.witherboymcw.superbattery.MetricHistoryManager
 
 class DashboardViewModel(
     val metricHistoryManager: MetricHistoryManager = MetricHistoryManager()

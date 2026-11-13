@@ -1,10 +1,11 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.awareness
 
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.BatteryManager
 import android.os.SystemClock
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 import java.util.Locale
 
 data class BatteryPowerInfo(
@@ -91,7 +92,7 @@ object BatteryMath {
     private var lastVoltageSampleTimeMs = Long.MIN_VALUE
 
     fun getBatteryPowerInfo(context: Context): BatteryPowerInfo? =
-        com.witherboymcw.superbattery.getBatteryPowerInfo(context)
+        com.witherboymcw.superbattery.awareness.getBatteryPowerInfo(context)
 
     fun getSystemBatteryPercentage(batteryIntent: Intent?): Int {
         if (batteryIntent == null) return 0

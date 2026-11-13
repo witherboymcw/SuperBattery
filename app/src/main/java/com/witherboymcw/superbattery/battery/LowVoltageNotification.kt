@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.battery
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -12,6 +12,9 @@ import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.witherboymcw.superbattery.MainActivity
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.settings.Permissions
 
 internal object LowVoltageNotification {
     private const val CHANNEL_ID = "low_battery_voltage"
@@ -22,7 +25,7 @@ internal object LowVoltageNotification {
     fun send(context: Context, voltageMv: Int) {
         val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         if (preferences.getBoolean(PREF_ALERT_ACTIVE, false)) return
-        if (!com.witherboymcw.superbattery.settings.Permissions.isPostNotificationsEnabled(context)) return
+        if (!Permissions.isPostNotificationsEnabled(context)) return
 
         val manager = NotificationManagerCompat.from(context)
         createChannel(context)

@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.widgets
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -7,6 +7,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.VietnameseLunarCalendar
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date

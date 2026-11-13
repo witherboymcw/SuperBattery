@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.screens.hotspot
 
 import android.app.Notification
 import android.app.NotificationManager
@@ -19,6 +19,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.witherboymcw.superbattery.widgets.BatteryWidget
 import org.json.JSONArray
 import java.lang.ref.WeakReference
 
@@ -36,14 +37,14 @@ object HotspotRuleLoader {
         HotspotRule(
             oem = "Universal / All Brands",
             titlePatterns = listOf(
-                "(?i)^(?=.*(?:tethering|hotspot|chia\\s+sẻ|chia\\s+se|phát\\s+sóng|phat\\s+song))(?=.*(?:\\b(?:on|active|activated|bật|bat)\\b|kích\\s+hoạt|kich\\s+hoat)).*$"
+                "(?i)^.*(?:tethering|hotspot|chia\\s+sẻ|chia\\s+se|phát\\s+sóng|phat\\s+song).*"
             ),
             noDeviceRegex = Regex(
-                "\\b(no\\s+(?:connected\\s+)?devices?|no\\s+devices?\\s+connected|0\\s+(?:connected\\s+)?devices?|không\\s+có\\s+thiết\\s+bị(?:\\s+nào)?(?:\\s+kết\\s+nối)?|khong\\s+co\\s+thiet\\s+bi(?:\\s+nao)?(?:\\s+ket\\s+noi)?|chưa\\s+có\\s+thiết\\s+bị|chua\\s+co\\s+thiet\\s+bi)\\b",
+                "\\b(?:no\\s+(?:connected\\s+)?(?:devices?|clients?)|no\\s+(?:devices?|clients?)\\s+connected|0\\s+(?:connected\\s+)?(?:devices?|clients?)|không\\s+có\\s+thiết\\s+bị(?:\\s+nào)?(?:\\s+kết\\s+nối)?|khong\\s+co\\s+thiet\\s+bi(?:\\s+nao)?(?:\\s+ket\\s+noi)?|chưa\\s+có\\s+thiết\\s+bị|chua\\s+co\\s+thiet\\s+bi)\\b",
                 RegexOption.IGNORE_CASE
             ),
             connectedRegex = Regex(
-                "\\b(\\d+)\\s+(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị(?:\\s+(?:đã|da))?(?:\\s+(?:kết\\s+nối|ket\\s+noi))?|thiet\\s+bi)\\b",
+                "\\b(\\d+)\\s+(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị(?:\\s+(?:đã|da))?(?:\\s+(?:kết\\s+nối|ket\\s+noi))?|thiet\\s+bi)\\b|\\b(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị)\\s*[:\\-]?\\s*(\\d+)\\b|\\b(\\d+)\\s+connected\\b",
                 RegexOption.IGNORE_CASE
             )
         )
@@ -190,11 +191,19 @@ class HotspotNotificationListener : NotificationListenerService() {
     private fun checkHotspotNotification(excludingKey: String? = null) {
         val activeNotifs = try { activeNotifications } catch (_: Exception) { return }
         if (activeNotifs == null) return
-        val newStatus = activeNotifs.asSequence()
+        val statuses = activeNotifs.asSequence()
             .filterNotNull()
             .filterNot { it.key == excludingKey }
-            .firstNotNullOfOrNull(::hotspotStatusFromNotification)
-            ?: HotspotState.OFF
+            .mapNotNull(::hotspotStatusFromNotification)
+            .toList()
+
+        val newStatus = statuses.maxByOrNull { status ->
+            when (status) {
+                is HotspotState.ON_CONNECTED -> 2
+                is HotspotState.ON_EMPTY -> 1
+                is HotspotState.OFF -> 0
+            }
+        } ?: HotspotState.OFF
 
         if (setCurrentStatus(this, newStatus)) refreshWidgets()
     }
@@ -207,18 +216,23 @@ class HotspotNotificationListener : NotificationListenerService() {
         val notif = sbn.notification ?: return null
         val extras = notif.extras ?: return null
 
-        val titleCharSeq = extras.getCharSequence(Notification.EXTRA_TITLE)
-        val bigTitleCharSeq = extras.getCharSequence(Notification.EXTRA_TITLE_BIG)
-        val notificationTitle = "$titleCharSeq $bigTitleCharSeq"
+        val titleCharSeq = try { extras.getCharSequence(Notification.EXTRA_TITLE) } catch (_: Exception) { null }
+        val bigTitleCharSeq = try { extras.getCharSequence(Notification.EXTRA_TITLE_BIG) } catch (_: Exception) { null }
+        val notificationTitle = listOfNotNull(titleCharSeq, bigTitleCharSeq)
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
 
         val rules = HotspotRuleLoader.getRules(this)
         val matchingRule = rules.firstOrNull { rule ->
             rule.titlePatterns.any { pattern ->
                 try {
-                    Regex(pattern, RegexOption.IGNORE_CASE).containsMatchIn(notificationTitle) ||
-                            notificationTitle.contains(pattern, ignoreCase = true)
+                    Regex(pattern, setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+                        .containsMatchIn(notificationTitle)
                 } catch (_: Exception) {
-                    notificationTitle.contains(pattern, ignoreCase = true)
+                    notificationTitle.contains("hotspot", ignoreCase = true) ||
+                            notificationTitle.contains("tethering", ignoreCase = true) ||
+                            notificationTitle.contains("chia sẻ", ignoreCase = true) ||
+                            notificationTitle.contains("phát sóng", ignoreCase = true)
                 }
             }
         } ?: return null
@@ -230,24 +244,38 @@ class HotspotNotificationListener : NotificationListenerService() {
             }
         }
 
+        listOf(
+            Notification.EXTRA_TITLE,
+            Notification.EXTRA_TITLE_BIG,
+            Notification.EXTRA_TEXT,
+            Notification.EXTRA_BIG_TEXT,
+            Notification.EXTRA_SUMMARY_TEXT,
+            Notification.EXTRA_SUB_TEXT,
+            Notification.EXTRA_INFO_TEXT
+        ).forEach { extraKey ->
+            try {
+                appendText(extras.getCharSequence(extraKey))
+            } catch (_: Exception) {
+            }
+        }
+
         try {
-            appendText(extras.getCharSequence(Notification.EXTRA_TITLE))
-            appendText(extras.getCharSequence(Notification.EXTRA_TITLE_BIG))
-            appendText(extras.getCharSequence(Notification.EXTRA_TEXT))
-            appendText(extras.getCharSequence(Notification.EXTRA_BIG_TEXT))
-            appendText(extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT))
-            appendText(extras.getCharSequence(Notification.EXTRA_SUB_TEXT))
-            appendText(extras.getCharSequence(Notification.EXTRA_INFO_TEXT))
             appendText(notif.tickerText)
+        } catch (_: Exception) {
+        }
+
+        try {
             extras.keySet()?.forEach { key ->
-                when (val value = extras.get(key)) {
-                    is CharSequence -> appendText(value)
-                    is Array<*> -> value.filterIsInstance<CharSequence>().forEach { appendText(it) }
-                    is Iterable<*> -> value.filterIsInstance<CharSequence>().forEach { appendText(it) }
+                try {
+                    when (val value = extras.get(key)) {
+                        is CharSequence -> appendText(value)
+                        is Array<*> -> value.filterIsInstance<CharSequence>().forEach { appendText(it) }
+                        is Iterable<*> -> value.filterIsInstance<CharSequence>().forEach { appendText(it) }
+                    }
+                } catch (_: Exception) {
                 }
             }
         } catch (_: Exception) {
-            // Ignore BadParcelableException if notification contains unknown 3rd party parcelables
         }
 
         val notificationContent = sb.toString()
@@ -256,7 +284,13 @@ class HotspotNotificationListener : NotificationListenerService() {
             return HotspotState.ON_EMPTY
         }
 
-        val clients = matchingRule.connectedRegex.find(notificationContent)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        val matchResult = matchingRule.connectedRegex.find(notificationContent)
+            ?: return HotspotState.ON_EMPTY
+
+        val clients = matchResult.groupValues
+            .drop(1)
+            .firstOrNull { it.isNotBlank() }
+            ?.toIntOrNull()
             ?: return HotspotState.ON_EMPTY
 
         return if (clients == 0) HotspotState.ON_EMPTY else HotspotState.ON_CONNECTED(clients)

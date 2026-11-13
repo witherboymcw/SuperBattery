@@ -14,6 +14,8 @@ import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import com.google.android.material.card.MaterialCardView
+import com.witherboymcw.superbattery.screens.settings.SettingsViewController
+import com.witherboymcw.superbattery.widgets.BatteryWidget
 
 /**
  * Top-level hardware condition checker for guaranteed OLED display detection.

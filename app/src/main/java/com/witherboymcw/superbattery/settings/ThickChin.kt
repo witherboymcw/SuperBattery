@@ -2,19 +2,20 @@ package com.witherboymcw.superbattery.settings
 
 import android.os.Bundle
 import android.os.Handler
-import android.view.MotionEvent
+import android.os.Looper
 import android.view.View
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
-import com.witherboymcw.superbattery.ChinAwareness
-import com.witherboymcw.superbattery.FoldableAwareness
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.awareness.ChinAwareness
+import com.witherboymcw.superbattery.awareness.FoldableAwareness
+import com.witherboymcw.superbattery.templates.SimpleSeekbarCard
 
 class ThickChin(private val activity: MainActivity) {
 
-    private val commitHandler = Handler(android.os.Looper.getMainLooper())
+    private val commitHandler = Handler(Looper.getMainLooper())
     private var pendingThickChinLevel: Int? = null
 
     private val commitRunnable = Runnable {
@@ -52,17 +53,6 @@ class ThickChin(private val activity: MainActivity) {
         val btnQuick0 = activity.findViewById<View>(R.id.btn_thick_chin_quick_0)
         val btnQuick256 = activity.findViewById<View>(R.id.btn_thick_chin_quick_256)
 
-        headerThickChin?.setOnClickListener {
-            val isExpanded = dropdownThickChin?.visibility == View.VISIBLE
-            dropdownThickChin?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowThickChin?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(ChinAwareness.KEY_THICK_CHIN_DROPDOWN_OPEN) == true) {
-            dropdownThickChin?.visibility = View.VISIBLE
-            arrowThickChin?.rotation = 180f
-        }
-
         val savedThickChinLevel = ChinAwareness.getThickChinLevel(activity)
         pendingThickChinLevel = savedThickChinLevel
 
@@ -78,94 +68,31 @@ class ThickChin(private val activity: MainActivity) {
             scheduleCommit()
         }
 
-        selectedThickChinText?.text = savedThickChinLevel.toString()
-        if (thickChinSeekBar?.progress != savedThickChinLevel) {
-            thickChinSeekBar?.progress = savedThickChinLevel
-        }
-
-        fun setupRepeatButton(button: View?, delta: Int) {
-            button ?: return
-            var repeatCount = 0
-            val repeatRunnable = object : Runnable {
-                override fun run() {
-                    if (!button.isAttachedToWindow) {
-                        commitHandler.removeCallbacks(this)
-                        return
-                    }
-                    repeatCount++
-                    val current = pendingThickChinLevel ?: ChinAwareness.getThickChinLevel(activity)
-                    updateThickChin(current + delta)
-                    val nextDelay = if (repeatCount < 3) 500L else 250L
-                    commitHandler.postDelayed(this, nextDelay)
-                }
+        SimpleSeekbarCard.bind(
+            headerView = headerThickChin,
+            dropdownView = dropdownThickChin,
+            arrowView = arrowThickChin,
+            valueTextView = selectedThickChinText,
+            seekBar = thickChinSeekBar,
+            savedInstanceStateKey = ChinAwareness.KEY_THICK_CHIN_DROPDOWN_OPEN,
+            savedInstanceState = savedInstanceState,
+            currentValue = savedThickChinLevel,
+            valueFormatter = { it.toString() },
+            onProgressUpdate = { progress ->
+                updateThickChin(progress, updateSeekBar = false)
+            },
+            onCommit = {
+                scheduleCommit()
             }
+        )
 
-            button.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) {}
-                override fun onViewDetachedFromWindow(v: View) {
-                    commitHandler.removeCallbacks(repeatRunnable)
-                }
-            })
-
-            button.setOnTouchListener { v, event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        v.parent?.requestDisallowInterceptTouchEvent(true)
-                        repeatCount = 0
-                        val current = pendingThickChinLevel ?: ChinAwareness.getThickChinLevel(activity)
-                        updateThickChin(current + delta)
-                        commitHandler.postDelayed(repeatRunnable, 500L)
-                        true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        if (event.x < 0 || event.x > v.width || event.y < 0 || event.y > v.height) {
-                            commitHandler.removeCallbacks(repeatRunnable)
-                            v.parent?.requestDisallowInterceptTouchEvent(false)
-                        }
-                        false
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        commitHandler.removeCallbacks(repeatRunnable)
-                        v.parent?.requestDisallowInterceptTouchEvent(false)
-                        if (event.action == MotionEvent.ACTION_UP) {
-                            v.performClick()
-                        }
-                        scheduleCommit()
-                        true
-                    }
-                    else -> false
-                }
-            }
-        }
-
-        setupRepeatButton(btnMinus10, -10)
-        setupRepeatButton(btnMinus1, -1)
-        setupRepeatButton(btnPlus1, 1)
-        setupRepeatButton(btnPlus10, 10)
+        val getCurrent = { pendingThickChinLevel ?: ChinAwareness.getThickChinLevel(activity) }
+        SimpleSeekbarCard.setupRepeatButton(btnMinus10, -10, { updateThickChin(it) }, getCurrent) { scheduleCommit() }
+        SimpleSeekbarCard.setupRepeatButton(btnMinus1, -1, { updateThickChin(it) }, getCurrent) { scheduleCommit() }
+        SimpleSeekbarCard.setupRepeatButton(btnPlus1, 1, { updateThickChin(it) }, getCurrent) { scheduleCommit() }
+        SimpleSeekbarCard.setupRepeatButton(btnPlus10, 10, { updateThickChin(it) }, getCurrent) { scheduleCommit() }
 
         btnQuick0?.setOnClickListener { updateThickChin(0) }
         btnQuick256?.setOnClickListener { updateThickChin(256) }
-
-        thickChinSeekBar?.setOnTouchListener { v, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> v.parent?.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> v.parent?.requestDisallowInterceptTouchEvent(false)
-            }
-            false
-        }
-
-        thickChinSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    updateThickChin(progress, updateSeekBar = false)
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                commitHandler.removeCallbacks(commitRunnable)
-            }
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                scheduleCommit()
-            }
-        })
     }
 }

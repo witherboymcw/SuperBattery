@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.awareness
 
 import android.app.Activity
 import android.content.res.Configuration
@@ -7,6 +7,7 @@ import android.view.RoundedCorner
 import android.view.View
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.card.MaterialCardView
+import com.witherboymcw.superbattery.R
 
 /**
  * Utility helper for calculating Android 12+ dynamic screen rounded corners

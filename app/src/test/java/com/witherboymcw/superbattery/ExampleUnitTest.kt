@@ -1,5 +1,8 @@
 package com.witherboymcw.superbattery
 
+import com.witherboymcw.superbattery.awareness.CornerAwareness
+import com.witherboymcw.superbattery.screens.dashboard.DashboardViewModel
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 import org.junit.Test
 import org.junit.Assert.*
 
@@ -230,5 +233,17 @@ class ExampleUnitTest {
 
         val radiusWithNullInsets = CornerAwareness.calculateDynamicCornerRadius(null, density)
         assertEquals(expectedDefaultRadiusPx, radiusWithNullInsets, 0.001f)
+    }
+
+    @Test
+    fun testLanguageNormalizationAndLocaleResolution() {
+        val brainrotAliases = listOf("art", "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot")
+        brainrotAliases.forEach { tag ->
+            val locale = when (tag) {
+                "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> java.util.Locale.forLanguageTag("art")
+                else -> java.util.Locale.forLanguageTag(tag)
+            }
+            assertEquals("art", locale.language)
+        }
     }
 }

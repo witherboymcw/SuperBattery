@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.awareness
 
 import android.content.Context
 import android.content.res.Configuration
@@ -6,6 +6,10 @@ import android.os.Build
 import android.view.Surface
 import android.view.View
 import android.view.WindowManager
+import com.witherboymcw.superbattery.MainActivity
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.screens.settings.SettingsViewController
+import com.witherboymcw.superbattery.widgets.BatteryWidget
 import kotlin.math.roundToInt
 
 /**

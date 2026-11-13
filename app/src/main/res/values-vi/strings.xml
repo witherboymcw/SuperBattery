@@ -110,6 +110,8 @@
     <string name="notch_position">Vị trí tai thỏ</string>
     <string name="notch_pos_center">Căn giữa</string>
     <string name="notch_pos_not_center">Lệch tâm</string>
+    <string name="notch_size_title">Kích thước tai thỏ</string>
+    <string name="notch_pill_title">Độ rộng viên thuốc</string>
     <string name="btn_set_notch_position">Chỉnh vị trí tai thỏ</string>
     <string name="notch_instruction_text">Kéo hình tròn đến vị trí tai thỏ mong muốn, sau đó chạm ra ngoài để lưu.</string>
     <string name="permission_already_granted">Quyền đã được cấp.</string>

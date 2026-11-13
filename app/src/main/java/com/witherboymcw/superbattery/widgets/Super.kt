@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.widgets
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -9,6 +9,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.widget.RemoteViews
+import com.witherboymcw.superbattery.DeviceConnectionCounter
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.awareness.BatteryMath
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 
 class SuperWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(

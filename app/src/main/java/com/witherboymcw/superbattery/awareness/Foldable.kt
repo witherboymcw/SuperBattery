@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.awareness
 
 import android.content.Context
 import android.hardware.Sensor

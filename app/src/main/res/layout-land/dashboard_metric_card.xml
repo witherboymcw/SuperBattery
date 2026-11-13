@@ -34,7 +34,7 @@
             android:layout_gravity="end|center_vertical"
             android:layout_marginEnd="6dp">
 
-            <com.witherboymcw.superbattery.BatteryRingView
+            <com.witherboymcw.superbattery.battery.BatteryRingView
                 android:id="@+id/battery_ring"
                 android:layout_width="60dp"
                 android:layout_height="60dp"

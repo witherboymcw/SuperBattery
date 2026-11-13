@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.screens.settings
 
 import android.os.Build
 import android.os.Bundle
@@ -8,6 +8,11 @@ import android.widget.TextView
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import com.witherboymcw.superbattery.MainActivity
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.SwipeBackFrameLayout
+import com.witherboymcw.superbattery.awareness.ChinAwareness
+import com.witherboymcw.superbattery.awareness.NotchAwareness
 import com.witherboymcw.superbattery.settings.Frequency
 import com.witherboymcw.superbattery.settings.Language
 import com.witherboymcw.superbattery.settings.Notch
@@ -133,6 +138,10 @@ internal class SettingsViewController {
     }
 
     fun unbind() {
+        notchCard?.unbind()
+        notchCard = null
+        thickChinCard?.flushCommit()
+        thickChinCard = null
         backCallback.remove()
         activityRef = null
     }
@@ -213,6 +222,7 @@ internal class SettingsViewController {
             }
 
             // Initialize 11 Component Cards
+            notchCard?.unbind()
             val pCard = Permissions(this).also { permissionsCard = it }
             val lCard = Language(this).also { languageCard = it }
             val fCard = Frequency(this).also { frequencyCard = it }
@@ -232,9 +242,7 @@ internal class SettingsViewController {
             }
             fCard.bind(
                 savedInstanceState,
-                refreshIntervalMs,
-                handler,
-                refreshDashboard
+                refreshIntervalMs
             ) { selectedMs ->
                 refreshIntervalMs = selectedMs
             }

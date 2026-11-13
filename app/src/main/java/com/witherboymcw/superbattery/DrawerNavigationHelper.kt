@@ -2,6 +2,9 @@ package com.witherboymcw.superbattery
 
 import android.view.View
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import com.witherboymcw.superbattery.screens.dashboard.DashboardLayout
+import com.witherboymcw.superbattery.screens.hotspot.HotspotViewController
+import com.witherboymcw.superbattery.screens.settings.SettingsViewController
 
 /**
  * Helper responsible for orchestrating DashboardLayout dual swipe gestures

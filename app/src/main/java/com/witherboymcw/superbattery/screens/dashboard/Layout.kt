@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.screens.dashboard
 
 import android.content.Context
 import android.content.res.Configuration
@@ -7,6 +7,7 @@ import android.view.MotionEvent
 import android.view.VelocityTracker
 import android.view.ViewConfiguration
 import android.widget.LinearLayout
+import com.witherboymcw.superbattery.awareness.CornerAwareness
 import kotlin.math.abs
 
 class DashboardLayout @JvmOverloads constructor(

@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.screens.hotspot
 
 import android.content.Context
 import android.os.Bundle
@@ -15,6 +15,11 @@ import android.widget.TextView
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import com.witherboymcw.superbattery.MainActivity
+import com.witherboymcw.superbattery.OledThemeAllInOne
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.SwipeBackFrameLayout
+import com.witherboymcw.superbattery.awareness.NotchAwareness
 import java.util.Locale
 
 internal class HotspotViewController {

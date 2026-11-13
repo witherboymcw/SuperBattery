@@ -3,5 +3,4 @@
     <locale android:name="en" />
     <locale android:name="vi" />
     <locale android:name="art" />
-    <locale android:name="b+vi+x+slang" />
 </locale-config>

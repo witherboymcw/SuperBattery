@@ -127,6 +127,8 @@
     <string name="notch_position">Notch Position</string>
     <string name="notch_pos_center">Center</string>
     <string name="notch_pos_not_center">Not Center</string>
+    <string name="notch_size_title">Notch Size</string>
+    <string name="notch_pill_title">Pill Width</string>
     <string name="btn_set_notch_position">Set Notch Position</string>
     <string name="notch_instruction_text">Drag the circle to the desired notch position, then tap anywhere else to save.</string>
     <string name="permission_already_granted">Permission already granted.</string>

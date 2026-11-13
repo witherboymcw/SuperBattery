@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.screens.hotspot
 
 import android.content.Context
 import org.json.JSONArray
@@ -65,8 +65,6 @@ object HotspotManager {
 
         client.isDenied = isDenied
 
-        // Hardware hooking logic commented out for standalone persistence testing:
-        /*
         if (isDenied) {
             val cmdIptables = "iptables -I FORWARD -m mac --mac-source ${client.mac} -j DROP"
             val cmdDeauth = "hostapd_cli -i wlan0 deauthenticate ${client.mac}"
@@ -75,7 +73,6 @@ object HotspotManager {
             val cmdIptables = "iptables -D FORWARD -m mac --mac-source ${client.mac} -j DROP"
             executeRootCommands(listOf(cmdIptables))
         }
-        */
 
         savePersistedClients(context)
     }

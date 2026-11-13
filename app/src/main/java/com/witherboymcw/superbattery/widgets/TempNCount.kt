@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.widgets
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -10,6 +10,12 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.SystemClock
 import android.widget.RemoteViews
+import com.witherboymcw.superbattery.CriticalEventNotification
+import com.witherboymcw.superbattery.MainActivity
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.awareness.BatteryMath
+import com.witherboymcw.superbattery.screens.hotspot.HotspotNotificationListener
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 
 class BatteryWidget : AppWidgetProvider() {
 

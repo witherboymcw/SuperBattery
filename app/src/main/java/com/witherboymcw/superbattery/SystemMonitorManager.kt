@@ -84,16 +84,6 @@ class SystemMonitorManager(context: Context) {
     // Prevent Activity Context memory leaks by converting to applicationContext immediately
     private val appContext: Context = context.applicationContext
 
-    interface Listener {
-        fun onBluetoothStateChanged(isEnabled: Boolean) {}
-        fun onRingerModeChanged(mode: Int) {}
-        fun onSimStateChanged(isReady: Boolean) {}
-        fun onBatteryChanged(batteryInfo: BatteryInfo) {}
-        fun onWifiStateChanged(isConnected: Boolean) {}
-        fun onNetworkSpeedChanged(networkSpeed: NetworkSpeed) {}
-    }
-
-    private var listener: Listener? = null
     private var isMonitoring = false
 
     // Reactive StateFlows for Kotlin Coroutines / Flow UI layer consumption
@@ -131,14 +121,12 @@ class SystemMonitorManager(context: Context) {
                     val isEnabled = isBluetoothEnabled()
                     if (_bluetoothState.value != isEnabled) {
                         _bluetoothState.value = isEnabled
-                        listener?.onBluetoothStateChanged(isEnabled)
                     }
                 }
                 AudioManager.RINGER_MODE_CHANGED_ACTION -> {
                     val mode = getRingerMode()
                     if (_ringerModeState.value != mode) {
                         _ringerModeState.value = mode
-                        listener?.onRingerModeChanged(mode)
                     }
                 }
                 ACTION_SIM_STATE_CHANGED,
@@ -146,7 +134,6 @@ class SystemMonitorManager(context: Context) {
                     val isReady = isSimReady()
                     if (_simState.value != isReady) {
                         _simState.value = isReady
-                        listener?.onSimStateChanged(isReady)
                     }
                 }
                 Intent.ACTION_BATTERY_CHANGED,
@@ -155,15 +142,10 @@ class SystemMonitorManager(context: Context) {
                     val newInfo = getBatteryInfo()
                     if (_batteryInfoState.value != newInfo) {
                         _batteryInfoState.value = newInfo
-                        listener?.onBatteryChanged(newInfo)
                     }
                 }
             }
         }
-    }
-
-    fun setListener(listener: Listener?) {
-        this.listener = listener
     }
 
     private fun resetNetworkStats() {
@@ -243,7 +225,6 @@ class SystemMonitorManager(context: Context) {
                     val isReady = isSimReady()
                     if (_simState.value != isReady) {
                         _simState.value = isReady
-                        listener?.onSimStateChanged(isReady)
                     }
                 }
             }
@@ -294,14 +275,12 @@ class SystemMonitorManager(context: Context) {
                 override fun onAvailable(network: Network) {
                     if (!_wifiState.value) {
                         _wifiState.value = true
-                        listener?.onWifiStateChanged(true)
                     }
                 }
 
                 override fun onLost(network: Network) {
                     if (_wifiState.value) {
                         _wifiState.value = false
-                        listener?.onWifiStateChanged(false)
                     }
                 }
             }
@@ -332,7 +311,6 @@ class SystemMonitorManager(context: Context) {
         if (rx == TrafficStats.UNSUPPORTED.toLong() || tx == TrafficStats.UNSUPPORTED.toLong()) {
             val speed = NetworkSpeed(rxRate = 0L, txRate = 0L, totalRxBytes = rx, totalTxBytes = tx, isSupported = false)
             _networkSpeedState.value = speed
-            listener?.onNetworkSpeedChanged(speed)
             return speed
         }
 
@@ -369,7 +347,6 @@ class SystemMonitorManager(context: Context) {
             isSupported = true
         )
         _networkSpeedState.value = speed
-        listener?.onNetworkSpeedChanged(speed)
         return speed
     }
 

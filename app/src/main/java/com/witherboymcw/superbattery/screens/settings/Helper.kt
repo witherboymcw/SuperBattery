@@ -1,6 +1,10 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.screens.settings
 
 import android.content.Context
+import com.witherboymcw.superbattery.RamUnit
+import com.witherboymcw.superbattery.TempUnit
+import com.witherboymcw.superbattery.VoltageUnit
+import com.witherboymcw.superbattery.widgets.BatteryWidget
 import java.util.Locale
 
 object SettingsHelper {
@@ -94,7 +98,11 @@ object SettingsHelper {
 
     fun getAppLocale(context: Context): Locale {
         val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
-        val savedLang = prefs.getString(APP_LANGUAGE_KEY, "system") ?: "system"
+        var savedLang = prefs.getString(APP_LANGUAGE_KEY, "system") ?: "system"
+        val validLangs = setOf("system", "vi", "en", "art", "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot")
+        if (savedLang !in validLangs) {
+            savedLang = "system"
+        }
         if (savedLang == "system" || savedLang.isEmpty()) {
             return if (getSystemPrimaryLanguage() == "vi") Locale.forLanguageTag("vi") else Locale.ENGLISH
         }

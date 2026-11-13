@@ -1,4 +1,4 @@
-<com.witherboymcw.superbattery.NotchAwareFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.witherboymcw.superbattery.awareness.NotchAwareFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/settings_container"
     android:layout_width="match_parent"
@@ -1311,6 +1311,196 @@
                                         android:text="@string/btn_set_notch_position"
                                         android:textSize="12sp"
                                         android:layout_marginTop="8dp"/>
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal"
+                                        android:layout_marginTop="12dp">
+
+                                        <TextView
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="@string/notch_size_title"
+                                            android:textSize="12sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:id="@+id/selected_notch_size_text"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:textColor="?android:attr/textColorSecondary"
+                                            android:textSize="12sp" />
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal">
+
+                                        <TextView
+                                            android:id="@+id/btn_notch_size_minus_10"
+                                            android:layout_width="38dp"
+                                            android:layout_height="38dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:clickable="true"
+                                            android:focusable="true"
+                                            android:gravity="center"
+                                            android:text="@string/thick_chin_minus_10"
+                                            android:textColor="?android:attr/textColorPrimary"
+                                            android:textSize="14sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:id="@+id/btn_notch_size_minus_1"
+                                            android:layout_width="32dp"
+                                            android:layout_height="38dp"
+                                            android:layout_marginStart="2dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:clickable="true"
+                                            android:focusable="true"
+                                            android:gravity="center"
+                                            android:text="@string/thick_chin_minus_1"
+                                            android:textColor="?android:attr/textColorPrimary"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+
+                                        <SeekBar
+                                            android:id="@+id/notch_size_seekbar"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginStart="4dp"
+                                            android:layout_marginEnd="4dp"
+                                            android:layout_weight="1"
+                                            android:max="80"
+                                            android:paddingStart="6dp"
+                                            android:paddingEnd="6dp" />
+
+                                        <TextView
+                                            android:id="@+id/btn_notch_size_plus_1"
+                                            android:layout_width="32dp"
+                                            android:layout_height="38dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:clickable="true"
+                                            android:focusable="true"
+                                            android:gravity="center"
+                                            android:text="@string/thick_chin_plus_1"
+                                            android:textColor="?android:attr/textColorPrimary"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:id="@+id/btn_notch_size_plus_10"
+                                            android:layout_width="38dp"
+                                            android:layout_height="38dp"
+                                            android:layout_marginStart="2dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:clickable="true"
+                                            android:focusable="true"
+                                            android:gravity="center"
+                                            android:text="@string/thick_chin_plus_10"
+                                            android:textColor="?android:attr/textColorPrimary"
+                                            android:textSize="14sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal"
+                                        android:layout_marginTop="8dp">
+
+                                        <TextView
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="@string/notch_pill_title"
+                                            android:textSize="12sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:id="@+id/selected_notch_pill_text"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:textColor="?android:attr/textColorSecondary"
+                                            android:textSize="12sp" />
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal">
+
+                                        <TextView
+                                            android:id="@+id/btn_notch_pill_minus_10"
+                                            android:layout_width="38dp"
+                                            android:layout_height="38dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:clickable="true"
+                                            android:focusable="true"
+                                            android:gravity="center"
+                                            android:text="@string/thick_chin_minus_10"
+                                            android:textColor="?android:attr/textColorPrimary"
+                                            android:textSize="14sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:id="@+id/btn_notch_pill_minus_1"
+                                            android:layout_width="32dp"
+                                            android:layout_height="38dp"
+                                            android:layout_marginStart="2dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:clickable="true"
+                                            android:focusable="true"
+                                            android:gravity="center"
+                                            android:text="@string/thick_chin_minus_1"
+                                            android:textColor="?android:attr/textColorPrimary"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+
+                                        <SeekBar
+                                            android:id="@+id/notch_pill_seekbar"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginStart="4dp"
+                                            android:layout_marginEnd="4dp"
+                                            android:layout_weight="1"
+                                            android:max="160"
+                                            android:paddingStart="6dp"
+                                            android:paddingEnd="6dp" />
+
+                                        <TextView
+                                            android:id="@+id/btn_notch_pill_plus_1"
+                                            android:layout_width="32dp"
+                                            android:layout_height="38dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:clickable="true"
+                                            android:focusable="true"
+                                            android:gravity="center"
+                                            android:text="@string/thick_chin_plus_1"
+                                            android:textColor="?android:attr/textColorPrimary"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:id="@+id/btn_notch_pill_plus_10"
+                                            android:layout_width="38dp"
+                                            android:layout_height="38dp"
+                                            android:layout_marginStart="2dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:clickable="true"
+                                            android:focusable="true"
+                                            android:gravity="center"
+                                            android:text="@string/thick_chin_plus_10"
+                                            android:textColor="?android:attr/textColorPrimary"
+                                            android:textSize="14sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
                                 </LinearLayout>
 
                                 <RadioButton
@@ -1472,4 +1662,4 @@
                 app:tint="?attr/colorControlNormal" />
         </com.google.android.material.card.MaterialCardView>
 
-</com.witherboymcw.superbattery.NotchAwareFrameLayout>
+</com.witherboymcw.superbattery.awareness.NotchAwareFrameLayout>

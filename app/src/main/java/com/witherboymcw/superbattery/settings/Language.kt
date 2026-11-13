@@ -1,13 +1,16 @@
 package com.witherboymcw.superbattery.settings
 
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.TextView
-import com.witherboymcw.superbattery.BatteryWidget
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.templates.OptionItem
+import com.witherboymcw.superbattery.templates.SimpleOptionCard
+import com.witherboymcw.superbattery.widgets.BatteryWidget
 
 class Language(private val activity: MainActivity) {
 
@@ -15,65 +18,46 @@ class Language(private val activity: MainActivity) {
         const val KEY_LANGUAGE_DROPDOWN_OPEN = "language_dropdown_open"
     }
 
-    private var headerLanguage: View? = null
-    private var dropdownLanguage: View? = null
-    private var arrowLanguage: ImageView? = null
-    private var selectedLanguageText: TextView? = null
-
     fun bind(savedInstanceState: Bundle?, onLanguageChanged: (String) -> Unit) {
-        headerLanguage = activity.findViewById(R.id.header_language)
-        dropdownLanguage = activity.findViewById(R.id.dropdown_language)
-        arrowLanguage = activity.findViewById(R.id.arrow_language)
-        selectedLanguageText = activity.findViewById(R.id.selected_language_text)
-
-        headerLanguage?.setOnClickListener {
-            val isExpanded = dropdownLanguage?.visibility == View.VISIBLE
-            dropdownLanguage?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowLanguage?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_LANGUAGE_DROPDOWN_OPEN) == true) {
-            dropdownLanguage?.visibility = View.VISIBLE
-            arrowLanguage?.rotation = 180f
-        }
-
+        val headerLanguage = activity.findViewById<View>(R.id.header_language)
+        val dropdownLanguage = activity.findViewById<View>(R.id.dropdown_language)
+        val arrowLanguage = activity.findViewById<ImageView>(R.id.arrow_language)
+        val selectedLanguageText = activity.findViewById<TextView>(R.id.selected_language_text)
         val langGroup = activity.findViewById<RadioGroup>(R.id.language_radio_group)
-        val savedLang = activity.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, android.content.Context.MODE_PRIVATE)
-            .getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
 
-        when (savedLang) {
-            "vi" -> {
-                langGroup?.check(R.id.lang_vietnamese)
-                selectedLanguageText?.text = activity.getString(R.string.language_vietnamese)
-            }
-            "en" -> {
-                langGroup?.check(R.id.lang_english)
-                selectedLanguageText?.text = activity.getString(R.string.language_english)
-            }
-            "art", "en-0rot", "en-x-brainrot", "en-brainrot", "en-BR" -> {
-                langGroup?.check(R.id.lang_brainrot)
-                selectedLanguageText?.text = activity.getString(R.string.language_brainrot)
-            }
-            else -> {
-                langGroup?.check(R.id.lang_system)
-                selectedLanguageText?.text = activity.getString(R.string.at_system)
-            }
+        val prefs = activity.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, Context.MODE_PRIVATE)
+        val savedLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
+        val currentLang = when (savedLang) {
+            "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
+            else -> savedLang
         }
 
-        langGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetLang = when (checkedId) {
-                R.id.lang_vietnamese -> "vi"
-                R.id.lang_english -> "en"
-                R.id.lang_brainrot -> "art"
-                else -> "system"
+        val options = listOf(
+            OptionItem(R.id.lang_system, "system", activity.getString(R.string.at_system)),
+            OptionItem(R.id.lang_vietnamese, "vi", activity.getString(R.string.language_vietnamese)),
+            OptionItem(R.id.lang_english, "en", activity.getString(R.string.language_english)),
+            OptionItem(R.id.lang_brainrot, "art", activity.getString(R.string.language_brainrot))
+        )
+
+        SimpleOptionCard.bind(
+            headerView = headerLanguage,
+            dropdownView = dropdownLanguage,
+            arrowView = arrowLanguage,
+            selectedTextView = selectedLanguageText,
+            radioGroup = langGroup,
+            savedInstanceStateKey = KEY_LANGUAGE_DROPDOWN_OPEN,
+            savedInstanceState = savedInstanceState,
+            currentValue = currentLang,
+            options = options
+        ) { targetLang ->
+            val activeLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
+            val normalizedActiveLang = when (activeLang) {
+                "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
+                else -> activeLang
             }
-            selectedLanguageText?.text = when (targetLang) {
-                "vi" -> activity.getString(R.string.language_vietnamese)
-                "en" -> activity.getString(R.string.language_english)
-                "art" -> activity.getString(R.string.language_brainrot)
-                else -> activity.getString(R.string.at_system)
+            if (normalizedActiveLang != targetLang) {
+                onLanguageChanged(targetLang)
             }
-            onLanguageChanged(targetLang)
         }
     }
 }

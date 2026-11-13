@@ -8,6 +8,7 @@ import android.graphics.Path
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 import kotlin.math.max
 
 class HistoryGraphView @JvmOverloads constructor(
@@ -195,7 +196,7 @@ class HistoryGraphView @JvmOverloads constructor(
             val fraction = i / 4f
             val y = top + (bottom - top) * fraction
             canvas.drawLine(left, y, right, y, gridPaint)
-            if (i in 1..3) {
+            if (i > 0 && i < 4) {
                 val baseline = y - (fontMetrics.ascent + fontMetrics.descent) / 2f
                 canvas.drawText(yLabelTexts[i], labelX, baseline, textPaint)
             }
@@ -239,7 +240,7 @@ class HistoryGraphView @JvmOverloads constructor(
         var pIdx = 0
         while (pIdx < numPoints) {
             val ts = points[pIdx].timestampMs
-            if (ts in windowStart..nowMs) {
+            if (ts >= windowStart && ts <= nowMs) {
                 if (startIndex == -1) startIndex = pIdx
                 endIndex = pIdx
             }

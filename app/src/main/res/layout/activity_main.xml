@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.witherboymcw.superbattery.DashboardLayout
+    <com.witherboymcw.superbattery.screens.dashboard.DashboardLayout
         android:id="@+id/dashboard"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -529,7 +529,7 @@
                     android:contentDescription="@string/temperature_title" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-    </com.witherboymcw.superbattery.DashboardLayout>
+    </com.witherboymcw.superbattery.screens.dashboard.DashboardLayout>
 
     <include layout="@layout/layout_settings" />
     <include layout="@layout/layout_hotspot" />

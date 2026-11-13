@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery
+package com.witherboymcw.superbattery.awareness
 
 import android.content.Context
 import android.content.Intent
@@ -10,22 +10,32 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.RectF
-import android.graphics.drawable.ShapeDrawable
-import android.graphics.drawable.shapes.OvalShape
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
+import android.os.Looper
 import android.provider.Settings
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import com.witherboymcw.superbattery.MainActivity
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.SwipeBackFrameLayout
+import com.witherboymcw.superbattery.widgets.BatteryWidget
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.TextView
 import kotlin.math.abs
 
@@ -40,10 +50,20 @@ object NotchAwareness {
     const val KEY_NOTCH_IS_CENTER = "notch_is_center"
     const val KEY_NOTCH_X = "notch_x"
     const val KEY_NOTCH_Y = "notch_y"
+    const val KEY_NOTCH_RADIUS = "notch_radius"
+    const val KEY_NOTCH_PILL_WIDTH = "notch_pill_width"
 
     const val MODE_SYSTEM = 0
     const val MODE_FORCE = 1
     const val MODE_IGNORE = 2
+
+    const val DEFAULT_NOTCH_RADIUS = 24f
+    const val MIN_NOTCH_RADIUS = 8f
+    const val MAX_NOTCH_RADIUS = 80f
+
+    const val DEFAULT_NOTCH_PILL_WIDTH = 0f
+    const val MIN_NOTCH_PILL_WIDTH = 0f
+    const val MAX_NOTCH_PILL_WIDTH = 160f
 
     enum class CutoutPosition {
         NONE,
@@ -70,7 +90,7 @@ object NotchAwareness {
     private val sharedTypedValue = TypedValue()
 
     /**
-     * Resolves the notch bounding rectangle considering system cutouts and custom simulated mode.
+     * Resolves the notch bounding rectangle considering system cutouts, orientation, and custom simulated mode.
      */
     fun getNotchRect(context: Context, hostView: View, tempRect: RectF = RectF()): RectF? {
         val prefs = context.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, Context.MODE_PRIVATE)
@@ -78,13 +98,49 @@ object NotchAwareness {
         if (notchMode == MODE_IGNORE) return null
 
         if (notchMode == MODE_FORCE) {
+            val isCenter = prefs.getBoolean(KEY_NOTCH_IS_CENTER, true)
             val cachedX = prefs.getFloat(KEY_NOTCH_X, -1f)
             val cachedY = prefs.getFloat(KEY_NOTCH_Y, -1f)
-            val isCenter = prefs.getBoolean(KEY_NOTCH_IS_CENTER, true)
-            if (cachedX != -1f && cachedY != -1f) {
-                val notchRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24f, context.resources.displayMetrics)
-                val finalY = if (isCenter) hostView.height / 2f else cachedY
-                tempRect.set(cachedX - notchRadius, finalY - notchRadius, cachedX + notchRadius, finalY + notchRadius)
+
+            val displayMetrics = context.resources.displayMetrics
+            val radiusDp = prefs.getFloat(KEY_NOTCH_RADIUS, DEFAULT_NOTCH_RADIUS)
+            val pillWidthDp = prefs.getFloat(KEY_NOTCH_PILL_WIDTH, DEFAULT_NOTCH_PILL_WIDTH)
+
+            val radiusPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, radiusDp, displayMetrics)
+            val pillWidthPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, pillWidthDp, displayMetrics)
+
+            val isLandscape = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                hostView.display?.rotation ?: Surface.ROTATION_0
+            } else {
+                @Suppress("DEPRECATION")
+                (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
+            }
+
+            val hostWidth = hostView.width.toFloat().takeIf { it > 0f } ?: displayMetrics.widthPixels.toFloat()
+            val hostHeight = hostView.height.toFloat().takeIf { it > 0f } ?: displayMetrics.heightPixels.toFloat()
+
+            if (isLandscape || rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+                val cY = if (isCenter || cachedY < 0f) hostHeight / 2f else cachedY
+                val isRight = rotation == Surface.ROTATION_270
+                val cX = if (isRight) {
+                    if (cachedX >= 0f && cachedX > hostWidth / 2f) cachedX else hostWidth - radiusPx
+                } else {
+                    if (cachedX >= 0f && cachedX < hostWidth / 2f) cachedX else radiusPx
+                }
+
+                val halfW = radiusPx
+                val halfH = radiusPx + pillWidthPx / 2f
+                tempRect.set(cX - halfW, cY - halfH, cX + halfW, cY + halfH)
+                return tempRect
+            } else {
+                val cX = if (isCenter || cachedX < 0f) hostWidth / 2f else cachedX
+                val cY = if (cachedY < 0f) radiusPx else cachedY
+
+                val halfWidth = radiusPx + pillWidthPx / 2f
+                val halfHeight = radiusPx
+
+                tempRect.set(cX - halfWidth, cY - halfHeight, cX + halfWidth, cY + halfHeight)
                 return tempRect
             }
         } else {
@@ -98,10 +154,13 @@ object NotchAwareness {
         return null
     }
 
+    private var liveCutoutOverride: CutoutInfo? = null
+
     /**
      * Resolves display cutout position and boundary bounds for layout calculations.
      */
     fun getCutoutInfo(context: Context, rootViewGroup: View): CutoutInfo {
+        liveCutoutOverride?.let { return it }
         val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             rootViewGroup.display?.rotation ?: Surface.ROTATION_0
         } else {
@@ -126,22 +185,24 @@ object NotchAwareness {
         if (notchMode == MODE_FORCE) {
             val isCentered = prefs.getBoolean(KEY_NOTCH_IS_CENTER, true)
             val nX = prefs.getFloat(KEY_NOTCH_X, -1f)
-            val notchRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24f, context.resources.displayMetrics)
+            val radiusDp = prefs.getFloat(KEY_NOTCH_RADIUS, DEFAULT_NOTCH_RADIUS)
+            val pillWidthDp = prefs.getFloat(KEY_NOTCH_PILL_WIDTH, DEFAULT_NOTCH_PILL_WIDTH)
 
-            if (isCentered || nX < 0f) {
-                val cX = screenWidth / 2f
-                return CutoutInfo(CutoutPosition.CENTER, cX - notchRadius, cX + notchRadius)
-            } else {
-                val cX = nX
-                val leftBound = cX - notchRadius
-                val rightBound = cX + notchRadius
-                val pos = when {
-                    cX < screenWidth * 0.35f -> CutoutPosition.TOP_LEFT
-                    cX > screenWidth * 0.65f -> CutoutPosition.TOP_RIGHT
-                    else -> CutoutPosition.CENTER
-                }
-                return CutoutInfo(pos, leftBound, rightBound)
+            val radiusPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, radiusDp, context.resources.displayMetrics)
+            val pillWidthPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, pillWidthDp, context.resources.displayMetrics)
+            val halfWidth = radiusPx + pillWidthPx / 2f
+
+            val cX = if (isCentered || nX < 0f) screenWidth / 2f else nX
+            val leftBound = cX - halfWidth
+            val rightBound = cX + halfWidth
+
+            val pos = when {
+                isCentered -> CutoutPosition.CENTER
+                cX < screenWidth * 0.35f -> CutoutPosition.TOP_LEFT
+                cX > screenWidth * 0.65f -> CutoutPosition.TOP_RIGHT
+                else -> CutoutPosition.CENTER
             }
+            return CutoutInfo(pos, leftBound, rightBound)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -175,7 +236,7 @@ object NotchAwareness {
     }
 
     /**
-     * Adjusts Home screen header views (left controls, settings button, dashboard title) around the cutout.
+     * Adjusts Home screen header views around the cutout, taking pill width expansion into account.
      */
     fun updateHomeHeaderLayout(activity: MainActivity) {
         val root = activity.findViewById<View>(R.id.main) ?: return
@@ -208,6 +269,9 @@ object NotchAwareness {
         val titleWidth = dashboardTitle.width.toFloat()
         val groupWidth = lcWidth + gap + sbWidth
 
+        val cutoutLeft = cutoutInfo.rectLeft
+        val cutoutRight = cutoutInfo.rectRight
+
         when (cutoutInfo.position) {
             CutoutPosition.NONE -> {
                 leftControls.translationX = 0f
@@ -215,17 +279,14 @@ object NotchAwareness {
                 dashboardTitle.translationX = 0f
             }
             CutoutPosition.CENTER -> {
-                val groupTargetLeft = ((W / 2f) - groupWidth) / 2f
-                val clampedGroupLeft = groupTargetLeft.coerceIn(margin, (W / 2f) - groupWidth)
+                val groupTargetLeft = ((cutoutLeft - clearance) - groupWidth).coerceIn(margin, cutoutLeft - groupWidth)
+                leftControls.translationX = groupTargetLeft - defaultLeftControlsX
+                btnSettings.translationX = (groupTargetLeft + lcWidth + gap) - defaultSettingsX
 
-                leftControls.translationX = clampedGroupLeft - defaultLeftControlsX
-                btnSettings.translationX = (clampedGroupLeft + lcWidth + gap) - defaultSettingsX
-
-                val targetTitleCenterX = (W / 2f) + (W / 4f)
+                val targetTitleCenterX = W * 0.75f
                 dashboardTitle.translationX = targetTitleCenterX - defaultTitleCenterX
             }
             CutoutPosition.TOP_LEFT -> {
-                val cutoutRight = cutoutInfo.rectRight
                 val leftBoundary = (cutoutRight + margin).coerceAtLeast(0f)
                 val rightBoundary = W / 2f - clearance
                 val targetTitleCenterX = if (leftBoundary < rightBoundary) {
@@ -247,7 +308,6 @@ object NotchAwareness {
                 btnSettings.translationX = (clampedGroupLeft + lcWidth + gap) - defaultSettingsX
 
                 val controlsRight = clampedGroupLeft + groupWidth
-                val cutoutLeft = cutoutInfo.rectLeft
                 val leftBoundary = controlsRight + clearance
                 val rightBoundary = (cutoutLeft - clearance).coerceAtMost(W)
 
@@ -262,7 +322,7 @@ object NotchAwareness {
     }
 
     /**
-     * Adjusts Settings screen header views around the cutout.
+     * Adjusts Settings screen header views around the cutout, taking pill width expansion into account.
      */
     fun updateSettingsHeaderLayout(activity: MainActivity) {
         val root = activity.findViewById<View>(R.id.main) ?: return
@@ -289,6 +349,8 @@ object NotchAwareness {
         val backWidth = cardBack.width.toFloat()
         val titleWidth = tvSettingsTitle.width.toFloat()
 
+        val cutoutRight = cutoutInfo.rectRight
+
         when (cutoutInfo.position) {
             CutoutPosition.NONE, CutoutPosition.TOP_RIGHT -> {
                 cardBack.translationX = 0f
@@ -296,12 +358,10 @@ object NotchAwareness {
             }
             CutoutPosition.CENTER -> {
                 cardBack.translationX = 0f
-
-                val targetTitleCenterX = (W / 2f) + (W / 4f)
+                val targetTitleCenterX = W * 0.75f
                 tvSettingsTitle.translationX = targetTitleCenterX - defaultTitleCenterX
             }
             CutoutPosition.TOP_LEFT -> {
-                val cutoutRight = cutoutInfo.rectRight
                 val targetBackLeft = (cutoutRight + margin).coerceAtLeast(margin)
                 cardBack.translationX = targetBackLeft - defaultBackLeft
 
@@ -319,7 +379,7 @@ object NotchAwareness {
     }
 
     /**
-     * Adjusts Hotspot screen header views around the cutout.
+     * Adjusts Hotspot screen header views around the cutout, taking pill width expansion into account.
      */
     fun updateHotspotHeaderLayout(activity: MainActivity) {
         val root = activity.findViewById<View>(R.id.main) ?: return
@@ -346,6 +406,8 @@ object NotchAwareness {
         val backWidth = cardBack.width.toFloat()
         val titleWidth = tvHotspotTitle.width.toFloat()
 
+        val cutoutLeft = cutoutInfo.rectLeft
+
         when (cutoutInfo.position) {
             CutoutPosition.NONE, CutoutPosition.TOP_LEFT -> {
                 cardBack.translationX = 0f
@@ -353,12 +415,10 @@ object NotchAwareness {
             }
             CutoutPosition.CENTER -> {
                 cardBack.translationX = 0f
-
-                val targetTitleCenterX = (W / 4f)
+                val targetTitleCenterX = W * 0.25f
                 tvHotspotTitle.translationX = targetTitleCenterX - defaultTitleCenterX
             }
             CutoutPosition.TOP_RIGHT -> {
-                val cutoutLeft = cutoutInfo.rectLeft
                 val targetBackRight = (cutoutLeft - margin).coerceAtMost(W - margin)
                 val targetBackLeft = targetBackRight - backWidth
                 cardBack.translationX = targetBackLeft - defaultBackLeft
@@ -415,83 +475,38 @@ object NotchAwareness {
 
         val prefs = context.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, Context.MODE_PRIVATE)
         if (prefs.getInt(KEY_NOTCH_CUSTOM_MODE, MODE_SYSTEM) == MODE_FORCE) {
-            canvas.drawOval(rect, notchPaint)
+            val cornerRadius = minOf(rect.width(), rect.height()) / 2f
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, notchPaint)
         }
     }
 
+    private var activeOverlayViewRef: java.lang.ref.WeakReference<View>? = null
+    private var activeWindowManagerRef: java.lang.ref.WeakReference<WindowManager>? = null
+
     /**
-     * Shows an interactive overlay allowing the user to set/drag the simulated notch position.
+     * Dismisses and removes any active notch position overlay window to prevent WindowManager memory leaks.
+     */
+    fun dismissNotchPositionOverlay() {
+        liveCutoutOverride = null
+        val overlay = activeOverlayViewRef?.get()
+        val wm = activeWindowManagerRef?.get()
+        if (overlay != null && wm != null) {
+            try {
+                wm.removeView(overlay)
+            } catch (_: Exception) {}
+        }
+        activeOverlayViewRef?.clear()
+        activeOverlayViewRef = null
+        activeWindowManagerRef?.clear()
+        activeWindowManagerRef = null
+    }
+
+    /**
+     * Shows an interactive overlay allowing the user to set/drag the simulated notch position,
+     * reading display orientation first, and synchronizing seekbars seamlessly.
      */
     fun showNotchPositionOverlay(activity: MainActivity) {
-        val wm = activity.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val overlayView = FrameLayout(activity)
-        overlayView.setBackgroundColor(0x88000000.toInt())
-
-        val circleView = View(activity)
-        circleView.background = ShapeDrawable(OvalShape()).apply {
-            paint.color = Color.BLACK
-        }
-        val radius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24f, activity.resources.displayMetrics).toInt()
-        val lp = FrameLayout.LayoutParams(radius * 2, radius * 2)
-
-        val prefs = activity.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, Context.MODE_PRIVATE)
-        val isCenter = prefs.getBoolean(KEY_NOTCH_IS_CENTER, true)
-        val currentX = prefs.getFloat(KEY_NOTCH_X, 0f)
-        val currentY = prefs.getFloat(KEY_NOTCH_Y, 0f)
-
-        lp.leftMargin = currentX.toInt() - radius
-        lp.topMargin = if (isCenter) activity.resources.displayMetrics.heightPixels / 2 - radius else currentY.toInt() - radius
-        circleView.layoutParams = lp
-
-        overlayView.addView(circleView)
-
-        val textInstruction = TextView(activity)
-        textInstruction.text = activity.getString(R.string.notch_instruction_text)
-        textInstruction.setTextColor(Color.WHITE)
-        textInstruction.gravity = Gravity.CENTER
-        overlayView.addView(textInstruction, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = Gravity.CENTER
-        })
-
-        var dX = 0f
-        var dY = 0f
-
-        circleView.setOnTouchListener { view, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    dX = view.x - event.rawX
-                    dY = view.y - event.rawY
-                    true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    view.animate()
-                        .x(event.rawX + dX)
-                        .apply {
-                            if (!isCenter) {
-                                y(event.rawY + dY)
-                            }
-                        }
-                        .setDuration(0)
-                        .start()
-                    true
-                }
-                else -> false
-            }
-        }
-
-        overlayView.setOnClickListener {
-            prefs.edit()
-                .putFloat(KEY_NOTCH_X, circleView.x + radius)
-                .putFloat(KEY_NOTCH_Y, circleView.y + radius)
-                .apply()
-            try {
-                wm.removeView(overlayView)
-            } catch (_: Exception) {}
-            updateAllHeaders(activity)
-        }
+        dismissNotchPositionOverlay()
 
         if (!com.witherboymcw.superbattery.settings.Permissions.isOverlayEnabled(activity)) {
             try {
@@ -501,6 +516,346 @@ object NotchAwareness {
                 ))
             } catch (_: Exception) {}
             return
+        }
+
+        val wm = activity.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val displayMetrics = activity.resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels.toFloat()
+        val screenHeight = displayMetrics.heightPixels.toFloat()
+
+        val isLandscape = activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            activity.display?.rotation ?: Surface.ROTATION_0
+        } else {
+            @Suppress("DEPRECATION")
+            (activity.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
+        }
+
+        val prefs = activity.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, Context.MODE_PRIVATE)
+        var isCenter = prefs.getBoolean(KEY_NOTCH_IS_CENTER, true)
+        var currentRadiusDp = prefs.getFloat(KEY_NOTCH_RADIUS, DEFAULT_NOTCH_RADIUS)
+        var currentPillDp = prefs.getFloat(KEY_NOTCH_PILL_WIDTH, DEFAULT_NOTCH_PILL_WIDTH)
+
+        var currentX = prefs.getFloat(KEY_NOTCH_X, -1f)
+        var currentY = prefs.getFloat(KEY_NOTCH_Y, -1f)
+
+        val radiusPxInitial = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, currentRadiusDp, displayMetrics)
+
+        if (isLandscape || rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+            if (currentY < 0f || isCenter) currentY = screenHeight / 2f
+            val isRight = rotation == Surface.ROTATION_270
+            if (currentX < 0f) {
+                currentX = if (isRight) screenWidth - radiusPxInitial else radiusPxInitial
+            }
+        } else {
+            if (currentX < 0f || isCenter) currentX = screenWidth / 2f
+            if (currentY < 0f) currentY = radiusPxInitial
+        }
+
+        val overlayView = FrameLayout(activity)
+        overlayView.setBackgroundColor(0x77000000.toInt())
+
+        val cutoutView = View(activity)
+        val cutoutDrawable = GradientDrawable().apply {
+            setColor(Color.BLACK)
+            setStroke(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2f, displayMetrics).toInt(), Color.WHITE)
+        }
+        cutoutView.background = cutoutDrawable
+
+        fun updateCutoutLayout() {
+            val radiusPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, currentRadiusDp, displayMetrics)
+            val pillPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, currentPillDp, displayMetrics)
+
+            val halfW: Float
+            val halfH: Float
+
+            if (isLandscape || rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+                halfW = radiusPx
+                halfH = radiusPx + pillPx / 2f
+                if (isCenter) {
+                    currentY = screenHeight / 2f
+                }
+            } else {
+                halfW = radiusPx + pillPx / 2f
+                halfH = radiusPx
+                if (isCenter) {
+                    currentX = screenWidth / 2f
+                }
+            }
+
+            cutoutDrawable.cornerRadius = minOf(halfW, halfH)
+
+            val lp = FrameLayout.LayoutParams((halfW * 2f).toInt(), (halfH * 2f).toInt())
+            lp.leftMargin = (currentX - halfW).toInt().coerceIn(0, (screenWidth - halfW * 2f).toInt().coerceAtLeast(0))
+            lp.topMargin = (currentY - halfH).toInt().coerceIn(0, (screenHeight - halfH * 2f).toInt().coerceAtLeast(0))
+            cutoutView.layoutParams = lp
+        }
+
+        updateCutoutLayout()
+        overlayView.addView(cutoutView)
+
+        // Floating Control Panel Card
+        val controlCard = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(0xEE1E1E1E.toInt())
+            val pPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, displayMetrics).toInt()
+            setPadding(pPx, pPx, pPx, pPx)
+        }
+
+        val cardParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.BOTTOM
+            val marginPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, displayMetrics).toInt()
+            setMargins(marginPx, marginPx, marginPx, marginPx)
+        }
+
+        val tvInstruction = TextView(activity).apply {
+            text = activity.getString(R.string.notch_instruction_text)
+            setTextColor(Color.WHITE)
+            textSize = 12f
+            gravity = Gravity.CENTER
+        }
+        controlCard.addView(tvInstruction)
+
+        // Center / Manual Position RadioGroup
+        val radioGroupPos = RadioGroup(activity).apply {
+            orientation = RadioGroup.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(0, 8, 0, 8)
+        }
+        val radioCenter = RadioButton(activity).apply {
+            text = activity.getString(R.string.notch_pos_center)
+            setTextColor(Color.WHITE)
+            isChecked = isCenter
+        }
+        val radioManual = RadioButton(activity).apply {
+            text = activity.getString(R.string.notch_pos_not_center)
+            setTextColor(Color.WHITE)
+            isChecked = !isCenter
+        }
+        radioGroupPos.addView(radioCenter)
+        radioGroupPos.addView(radioManual)
+        controlCard.addView(radioGroupPos)
+
+        // Size Seekbar Section
+        val sizeHeaderLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 8, 0, 0)
+        }
+        val tvSizeTitle = TextView(activity).apply {
+            text = activity.getString(R.string.notch_size_title)
+            setTextColor(Color.WHITE)
+            textSize = 12f
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val tvSizeVal = TextView(activity).apply {
+            text = "${currentRadiusDp.toInt()} dp"
+            setTextColor(0xFFCCCCCC.toInt())
+            textSize = 12f
+        }
+        sizeHeaderLayout.addView(tvSizeTitle)
+        sizeHeaderLayout.addView(tvSizeVal)
+        controlCard.addView(sizeHeaderLayout)
+
+        val sizeSeekLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val seekBarSize = SeekBar(activity).apply {
+            max = MAX_NOTCH_RADIUS.toInt()
+            progress = currentRadiusDp.toInt()
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        sizeSeekLayout.addView(seekBarSize)
+        controlCard.addView(sizeSeekLayout)
+
+        // Pill Seekbar Section
+        val pillHeaderLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 8, 0, 0)
+        }
+        val tvPillTitle = TextView(activity).apply {
+            text = activity.getString(R.string.notch_pill_title)
+            setTextColor(Color.WHITE)
+            textSize = 12f
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val tvPillVal = TextView(activity).apply {
+            text = "${currentPillDp.toInt()} dp"
+            setTextColor(0xFFCCCCCC.toInt())
+            textSize = 12f
+        }
+        pillHeaderLayout.addView(tvPillTitle)
+        pillHeaderLayout.addView(tvPillVal)
+        controlCard.addView(pillHeaderLayout)
+
+        val pillSeekLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val seekBarPill = SeekBar(activity).apply {
+            max = MAX_NOTCH_PILL_WIDTH.toInt()
+            progress = currentPillDp.toInt()
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        pillSeekLayout.addView(seekBarPill)
+        controlCard.addView(pillSeekLayout)
+
+        // Done Button
+        val btnSave = Button(activity).apply {
+            text = "Done"
+            textSize = 12f
+        }
+        controlCard.addView(btnSave, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            topMargin = 8
+        })
+
+        overlayView.addView(controlCard, cardParams)
+
+        fun refreshPreview() {
+            val radiusPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, currentRadiusDp, displayMetrics)
+            val pillWidthPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, currentPillDp, displayMetrics)
+            val halfWidth = radiusPx + pillWidthPx / 2f
+
+            val cX = if (isCenter || currentX < 0f) screenWidth / 2f else currentX
+            val leftBound = cX - halfWidth
+            val rightBound = cX + halfWidth
+
+            val pos = when {
+                isCenter -> CutoutPosition.CENTER
+                cX < screenWidth * 0.35f -> CutoutPosition.TOP_LEFT
+                cX > screenWidth * 0.65f -> CutoutPosition.TOP_RIGHT
+                else -> CutoutPosition.CENTER
+            }
+            liveCutoutOverride = CutoutInfo(pos, leftBound, rightBound)
+            updateCutoutLayout()
+            updateAllHeaders(activity)
+        }
+
+        fun commitToPrefs() {
+            liveCutoutOverride = null
+            prefs.edit()
+                .putBoolean(KEY_NOTCH_IS_CENTER, isCenter)
+                .putFloat(KEY_NOTCH_X, currentX)
+                .putFloat(KEY_NOTCH_Y, currentY)
+                .putFloat(KEY_NOTCH_RADIUS, currentRadiusDp)
+                .putFloat(KEY_NOTCH_PILL_WIDTH, currentPillDp)
+                .apply()
+            updateCutoutLayout()
+            updateAllHeaders(activity)
+        }
+
+        radioGroupPos.setOnCheckedChangeListener { _, checkedId ->
+            isCenter = (checkedId == radioCenter.id)
+            commitToPrefs()
+        }
+
+        seekBarSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    currentRadiusDp = progress.toFloat().coerceIn(MIN_NOTCH_RADIUS, MAX_NOTCH_RADIUS)
+                    tvSizeVal.text = "${currentRadiusDp.toInt()} dp"
+                    refreshPreview()
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                commitToPrefs()
+            }
+        })
+
+        seekBarPill.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    currentPillDp = progress.toFloat().coerceIn(MIN_NOTCH_PILL_WIDTH, MAX_NOTCH_PILL_WIDTH)
+                    tvPillVal.text = "${currentPillDp.toInt()} dp"
+                    refreshPreview()
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                commitToPrefs()
+            }
+        })
+
+        btnSave.setOnClickListener {
+            commitToPrefs()
+            dismissNotchPositionOverlay()
+        }
+
+        // Pinch-to-zoom gesture detector
+        val scaleDetector = ScaleGestureDetector(activity, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                val scaleFactor = detector.scaleFactor
+                val newRadius = (currentRadiusDp * scaleFactor).coerceIn(MIN_NOTCH_RADIUS, MAX_NOTCH_RADIUS)
+                if (abs(newRadius - currentRadiusDp) > 0.1f) {
+                    currentRadiusDp = newRadius
+                    tvSizeVal.text = "${currentRadiusDp.toInt()} dp"
+                    seekBarSize.progress = currentRadiusDp.toInt()
+                    refreshPreview()
+                }
+                return true
+            }
+
+            override fun onScaleEnd(detector: ScaleGestureDetector) {
+                commitToPrefs()
+            }
+        })
+
+        var touchStartX = 0f
+        var touchStartY = 0f
+        var initialX = 0f
+        var initialY = 0f
+
+        overlayView.setOnTouchListener { v, event ->
+            scaleDetector.onTouchEvent(event)
+
+            if (event.pointerCount == 1) {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        touchStartX = event.rawX
+                        touchStartY = event.rawY
+                        initialX = currentX
+                        initialY = currentY
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = event.rawX - touchStartX
+                        val dy = event.rawY - touchStartY
+                        if (isLandscape || rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+                            if (!isCenter) {
+                                currentY = initialY + dy
+                            }
+                            currentX = initialX + dx
+                        } else {
+                            if (!isCenter) {
+                                currentX = initialX + dx
+                            }
+                            currentY = initialY + dy
+                        }
+                        refreshPreview()
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        v.performClick()
+                        commitToPrefs()
+                        true
+                    }
+                    MotionEvent.ACTION_CANCEL -> {
+                        commitToPrefs()
+                        true
+                    }
+                    else -> true
+                }
+            } else {
+                true
+            }
         }
 
         val params = WindowManager.LayoutParams(
@@ -513,8 +868,11 @@ object NotchAwareness {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         )
+
         try {
             wm.addView(overlayView, params)
+            activeWindowManagerRef = java.lang.ref.WeakReference(wm)
+            activeOverlayViewRef = java.lang.ref.WeakReference(overlayView)
         } catch (_: Exception) {}
     }
 }
@@ -535,7 +893,9 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         if (key == NotchAwareness.KEY_NOTCH_CUSTOM_MODE ||
             key == NotchAwareness.KEY_NOTCH_IS_CENTER ||
             key == NotchAwareness.KEY_NOTCH_X ||
-            key == NotchAwareness.KEY_NOTCH_Y) {
+            key == NotchAwareness.KEY_NOTCH_Y ||
+            key == NotchAwareness.KEY_NOTCH_RADIUS ||
+            key == NotchAwareness.KEY_NOTCH_PILL_WIDTH) {
             invalidate()
             requestLayout()
         }

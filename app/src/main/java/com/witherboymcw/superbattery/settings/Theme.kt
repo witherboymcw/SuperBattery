@@ -1,14 +1,17 @@
 package com.witherboymcw.superbattery.settings
 
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatDelegate
-import com.witherboymcw.superbattery.BatteryWidget
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.templates.OptionItem
+import com.witherboymcw.superbattery.templates.SimpleOptionCard
+import com.witherboymcw.superbattery.widgets.BatteryWidget
 
 class Theme(private val activity: MainActivity) {
 
@@ -17,65 +20,34 @@ class Theme(private val activity: MainActivity) {
         const val APP_THEME_KEY = "app_theme"
     }
 
-    private var headerTheme: View? = null
-    private var dropdownTheme: View? = null
-    private var arrowTheme: ImageView? = null
-    private var selectedThemeText: TextView? = null
-
     fun bind(savedInstanceState: Bundle?) {
-        headerTheme = activity.findViewById(R.id.header_theme)
-        dropdownTheme = activity.findViewById(R.id.dropdown_theme)
-        arrowTheme = activity.findViewById(R.id.arrow_theme)
-        selectedThemeText = activity.findViewById(R.id.selected_theme_text)
-
-        headerTheme?.setOnClickListener {
-            val isExpanded = dropdownTheme?.visibility == View.VISIBLE
-            dropdownTheme?.visibility = if (isExpanded) View.GONE else View.VISIBLE
-            arrowTheme?.animate()?.rotation(if (isExpanded) 0f else 180f)?.setDuration(200L)?.start()
-        }
-
-        if (savedInstanceState?.getBoolean(KEY_THEME_DROPDOWN_OPEN) == true) {
-            dropdownTheme?.visibility = View.VISIBLE
-            arrowTheme?.rotation = 180f
-        }
-
+        val headerTheme = activity.findViewById<View>(R.id.header_theme)
+        val dropdownTheme = activity.findViewById<View>(R.id.dropdown_theme)
+        val arrowTheme = activity.findViewById<ImageView>(R.id.arrow_theme)
+        val selectedThemeText = activity.findViewById<TextView>(R.id.selected_theme_text)
         val themeGroup = activity.findViewById<RadioGroup>(R.id.theme_radio_group)
-        val prefs = activity.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, android.content.Context.MODE_PRIVATE)
+
+        val prefs = activity.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, Context.MODE_PRIVATE)
         val currentThemeMode = prefs.getString(APP_THEME_KEY, "system") ?: "system"
 
-        when (currentThemeMode) {
-            "light" -> {
-                themeGroup?.check(R.id.theme_light)
-                selectedThemeText?.text = activity.getString(R.string.theme_light)
-            }
-            "dark" -> {
-                themeGroup?.check(R.id.theme_dark)
-                selectedThemeText?.text = activity.getString(R.string.theme_dark)
-            }
-            "oled" -> {
-                themeGroup?.check(R.id.theme_oled)
-                selectedThemeText?.text = activity.getString(R.string.theme_oled)
-            }
-            else -> {
-                themeGroup?.check(R.id.theme_system)
-                selectedThemeText?.text = activity.getString(R.string.at_system)
-            }
-        }
+        val options = listOf(
+            OptionItem(R.id.theme_system, "system", activity.getString(R.string.at_system)),
+            OptionItem(R.id.theme_light, "light", activity.getString(R.string.theme_light)),
+            OptionItem(R.id.theme_dark, "dark", activity.getString(R.string.theme_dark)),
+            OptionItem(R.id.theme_oled, "oled", activity.getString(R.string.theme_oled))
+        )
 
-        themeGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val targetMode = when (checkedId) {
-                R.id.theme_light -> "light"
-                R.id.theme_dark -> "dark"
-                R.id.theme_oled -> "oled"
-                else -> "system"
-            }
-            selectedThemeText?.text = when (targetMode) {
-                "light" -> activity.getString(R.string.theme_light)
-                "dark" -> activity.getString(R.string.theme_dark)
-                "oled" -> activity.getString(R.string.theme_oled)
-                else -> activity.getString(R.string.at_system)
-            }
-
+        SimpleOptionCard.bind(
+            headerView = headerTheme,
+            dropdownView = dropdownTheme,
+            arrowView = arrowTheme,
+            selectedTextView = selectedThemeText,
+            radioGroup = themeGroup,
+            savedInstanceStateKey = KEY_THEME_DROPDOWN_OPEN,
+            savedInstanceState = savedInstanceState,
+            currentValue = currentThemeMode,
+            options = options
+        ) { targetMode ->
             val activeTheme = prefs.getString(APP_THEME_KEY, "system") ?: "system"
             if (activeTheme != targetMode) {
                 prefs.edit().putString(APP_THEME_KEY, targetMode).apply()

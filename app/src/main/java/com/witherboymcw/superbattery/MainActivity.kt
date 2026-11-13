@@ -13,8 +13,6 @@ import android.graphics.Rect
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.MotionEvent
@@ -30,16 +28,36 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import com.witherboymcw.superbattery.awareness.BatteryMath
+import com.witherboymcw.superbattery.awareness.ChinAwareness
+import com.witherboymcw.superbattery.awareness.CornerAwareness
+import com.witherboymcw.superbattery.awareness.FoldableAwareness
+import com.witherboymcw.superbattery.awareness.NotchAwareness
+import com.witherboymcw.superbattery.awareness.getBatteryPowerInfo
+import com.witherboymcw.superbattery.widgets.BatteryDetailsWidget
+import com.witherboymcw.superbattery.widgets.BatteryWidget
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
+import com.witherboymcw.superbattery.battery.BatteryMonitorService
+import com.witherboymcw.superbattery.battery.BatteryRingView
+import com.witherboymcw.superbattery.screens.dashboard.DashboardViewModel
+import com.witherboymcw.superbattery.screens.hotspot.HotspotNotificationListener
+import com.witherboymcw.superbattery.screens.hotspot.HotspotViewController
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
+import com.witherboymcw.superbattery.screens.settings.SettingsViewController
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -48,8 +66,12 @@ class MainActivity : AppCompatActivity() {
     private val settingsViewController = SettingsViewController()
     private val hotspotViewController = HotspotViewController()
     private val dashboardViewModel by lazy { ViewModelProvider(this)[DashboardViewModel::class.java] }
-    internal val handler = Handler(Looper.getMainLooper())
+    private val refreshIntervalState = MutableStateFlow(DEFAULT_REFRESH_INTERVAL_MS)
     internal var refreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS
+        set(value) {
+            field = value
+            refreshIntervalState.value = value
+        }
 
     private var tvVoltageCurrent: TextView? = null
     private var tvTemperatureCurrent: TextView? = null
@@ -82,19 +104,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var systemMonitorManager: SystemMonitorManager
 
     private val clockFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-    private val clockRunnable = object : Runnable {
-        override fun run() {
-            tvHeaderClock?.text = clockFormat.format(Date())
-            handler.postDelayed(this, 1_000L)
-        }
-    }
-
-    internal val refreshDashboard = object : Runnable {
-        override fun run() {
-            updateDashboard()
-            handler.postDelayed(this, refreshIntervalMs)
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ensureInitialLanguage()
@@ -182,18 +191,42 @@ class MainActivity : AppCompatActivity() {
 
         updateFoldableUiState()
         lifecycleScope.launch {
-            try {
-                WindowInfoTracker.getOrCreate(this@MainActivity)
-                    .windowLayoutInfo(this@MainActivity)
-                    .collect { layoutInfo ->
-                        val hasFoldingFeature = layoutInfo.displayFeatures.any { it is FoldingFeature }
-                        if (hasFoldingFeature) {
-                            FoldableAwareness.markFoldingFeatureDetected(true)
-                            applyThickChinPadding()
-                            updateFoldableUiState()
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    try {
+                        WindowInfoTracker.getOrCreate(this@MainActivity)
+                            .windowLayoutInfo(this@MainActivity)
+                            .collect { layoutInfo ->
+                                val hasFoldingFeature = layoutInfo.displayFeatures.any { it is FoldingFeature }
+                                if (hasFoldingFeature) {
+                                    FoldableAwareness.markFoldingFeatureDetected(true)
+                                    applyThickChinPadding()
+                                    updateFoldableUiState()
+                                }
+                            }
+                    } catch (_: Exception) {}
+                }
+                launch {
+                    refreshIntervalState.collectLatest { intervalMs ->
+                        while (true) {
+                            updateDashboard()
+                            delay(intervalMs)
                         }
                     }
-            } catch (_: Exception) {}
+                }
+                launch {
+                    while (true) {
+                        tvHeaderClock?.text = clockFormat.format(Date())
+                        delay(1_000L)
+                    }
+                }
+                launch { systemMonitorManager.bluetoothState.collect(::updateBluetoothStatus) }
+                launch { systemMonitorManager.ringerModeState.collect(::updateRingerModeIcon) }
+                launch { systemMonitorManager.simState.collect(::updateSimSignalStatus) }
+                launch { systemMonitorManager.batteryInfoState.collect { updateDashboard() } }
+                launch { systemMonitorManager.wifiState.collect(::updateWifiStatus) }
+                launch { systemMonitorManager.networkSpeedState.collect(::updateNetworkSpeedUi) }
+            }
         }
     }
 
@@ -296,36 +329,6 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         loadRefreshInterval()
         updatePermissionStatuses()
-        handler.removeCallbacks(refreshDashboard)
-        handler.post(refreshDashboard)
-        handler.removeCallbacks(clockRunnable)
-        handler.post(clockRunnable)
-
-        systemMonitorManager.setListener(object : SystemMonitorManager.Listener {
-            override fun onBluetoothStateChanged(isEnabled: Boolean) {
-                updateBluetoothStatus(isEnabled)
-            }
-
-            override fun onRingerModeChanged(mode: Int) {
-                updateRingerModeIcon(mode)
-            }
-
-            override fun onSimStateChanged(isReady: Boolean) {
-                updateSimSignalStatus(isReady)
-            }
-
-            override fun onBatteryChanged(batteryInfo: BatteryInfo) {
-                updateDashboard()
-            }
-
-            override fun onWifiStateChanged(isConnected: Boolean) {
-                updateWifiStatus(isConnected)
-            }
-
-            override fun onNetworkSpeedChanged(networkSpeed: NetworkSpeed) {
-                updateNetworkSpeedUi(networkSpeed)
-            }
-        })
         systemMonitorManager.startMonitoring()
 
         updateRingerModeIcon()
@@ -351,22 +354,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onUserLeaveHint() {
-        handler.post { refreshWidgets() }
+        refreshWidgets()
         super.onUserLeaveHint()
     }
 
     override fun onPause() {
+        NotchAwareness.dismissNotchPositionOverlay()
         settingsViewController.flushThickChinCommit()
-        handler.removeCallbacks(refreshDashboard)
-        handler.removeCallbacks(clockRunnable)
         systemMonitorManager.stopMonitoring()
-        systemMonitorManager.setListener(null)
         super.onPause()
     }
 
     override fun onDestroy() {
         settingsViewController.unbind()
-        handler.removeCallbacksAndMessages(null)
         (findViewById<android.view.View>(R.id.settings_container) as? SwipeBackFrameLayout)?.swipeListener = null
         super.onDestroy()
     }
@@ -399,18 +399,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun ensureInitialLanguage() {
         val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
-        var savedLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-        val validLangs = setOf("system", "vi", "en", "art")
+        val savedLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
+        val validLangs = setOf("system", "vi", "en", "art", "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot")
 
-        if (savedLang !in validLangs) {
-            savedLang = "system"
+        val normalizedLang = if (savedLang !in validLangs) {
             prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, "system").apply()
+            "system"
+        } else {
+            when (savedLang) {
+                "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
+                else -> savedLang
+            }
         }
 
-        val targetLocales = if (savedLang == "system") {
+        val targetLocales = if (normalizedLang == "system") {
             LocaleListCompat.getEmptyLocaleList()
         } else {
-            LocaleListCompat.forLanguageTags(savedLang)
+            LocaleListCompat.forLanguageTags(normalizedLang)
         }
 
         val currentLocales = AppCompatDelegate.getApplicationLocales()
@@ -422,13 +427,21 @@ class MainActivity : AppCompatActivity() {
     internal fun setAppLanguage(langCode: String) {
         val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
         val currentLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-        if (currentLang != langCode) {
-            prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, langCode).apply()
+        val normalizedTarget = when (langCode) {
+            "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
+            else -> langCode
+        }
+        val normalizedCurrent = when (currentLang) {
+            "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
+            else -> currentLang
+        }
+        if (normalizedCurrent != normalizedTarget) {
+            prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, normalizedTarget).apply()
 
-            val appLocales = if (langCode == "system") {
+            val appLocales = if (normalizedTarget == "system") {
                 LocaleListCompat.getEmptyLocaleList()
             } else {
-                LocaleListCompat.forLanguageTags(langCode)
+                LocaleListCompat.forLanguageTags(normalizedTarget)
             }
 
             AppCompatDelegate.setApplicationLocales(appLocales)
