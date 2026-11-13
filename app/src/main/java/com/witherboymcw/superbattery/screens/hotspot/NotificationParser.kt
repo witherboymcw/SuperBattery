@@ -22,14 +22,14 @@ object HotspotNotificationParser {
         CompiledHotspotRule(
             oem = "Universal / All Brands",
             compiledTitleRegexes = listOf(
-                Regex("(?i)^.*(?:tethering|hotspot|chia\\s+sẻ|chia\\s+se|phát\\s+sóng|phat\\s+song).*", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+                Regex("(?i)^.*(?:tethering|hotspot|chia\\s+sẻ|chia\\s+se|phát\\s+sóng|phat\\s+song|điểm\\s+truy\\s+cập|diem\\s+truy\\s+cap).*", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
             ),
             noDeviceRegex = Regex(
-                "\\b(?:no\\s+(?:connected\\s+)?(?:devices?|clients?)|no\\s+(?:devices?|clients?)\\s+connected|0\\s+(?:connected\\s+)?(?:devices?|clients?)|không\\s+có\\s+thiết\\s+bị(?:\\s+nào)?(?:\\s+kết\\s+nối)?|khong\\s+co\\s+thiet\\s+bi(?:\\s+nao)?(?:\\s+ket\\s+noi)?|chưa\\s+có\\s+thiết\\s+bị|chua\\s+co\\s+thiet\\s+bi)\\b",
+                "\\b(?:no\\s+(?:connected\\s+)?(?:devices?|clients?)|no\\s+(?:devices?|clients?)\\s+connected|0\\s+(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị|thiet_bi)|0\\s+thiết\\s+bị|không\\s+có\\s+thiết\\s+bị(?:\\s+nào)?(?:\\s+(?:được|duoc|đã|da))?(?:\\s+kết\\s+nối|\\s+ket\\s+noi)?|khong\\s+co\\s+thiet\\s+bi(?:\\s+nao)?(?:\\s+(?:duoc|da))?(?:\\s+ket\\s+noi)?|chưa\\s+có\\s+thiết\\s+bị(?:\\s+nào)?(?:\\s+(?:được|duoc|đã|da))?(?:\\s+kết\\s+nối|\\s+ket\\s+noi)?|chua\\s+co\\s+thiet\\s+bi(?:\\s+nao)?(?:\\s+(?:duoc|da))?(?:\\s+ket\\s+noi)?)\\b",
                 RegexOption.IGNORE_CASE
             ),
             connectedRegex = Regex(
-                "\\b(\\d+)\\s+(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị(?:\\s+(?:đã|da))?(?:\\s+(?:kết\\s+nối|ket\\s+noi))?|thiet\\s+bi)\\b|\\b(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị)\\s*[:\\-]?\\s*(\\d+)\\b|\\b(\\d+)\\s+connected\\b",
+                "\\b(\\d+)\\s+(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị(?:\\s+nào)?(?:\\s+(?:được|duoc|đã|da|đang|dang))?(?:\\s+(?:kết\\s+nối|ket\\s+noi))?|thiet\\s+bi)\\b|\\b(?:connected\\s+)?(?:devices?|clients?|thiết\\s+bị)\\s*[:\\-]?\\s*(\\d+)\\b|\\b(\\d+)\\s+connected\\b",
                 RegexOption.IGNORE_CASE
             )
         )
@@ -55,11 +55,17 @@ object HotspotNotificationParser {
             }
         } ?: return null
 
-        if (matchingRule.noDeviceRegex.containsMatchIn(notificationContent)) {
+        val combinedText = if (notificationContent.contains(notificationTitle, ignoreCase = true)) {
+            notificationContent
+        } else {
+            "$notificationTitle $notificationContent"
+        }
+
+        if (matchingRule.noDeviceRegex.containsMatchIn(combinedText)) {
             return HotspotState.ON_EMPTY
         }
 
-        val matchResult = matchingRule.connectedRegex.find(notificationContent)
+        val matchResult = matchingRule.connectedRegex.find(combinedText)
             ?: return HotspotState.ON_EMPTY
 
         val clients = matchResult.groupValues
