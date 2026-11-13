@@ -31,29 +31,9 @@ internal class HotspotViewController : DrawerScreen(
         NotchAwareness.updateHotspotHeaderLayout(activity)
     }
 
-    private fun getTargetLayoutRes(): Int = R.layout.layout_hotspot
-
     fun bind(activity: MainActivity, savedInstanceState: Bundle? = null) {
         this.activityRef = activity
         activity.onBackPressedDispatcher.addCallback(activity, backCallback)
-
-        val targetLayout = getTargetLayoutRes()
-        val currentContainer = activity.findViewById<ViewGroup>(R.id.hotspot_container) ?: return
-        val parentView = currentContainer.parent as? ViewGroup
-
-        if (parentView != null) {
-            val currentTag = currentContainer.getTag(R.id.hotspot_container) as? Int
-            if (currentTag != targetLayout) {
-                val index = parentView.indexOfChild(currentContainer)
-                val visibility = currentContainer.visibility
-                parentView.removeView(currentContainer)
-                val newView = activity.layoutInflater.inflate(targetLayout, parentView, false)
-                newView.id = R.id.hotspot_container
-                newView.visibility = visibility
-                newView.setTag(R.id.hotspot_container, targetLayout)
-                parentView.addView(newView, index)
-            }
-        }
 
         activity.applyHotspotCardTheme()
 
