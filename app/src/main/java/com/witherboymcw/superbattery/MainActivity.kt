@@ -127,17 +127,7 @@ class MainActivity : AppCompatActivity() {
         applyThickChinPadding()
         applyGraphBackgrounds(OledThemeAllInOne.getEffectiveThemeForGraph(this))
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-            windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            )
-        }
+        hideSystemBars()
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
@@ -327,6 +317,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        hideSystemBars()
         loadRefreshInterval()
         updatePermissionStatuses()
         systemMonitorManager.startMonitoring()
@@ -336,6 +327,19 @@ class MainActivity : AppCompatActivity() {
         updateSimSignalStatus()
         updateWifiStatus()
         NotchAwareness.updateAllHeaders(this)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            hideSystemBars()
+        }
+    }
+
+    private fun hideSystemBars() {
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {

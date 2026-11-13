@@ -272,11 +272,25 @@ object NotchAwareness {
         val cutoutLeft = cutoutInfo.rectLeft
         val cutoutRight = cutoutInfo.rectRight
 
-        when (cutoutInfo.position) {
+        val isLandscape = activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val position = if (isLandscape) CutoutPosition.NONE else cutoutInfo.position
+
+        when (position) {
             CutoutPosition.NONE -> {
-                leftControls.translationX = 0f
-                btnSettings.translationX = 0f
-                dashboardTitle.translationX = 0f
+                val groupTargetLeft = margin
+                leftControls.translationX = groupTargetLeft - defaultLeftControlsX
+                btnSettings.translationX = (groupTargetLeft + lcWidth + gap) - defaultSettingsX
+
+                val controlsRight = groupTargetLeft + groupWidth
+                val leftBoundary = controlsRight + clearance
+                val rightBoundary = W - margin
+
+                val targetTitleCenterX = if (leftBoundary + titleWidth <= rightBoundary) {
+                    (leftBoundary + rightBoundary) / 2f
+                } else {
+                    leftBoundary + titleWidth / 2f
+                }
+                dashboardTitle.translationX = targetTitleCenterX - defaultTitleCenterX
             }
             CutoutPosition.CENTER -> {
                 val groupTargetLeft = ((cutoutLeft - clearance) - groupWidth).coerceIn(margin, cutoutLeft - groupWidth)
