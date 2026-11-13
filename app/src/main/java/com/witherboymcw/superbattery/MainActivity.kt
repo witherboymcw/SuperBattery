@@ -34,8 +34,11 @@ import com.witherboymcw.superbattery.awareness.CornerAwareness
 import com.witherboymcw.superbattery.awareness.FoldableAwareness
 import com.witherboymcw.superbattery.awareness.NotchAwareness
 import com.witherboymcw.superbattery.awareness.getBatteryPowerInfo
+import com.witherboymcw.superbattery.screens.dashboard.DashboardUiState
+import com.witherboymcw.superbattery.templates.LocaleManager
 import com.witherboymcw.superbattery.templates.MetricColors
 import com.witherboymcw.superbattery.templates.MetricGraphBinder
+import com.witherboymcw.superbattery.templates.getDisplayRotationCompat
 import com.witherboymcw.superbattery.widgets.BatteryDetailsWidget
 import com.witherboymcw.superbattery.widgets.BatteryWidget
 import androidx.core.os.LocaleListCompat
@@ -218,7 +221,7 @@ class MainActivity : AppCompatActivity() {
                 launch { systemMonitorManager.simState.collect(::updateSimSignalStatus) }
                 launch { systemMonitorManager.batteryInfoState.collect { updateDashboard() } }
                 launch { systemMonitorManager.wifiState.collect(::updateWifiStatus) }
-                launch { systemMonitorManager.networkSpeedState.collect(::updateNetworkSpeedUi) }
+                launch { systemMonitorManager.networkSpeedState.collect { updateDashboard() } }
             }
         }
     }
@@ -405,53 +408,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun ensureInitialLanguage() {
-        val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
-        val savedLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-        val validLangs = setOf("system", "vi", "en", "art", "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot")
-
-        val normalizedLang = if (savedLang !in validLangs) {
-            prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, "system").apply()
-            "system"
-        } else {
-            when (savedLang) {
-                "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
-                else -> savedLang
-            }
-        }
-
-        val targetLocales = if (normalizedLang == "system") {
-            LocaleListCompat.getEmptyLocaleList()
-        } else {
-            LocaleListCompat.forLanguageTags(normalizedLang)
-        }
-
-        val currentLocales = AppCompatDelegate.getApplicationLocales()
-        if (currentLocales.toLanguageTags() != targetLocales.toLanguageTags()) {
-            AppCompatDelegate.setApplicationLocales(targetLocales)
-        }
+        LocaleManager.ensureInitialLanguage(this)
     }
 
     internal fun setAppLanguage(langCode: String) {
-        val prefs = getSharedPreferences(BatteryWidget.SETTINGS_PREFS, MODE_PRIVATE)
-        val currentLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-        val normalizedTarget = when (langCode) {
-            "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
-            else -> langCode
-        }
-        val normalizedCurrent = when (currentLang) {
-            "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
-            else -> currentLang
-        }
-        if (normalizedCurrent != normalizedTarget) {
-            prefs.edit().putString(BatteryWidget.APP_LANGUAGE_KEY, normalizedTarget).apply()
-
-            val appLocales = if (normalizedTarget == "system") {
-                LocaleListCompat.getEmptyLocaleList()
-            } else {
-                LocaleListCompat.forLanguageTags(normalizedTarget)
-            }
-
-            AppCompatDelegate.setApplicationLocales(appLocales)
+        LocaleManager.setAppLanguage(this, langCode) {
             refreshWidgets()
         }
     }
@@ -647,160 +608,95 @@ class MainActivity : AppCompatActivity() {
 
     internal fun updateDashboard() {
         updateBatteryRingGeometry()
+        systemMonitorManager.updateNetworkSpeed()
+
         val batteryInfo = systemMonitorManager.getBatteryInfo()
-        val battery = batteryInfo.rawIntent
-        val voltageMv = batteryInfo.voltageMv
-        val temperatureC = batteryInfo.temperatureC
-        val sampleTime = SystemClock.elapsedRealtime()
-        val smoothedVoltageMv = BatteryMath.getSmoothedVoltage(voltageMv, sampleTime)
-        val isUseSystemBattery = SettingsHelper.isUseSystemBatteryCounter(this)
-        val batteryPercent = if (voltageMv > 0 || isUseSystemBattery) {
-            BatteryMath.getBatteryPercentage(isUseSystemBattery, battery, smoothedVoltageMv)
-        } else null
-        val dash = getString(R.string.placeholder_dash)
-        val batteryValue = batteryPercent?.let { "$it%" } ?: dash
-        val batteryColor = BatteryMath.percentageColor(batteryPercent ?: 0)
-        setBatteryCard(R.string.metric_battery, batteryValue, batteryPercent ?: 0, batteryColor)
-
-        val voltageUnit = SettingsHelper.getVoltageUnit(this)
-        val ramUnit = SettingsHelper.getRamUnit(this)
-
-        tvVoltageCurrent?.text = if (voltageMv > 0) {
-            SettingsHelper.formatVoltage(voltageMv, voltageUnit)
-        } else dash
-        tvTemperatureCurrent?.text =
-            SettingsHelper.formatDashboardTemperature(this, temperatureC)
-
-        // 1. Voltage power and title
         val powerInfo = getBatteryPowerInfo(this)
-        tvVoltagePower?.text = powerInfo?.getCurrentPowerString(this) ?: dash
-
-        val signedWatts = if (powerInfo != null) {
-            if (powerInfo.isCharging) powerInfo.powerWatts else -powerInfo.powerWatts
-        } else 0f
-        val isWattsPositive = signedWatts > 0f
-
-        tvVoltageTitle?.setText(
-            if (isUseSystemBattery && isWattsPositive) R.string.charging_true else R.string.voltage_title
-        )
-
-        if (voltageMv > 0) dashboardViewModel.addVoltageSample(voltageMv.toFloat(), sampleTime)
-        if (battery != null) dashboardViewModel.addTemperatureSample(temperatureC, sampleTime)
+        val networkSpeed = systemMonitorManager.networkSpeedState.value
 
         val memory = getSystemService(ActivityManager::class.java)
         memory?.getMemoryInfo(memoryInfo)
-        val totalMb = memoryInfo.totalMem / (1024L * 1024L)
-        val availableMb = memoryInfo.availMem / (1024L * 1024L)
-        val usedMb = (totalMb - availableMb).coerceAtLeast(0L)
-        val usedPercent = if (totalMb > 0) (usedMb * 100 / totalMb).toInt() else 0
-        dashboardViewModel.addRamSample(usedMb.toFloat(), sampleTime)
-        tvRamCurrent?.text = getString(R.string.current_ram_format, usedPercent)
 
-        // 2. RAM usage detail according to Settings unit
-        val locale = SettingsHelper.getAppLocale(this)
-        val ramValConverted = SettingsHelper.convertRam(usedMb.toFloat(), ramUnit)
-        val ramSuffixStr = getString(if (ramUnit == RamUnit.GB) R.string.unit_gb else R.string.unit_mb)
-        tvRamUsageDetail?.text = if (ramUnit == RamUnit.GB) {
-            String.format(locale, "%.1f %s", ramValConverted, ramSuffixStr)
-        } else {
-            String.format(locale, "%.0f %s", ramValConverted, ramSuffixStr)
-        }
+        val uiState = dashboardViewModel.buildUiState(
+            context = this,
+            batteryInfo = batteryInfo,
+            powerInfo = powerInfo,
+            networkSpeed = networkSpeed,
+            totalMemBytes = memoryInfo.totalMem,
+            availMemBytes = memoryInfo.availMem,
+            voltageUnit = SettingsHelper.getVoltageUnit(this),
+            ramUnit = SettingsHelper.getRamUnit(this),
+            tempUnit = SettingsHelper.getTemperatureUnit(this),
+            isUseSystemBattery = SettingsHelper.isUseSystemBatteryCounter(this)
+        )
 
-        // 3. Temperature status
-        val statusRes = MetricColors.getTemperatureStatusRes(temperatureC)
-        tvTemperatureStatus?.text = getString(statusRes)
+        renderDashboardUiState(uiState, batteryInfo.rawIntent)
+    }
 
-        systemMonitorManager.updateNetworkSpeed()
+    private fun renderDashboardUiState(state: DashboardUiState, batteryIntent: Intent?) {
+        setBatteryCard(state.batteryTitleRes, state.batteryValueText, state.batteryPercent, state.batteryColor)
 
-        val (minVoltageMv, maxVoltageMv) = dashboardViewModel.getVoltageBoundsMv()
+        tvVoltageCurrent?.text = state.voltageCurrentText
+        tvVoltagePower?.text = state.voltagePowerText
+        tvVoltageTitle?.setText(state.voltageTitleRes)
 
-        val (minVoltage, maxVoltage, voltageSuffix) = when (voltageUnit) {
-            VoltageUnit.MV -> Triple(minVoltageMv, maxVoltageMv, " " + getString(R.string.unit_mv))
-            VoltageUnit.V -> Triple(minVoltageMv / 1000f, maxVoltageMv / 1000f, " " + getString(R.string.unit_v))
-        }
-        val voltageDecimalPlaces = if (voltageUnit == VoltageUnit.V) 2 else 0
         MetricGraphBinder.updateGraph(
             graph = voltageGraph,
-            samples = dashboardViewModel.voltageHistory,
-            minValue = minVoltage,
-            maxValue = maxVoltage,
-            suffix = voltageSuffix,
-            currentTimeMs = sampleTime,
-            decimalPlaces = voltageDecimalPlaces,
-            valueTransform = { rawMv -> SettingsHelper.convertVoltage(rawMv, voltageUnit) },
+            samples = state.voltageSamples,
+            minValue = state.minVoltage,
+            maxValue = state.maxVoltage,
+            suffix = state.voltageSuffix,
+            currentTimeMs = state.sampleTime,
+            decimalPlaces = state.voltageDecimalPlaces,
+            valueTransform = { rawMv -> SettingsHelper.convertVoltage(rawMv, state.voltageUnit) },
             valueColor = { voltage ->
-                val rawMv = SettingsHelper.convertToVoltageMv(voltage, voltageUnit).toInt()
-                val percent = BatteryMath.getBatteryPercentage(isUseSystemBattery, battery, rawMv)
+                val rawMv = SettingsHelper.convertToVoltageMv(voltage, state.voltageUnit).toInt()
+                val percent = BatteryMath.getBatteryPercentage(state.isUseSystemBattery, batteryIntent, rawMv)
                 MetricColors.getBatteryColor(percent)
             }
         )
 
-        val maxRam = SettingsHelper.convertRam(totalMb.toFloat(), ramUnit).coerceAtLeast(0.1f)
-        val ramSuffix = " " + getString(if (ramUnit == RamUnit.GB) R.string.unit_gb else R.string.unit_mb)
-        val ramDecimalPlaces = if (ramUnit == RamUnit.GB) 1 else 0
+        tvRamCurrent?.text = state.ramCurrentPercentText
+        tvRamUsageDetail?.text = state.ramUsageDetailText
 
         MetricGraphBinder.updateGraph(
             graph = ramGraph,
-            samples = dashboardViewModel.ramHistory,
+            samples = state.ramSamples,
             minValue = 0f,
-            maxValue = maxRam,
-            suffix = ramSuffix,
-            currentTimeMs = sampleTime,
-            decimalPlaces = ramDecimalPlaces,
-            valueTransform = { rawMb -> SettingsHelper.convertRam(rawMb, ramUnit) },
+            maxValue = state.maxRam,
+            suffix = state.ramSuffix,
+            currentTimeMs = state.sampleTime,
+            decimalPlaces = state.ramDecimalPlaces,
+            valueTransform = { rawMb -> SettingsHelper.convertRam(rawMb, state.ramUnit) },
             valueColor = { ramVal ->
-                val ramMb = SettingsHelper.convertToRamMb(ramVal, ramUnit)
-                val ramUsedPercent = if (totalMb > 0) ramMb * 100f / totalMb else 0f
+                val ramMb = SettingsHelper.convertToRamMb(ramVal, state.ramUnit)
+                val ramUsedPercent = if (state.totalMb > 0) ramMb * 100f / state.totalMb else 0f
                 MetricColors.getRamColor(ramUsedPercent)
             }
         )
 
-        val tempUnit = SettingsHelper.getTemperatureUnit(this)
-        val (minTemp, maxTemp, tempSuffix) = when (tempUnit) {
-            TempUnit.CELSIUS -> Triple(0f, 60f, getString(R.string.unit_celsius))
-            TempUnit.FAHRENHEIT -> Triple(32f, 140f, getString(R.string.unit_fahrenheit))
-            TempUnit.KELVIN -> Triple(273f, 333f, " " + getString(R.string.unit_kelvin))
-        }
+        tvTemperatureCurrent?.text = state.temperatureCurrentText
+        tvTemperatureStatus?.text = getString(state.temperatureStatusRes)
+
         MetricGraphBinder.updateGraph(
             graph = tempGraph,
-            samples = dashboardViewModel.temperatureHistory,
-            minValue = minTemp,
-            maxValue = maxTemp,
-            suffix = tempSuffix,
-            currentTimeMs = sampleTime,
+            samples = state.temperatureSamples,
+            minValue = state.minTemp,
+            maxValue = state.maxTemp,
+            suffix = state.tempSuffix,
+            currentTimeMs = state.sampleTime,
             decimalPlaces = 0,
-            valueTransform = { rawC -> SettingsHelper.convertTemperature(rawC, tempUnit) },
+            valueTransform = { rawC -> SettingsHelper.convertTemperature(rawC, state.tempUnit) },
             valueColor = { tempVal ->
-                val celsius = SettingsHelper.convertToCelsius(tempVal, tempUnit)
+                val celsius = SettingsHelper.convertToCelsius(tempVal, state.tempUnit)
                 MetricColors.getTemperatureColor(celsius)
             }
         )
-    }
 
-    private fun updateNetworkSpeedUi(speed: NetworkSpeed = systemMonitorManager.networkSpeedState.value) {
-        if (!speed.isSupported) {
-            val unavail = getString(R.string.network_unavailable)
-            tvNetTxTotal?.text = unavail
-            tvNetTxSpeed?.text = "—"
-            tvNetRxTotal?.text = unavail
-            tvNetRxSpeed?.text = "—"
-        } else {
-            tvNetTxTotal?.text = formatBytes(speed.totalTxBytes)
-            tvNetTxSpeed?.text = formatBytes(speed.txRate) + "/s"
-            tvNetRxTotal?.text = formatBytes(speed.totalRxBytes)
-            tvNetRxSpeed?.text = formatBytes(speed.rxRate) + "/s"
-        }
-    }
-
-    private fun formatBytes(bytes: Long): String {
-        if (bytes < 1024) return "$bytes B"
-        var value = bytes.toDouble()
-        var unit = -1
-        while (value >= 1024 && unit < BYTE_UNITS.lastIndex) {
-            value /= 1024
-            unit++
-        }
-        return String.format(Locale.getDefault(), "%.1f %s", value, BYTE_UNITS[unit])
+        tvNetTxTotal?.text = state.netTxTotalText
+        tvNetTxSpeed?.text = state.netTxSpeedText
+        tvNetRxTotal?.text = state.netRxTotalText
+        tvNetRxSpeed?.text = state.netRxSpeedText
     }
 
     internal fun openNotificationAccessSettings() {
@@ -824,7 +720,6 @@ class MainActivity : AppCompatActivity() {
 
 
     companion object {
-        private val BYTE_UNITS = arrayOf("KB", "MB", "GB", "TB")
         private const val SETTINGS_PREFS = BatteryWidget.SETTINGS_PREFS
         private const val REFRESH_INTERVAL_KEY = "refresh_interval_ms"
         private const val DEFAULT_REFRESH_INTERVAL_MS = 1_000L

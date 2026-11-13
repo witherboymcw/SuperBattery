@@ -87,38 +87,14 @@ object SettingsHelper {
         }
     }
 
-    fun getSystemPrimaryLanguage(): String {
-        val locales = android.content.res.Resources.getSystem().configuration.locales
-        return if (!locales.isEmpty) {
-            locales[0]?.language ?: "en"
-        } else {
-            "en"
-        }
-    }
+    fun getSystemPrimaryLanguage(): String =
+        com.witherboymcw.superbattery.templates.LocaleManager.getSystemPrimaryLanguage()
 
-    fun getAppLocale(context: Context): Locale {
-        val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
-        var savedLang = prefs.getString(APP_LANGUAGE_KEY, "system") ?: "system"
-        val validLangs = setOf("system", "vi", "en", "art", "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot")
-        if (savedLang !in validLangs) {
-            savedLang = "system"
-        }
-        if (savedLang == "system" || savedLang.isEmpty()) {
-            return if (getSystemPrimaryLanguage() == "vi") Locale.forLanguageTag("vi") else Locale.ENGLISH
-        }
-        val tag = when (savedLang) {
-            "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
-            else -> savedLang
-        }
-        return Locale.forLanguageTag(tag)
-    }
+    fun getAppLocale(context: Context): Locale =
+        com.witherboymcw.superbattery.templates.LocaleManager.getAppLocale(context)
 
-    fun getLocalizedContext(context: Context): Context {
-        val locale = getAppLocale(context)
-        val config = android.content.res.Configuration(context.resources.configuration)
-        config.setLocale(locale)
-        return context.createConfigurationContext(config)
-    }
+    fun getLocalizedContext(context: Context): Context =
+        com.witherboymcw.superbattery.templates.LocaleManager.getLocalizedContext(context)
 
     fun isUseSystemBatteryCounter(context: Context): Boolean {
         return context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)

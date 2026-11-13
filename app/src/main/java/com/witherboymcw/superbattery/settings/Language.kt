@@ -27,10 +27,7 @@ class Language(private val activity: MainActivity) {
 
         val prefs = activity.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, Context.MODE_PRIVATE)
         val savedLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-        val currentLang = when (savedLang) {
-            "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
-            else -> savedLang
-        }
+        val currentLang = com.witherboymcw.superbattery.templates.LocaleManager.normalizeLanguageTag(savedLang)
 
         val options = listOf(
             OptionItem(R.id.lang_system, "system", activity.getString(R.string.at_system)),
@@ -51,10 +48,7 @@ class Language(private val activity: MainActivity) {
             options = options
         ) { targetLang ->
             val activeLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
-            val normalizedActiveLang = when (activeLang) {
-                "en-BR", "en-brainrot", "en-x-brainrot", "en-0rot" -> "art"
-                else -> activeLang
-            }
+            val normalizedActiveLang = com.witherboymcw.superbattery.templates.LocaleManager.normalizeLanguageTag(activeLang)
             if (normalizedActiveLang != targetLang) {
                 onLanguageChanged(targetLang)
             }

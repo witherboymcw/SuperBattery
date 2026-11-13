@@ -8,6 +8,7 @@ import android.view.View
 import android.view.WindowManager
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.templates.getDisplayRotationCompat
 import com.witherboymcw.superbattery.screens.settings.SettingsViewController
 import com.witherboymcw.superbattery.widgets.BatteryWidget
 import kotlin.math.roundToInt
@@ -132,12 +133,7 @@ object ChinAwareness {
 
         val rawLevel = overrideLevel ?: activity.thickChinOverrideLevel ?: getThickChinLevel(activity)
 
-        val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            activity.display?.rotation ?: Surface.ROTATION_0
-        } else {
-            @Suppress("DEPRECATION")
-            (activity.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
-        }
+        val rotation = activity.getDisplayRotationCompat()
 
         val paddingResult = calculateChinPadding(
             density = density,
