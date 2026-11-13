@@ -5,8 +5,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.activity.BackEventCompat
-import androidx.activity.OnBackPressedCallback
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
@@ -24,11 +22,13 @@ import com.witherboymcw.superbattery.settings.Theme
 import com.witherboymcw.superbattery.settings.ThickChin
 import com.witherboymcw.superbattery.settings.UseSysBatt
 import com.witherboymcw.superbattery.settings.UnitVOLT
+import com.witherboymcw.superbattery.templates.DrawerScreen
 
-internal class SettingsViewController {
-    private var activityRef: MainActivity? = null
-    var isOpen: Boolean = false
-
+internal class SettingsViewController : DrawerScreen(
+    containerId = R.id.settings_container,
+    slideDirection = SlideDirection.FROM_RIGHT,
+    actionButtonId = R.id.settings_button
+) {
     var permissionsCard: Permissions? = null
         private set
     var languageCard: Language? = null
@@ -52,107 +52,24 @@ internal class SettingsViewController {
     var oledCard: Oled? = null
         private set
 
-    val backCallback = object : OnBackPressedCallback(false) {
-        private var initialWidth = 0f
-
-        override fun handleOnBackStarted(backEvent: BackEventCompat) {
-            val container = activityRef?.findViewById<View>(R.id.settings_container) ?: return
-            initialWidth = container.width.toFloat().takeIf { it > 0f } ?: 1080f
-        }
-
-        override fun handleOnBackProgressed(backEvent: BackEventCompat) {
-            val container = activityRef?.findViewById<View>(R.id.settings_container) ?: return
-            val progress = backEvent.progress
-            container.translationX = initialWidth * progress
-        }
-
-        override fun handleOnBackCancelled() {
-            val container = activityRef?.findViewById<View>(R.id.settings_container) ?: return
-            container.animate()
-                .translationX(0f)
-                .setDuration(150L)
-                .setInterpolator(FastOutSlowInInterpolator())
-                .start()
-        }
-
-        override fun handleOnBackPressed() {
-            val act = activityRef ?: return
-            closeScreen(act)
-        }
-    }
-
-    fun openScreen(activity: MainActivity) {
-        val container = activity.findViewById<View>(R.id.settings_container) ?: return
-        isOpen = true
-        container.visibility = View.VISIBLE
-        val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
-        container.translationX = width
-        container.animate()
-            .translationX(0f)
-            .setDuration(280L)
-            .setInterpolator(FastOutSlowInInterpolator())
-            .withLayer()
-            .start()
-        activity.btnSettings?.animate()
-            ?.rotation(90f)
-            ?.setDuration(280L)
-            ?.setInterpolator(FastOutSlowInInterpolator())
-            ?.start()
-        backCallback.isEnabled = true
-        NotchAwareness.updateSettingsHeaderLayout(activity)
-    }
-
-    fun closeScreen(activity: MainActivity, animate: Boolean = true) {
+    override fun onPreClose() {
         thickChinCard?.flushCommit()
-        val container = activity.findViewById<View>(R.id.settings_container) ?: return
-        if (container.visibility != View.VISIBLE) return
-        isOpen = false
-        backCallback.isEnabled = false
-        if (animate) {
-            val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
-            container.animate()
-                .translationX(width)
-                .setDuration(280L)
-                .setInterpolator(FastOutSlowInInterpolator())
-                .withLayer()
-                .withEndAction {
-                    container.visibility = View.GONE
-                }
-                .start()
-            activity.btnSettings?.animate()
-                ?.rotation(0f)
-                ?.setDuration(280L)
-                ?.setInterpolator(FastOutSlowInInterpolator())
-                ?.start()
-        } else {
-            container.animate().cancel()
-            container.visibility = View.GONE
-            container.translationX = 0f
-            activity.btnSettings?.animate()?.cancel()
-            activity.btnSettings?.rotation = 0f
-        }
+    }
+
+    override fun onPostOpen(activity: MainActivity) {
+        NotchAwareness.updateSettingsHeaderLayout(activity)
     }
 
     fun flushThickChinCommit() {
         thickChinCard?.flushCommit()
     }
 
-    fun unbind() {
+    override fun unbind() {
         notchCard?.unbind()
         notchCard = null
         thickChinCard?.flushCommit()
         thickChinCard = null
-        backCallback.remove()
-        activityRef = null
-    }
-
-    fun restoreOpenState(activity: MainActivity) {
-        val container = activity.findViewById<View>(R.id.settings_container) ?: return
-        container.visibility = View.VISIBLE
-        container.translationX = 0f
-        backCallback.isEnabled = true
-        isOpen = true
-        activity.btnSettings?.rotation = 90f
+        super.unbind()
     }
 
     private fun getTargetLayoutRes(): Int = R.layout.layout_settings
