@@ -245,5 +245,11 @@ class ExampleUnitTest {
             }
             assertEquals("art", locale.language)
         }
+
+        val chineseTags = listOf("zh", "zh-CN", "zh-cn", "zh-hans")
+        chineseTags.forEach { tag ->
+            val normalized = com.witherboymcw.superbattery.templates.LocaleManager.normalizeLanguageTag(tag)
+            assertEquals("zh-CN", normalized)
+        }
     }
 }

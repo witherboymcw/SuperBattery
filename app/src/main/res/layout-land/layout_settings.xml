@@ -934,6 +934,15 @@
                                         android:textSize="14sp" />
 
                                     <RadioButton
+                                        android:id="@+id/lang_chinese_simplified"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:paddingStart="8dp"
+                                        android:paddingEnd="8dp"
+                                        android:text="@string/language_simplified_chinese"
+                                        android:textSize="14sp" />
+
+                                    <RadioButton
                                         android:id="@+id/lang_english"
                                         android:layout_width="match_parent"
                                         android:layout_height="44dp"

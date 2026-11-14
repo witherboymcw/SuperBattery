@@ -296,6 +296,8 @@ internal class SettingsViewController : DrawerScreen(
                 }
 
                 val restoredSection = when {
+                    savedInstanceState?.getBoolean(Language.KEY_LANGUAGE_DROPDOWN_OPEN) == true ->
+                        Triple(dropdownLanguage, arrowLanguage, R.string.language)
                     savedInstanceState?.getBoolean(Permissions.KEY_SUPER_PERMISSIONS_DROPDOWN_OPEN) == true ->
                         Triple(dropdownSuperPermissions, arrowSuperPermissions, R.string.super_permissions_header)
                     savedInstanceState?.getBoolean(Frequency.KEY_FREQUENCY_DROPDOWN_OPEN) == true ->

@@ -59,6 +59,14 @@ import com.witherboymcw.superbattery.screens.hotspot.HotspotNotificationListener
 import com.witherboymcw.superbattery.screens.hotspot.HotspotViewController
 import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 import com.witherboymcw.superbattery.screens.settings.SettingsViewController
+import com.witherboymcw.superbattery.settings.Frequency
+import com.witherboymcw.superbattery.settings.Language
+import com.witherboymcw.superbattery.settings.Notch
+import com.witherboymcw.superbattery.settings.Permissions
+import com.witherboymcw.superbattery.settings.Theme
+import com.witherboymcw.superbattery.settings.UnitRAM
+import com.witherboymcw.superbattery.settings.UnitTEMP
+import com.witherboymcw.superbattery.settings.UnitVOLT
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -115,6 +123,11 @@ class MainActivity : AppCompatActivity() {
         ensureInitialLanguage()
         OledThemeAllInOne.applyActivityTheme(this)
 
+        if (savedInstanceState != null) {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(0, 0)
+        }
+
         super.onCreate(savedInstanceState)
         systemMonitorManager = SystemMonitorManager(this)
         try {
@@ -129,6 +142,13 @@ class MainActivity : AppCompatActivity() {
         }
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+
+        if (savedInstanceState?.getBoolean(KEY_SETTINGS_OPEN) == true) {
+            findViewById<View>(R.id.settings_container)?.visibility = View.VISIBLE
+        }
+        if (savedInstanceState?.getBoolean(KEY_HOTSPOT_OPEN) == true) {
+            findViewById<View>(R.id.hotspot_container)?.visibility = View.VISIBLE
+        }
         initDashboardViews()
         applyThickChinPadding()
         applyGraphBackgrounds(OledThemeAllInOne.getEffectiveThemeForGraph(this))
@@ -275,27 +295,31 @@ class MainActivity : AppCompatActivity() {
         }
         val dropdownLanguage = findViewById<View>(R.id.dropdown_language)
         if (dropdownLanguage?.visibility == View.VISIBLE) {
-            outState.putBoolean(KEY_LANGUAGE_DROPDOWN_OPEN, true)
+            outState.putBoolean(Language.KEY_LANGUAGE_DROPDOWN_OPEN, true)
+        }
+        val dropdownSuperPermissions = findViewById<View>(R.id.dropdown_super_permissions)
+        if (dropdownSuperPermissions?.visibility == View.VISIBLE) {
+            outState.putBoolean(Permissions.KEY_SUPER_PERMISSIONS_DROPDOWN_OPEN, true)
         }
         val dropdownFrequency = findViewById<View>(R.id.dropdown_update_frequency)
         if (dropdownFrequency?.visibility == View.VISIBLE) {
-            outState.putBoolean(KEY_FREQUENCY_DROPDOWN_OPEN, true)
+            outState.putBoolean(Frequency.KEY_FREQUENCY_DROPDOWN_OPEN, true)
         }
         val dropdownTheme = findViewById<View>(R.id.dropdown_theme)
         if (dropdownTheme?.visibility == View.VISIBLE) {
-            outState.putBoolean(KEY_THEME_DROPDOWN_OPEN, true)
+            outState.putBoolean(Theme.KEY_THEME_DROPDOWN_OPEN, true)
         }
         val dropdownTempUnit = findViewById<View>(R.id.dropdown_temp_unit)
         if (dropdownTempUnit?.visibility == View.VISIBLE) {
-            outState.putBoolean(KEY_TEMP_UNIT_DROPDOWN_OPEN, true)
+            outState.putBoolean(UnitTEMP.KEY_TEMP_UNIT_DROPDOWN_OPEN, true)
         }
         val dropdownVoltageUnit = findViewById<View>(R.id.dropdown_voltage_unit)
         if (dropdownVoltageUnit?.visibility == View.VISIBLE) {
-            outState.putBoolean(KEY_VOLTAGE_UNIT_DROPDOWN_OPEN, true)
+            outState.putBoolean(UnitVOLT.KEY_VOLTAGE_UNIT_DROPDOWN_OPEN, true)
         }
         val dropdownRamUnit = findViewById<View>(R.id.dropdown_ram_unit)
         if (dropdownRamUnit?.visibility == View.VISIBLE) {
-            outState.putBoolean(KEY_RAM_UNIT_DROPDOWN_OPEN, true)
+            outState.putBoolean(UnitRAM.KEY_RAM_UNIT_DROPDOWN_OPEN, true)
         }
         val dropdownThickChin = findViewById<View>(R.id.dropdown_thick_chin)
         if (dropdownThickChin?.visibility == View.VISIBLE) {
@@ -307,7 +331,7 @@ class MainActivity : AppCompatActivity() {
         }
         val dropdownNotch = findViewById<View>(R.id.dropdown_notch)
         if (dropdownNotch?.visibility == View.VISIBLE) {
-            outState.putBoolean(SettingsViewController.KEY_NOTCH_DROPDOWN_OPEN, true)
+            outState.putBoolean(Notch.KEY_NOTCH_DROPDOWN_OPEN, true)
         }
         val scrollView = findViewById<android.widget.ScrollView>(R.id.settings_scroll_view)
             ?: findViewById<android.widget.ScrollView>(R.id.settings_scroll_left)
@@ -725,12 +749,6 @@ class MainActivity : AppCompatActivity() {
         internal const val PHONE_STATE_PERMISSION_REQUEST = 1002
         private const val KEY_SETTINGS_OPEN = "key_settings_open"
         private const val KEY_HOTSPOT_OPEN = "key_hotspot_open"
-        private const val KEY_LANGUAGE_DROPDOWN_OPEN = "key_language_dropdown_open"
-        private const val KEY_FREQUENCY_DROPDOWN_OPEN = "key_frequency_dropdown_open"
-        private const val KEY_THEME_DROPDOWN_OPEN = "key_theme_dropdown_open"
-        private const val KEY_TEMP_UNIT_DROPDOWN_OPEN = "key_temp_unit_dropdown_open"
-        private const val KEY_VOLTAGE_UNIT_DROPDOWN_OPEN = "key_voltage_unit_dropdown_open"
-        private const val KEY_RAM_UNIT_DROPDOWN_OPEN = "key_ram_unit_dropdown_open"
         private const val KEY_SETTINGS_SCROLL_Y = "key_settings_scroll_y"
         private const val KEY_SETTINGS_SCROLL_RIGHT_Y = "key_settings_scroll_right_y"
     }

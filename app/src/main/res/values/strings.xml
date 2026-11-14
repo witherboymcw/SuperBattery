@@ -48,11 +48,6 @@
     <string name="waiting_for_samples">Collecting samples…</string>
     <string name="settings">Settings</string>
     <string name="language_subtitle">Choose your preferred language</string>
-    <string name="allow_notifications">🔔 Allow notifications</string>
-    <string name="allow_notifications_subtitle">To receive system status updates and critical alerts</string>
-    <string name="manage_notification_access_subtitle">Required to count connected hotspot clients</string>
-    <string name="permission_phone_state_title">📶 Read phone state permission</string>
-    <string name="permission_phone_state_subtitle">To accurately detect cellular signal status</string>
     <string name="update_frequency">⏱️ Update frequency</string>
     <string name="update_frequency_subtitle">Set how often telemetry data is refreshed</string>
     <string name="update_every_half_second">Every 0.5 seconds</string>
@@ -75,12 +70,12 @@
     <string name="temp_unit_kelvin" translatable="false">K (Kelvin)</string>
     <string name="language">🌐 Language</string>
     <string name="at_system">System</string>
-    <string name="language_english">English (US)</string>
     <string name="language_english_us" tools:ignore="MissingTranslation">English (US)</string>
     <string name="language_english_uk" tools:ignore="MissingTranslation">English (UK)</string>
     <string name="language_vietnamese">Vietnamese</string>
+    <string name="language_simplified_chinese">Chinese (Simplified)</string>
     <string name="language_brainrot">Brainrot English (Sigma Rizz)</string>
-    <string name="super_permissions_header">🛡️ Super Permissions</string>
+    <string name="super_permissions_header">🛡️ Permissions</string>
     <string name="super_permissions_subtitle">Manage app permissions and feature toggles</string>
     <string name="perm_post_notifications">Notification alerts</string>
     <string name="perm_notification_access">Hotspot client reader</string>
@@ -134,7 +129,6 @@
     <string name="notch_pill_title">Pill Width</string>
     <string name="btn_set_notch_position">Set Notch Position</string>
     <string name="notch_instruction_text">Drag the circle to the desired notch position, then tap anywhere else to save.</string>
-    <string name="permission_already_granted">Permission already granted.</string>
 
     <string name="hotspot_title">Hotspot Devices</string>
     <string name="status_connected">Connected</string>

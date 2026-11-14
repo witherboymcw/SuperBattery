@@ -49,11 +49,6 @@
     <string name="waiting_for_samples">Đang thu thập dữ liệu…</string>
     <string name="settings">Cài đặt</string>
     <string name="language_subtitle">Chọn ngôn ngữ hiển thị</string>
-    <string name="allow_notifications">🔔 Gửi thông báo</string>
-    <string name="allow_notifications_subtitle">Được cập nhật trạng thái hệ thống và cảnh báo</string>
-    <string name="manage_notification_access_subtitle">Cần thiết để đếm số lượng thiết bị kết nối Wi-Fi</string>
-    <string name="permission_phone_state_title">📶 Quyền trạng thái điện thoại</string>
-    <string name="permission_phone_state_subtitle">Phát hiện trạng thái sóng di động</string>
     <string name="update_frequency">⏱️ Tần suất cập nhật</string>
     <string name="update_frequency_subtitle">Chỉnh tần suất làm mới dữ liệu hệ thống</string>
     <string name="update_every_half_second">Mỗi 0,5 giây</string>
@@ -74,17 +69,18 @@
 
     <string name="language">🌐 Ngôn ngữ</string>
     <string name="at_system">Theo hệ thống</string>
-    <string name="language_english">Tiếng Anh (Mỹ)</string>
+
     <string name="language_english_us">Tiếng Anh (Mỹ)</string>
     <string name="language_english_uk">Tiếng Anh (Anh)</string>
     <string name="language_vietnamese">Tiếng Việt</string>
+    <string name="language_simplified_chinese">Tiếng Trung (Giản thể)</string>
     <string name="language_brainrot">Tiếng Anh Brainrot</string>
-    <string name="super_permissions_header">🛡️ Super Permissions</string>
+    <string name="super_permissions_header">🛡️ Cấp quyền ứng dụng</string>
     <string name="super_permissions_subtitle">Quản lý quyền hệ thống và cờ sử dụng ứng dụng</string>
-    <string name="perm_post_notifications">Quyền gửi thông báo</string>
-    <string name="perm_notification_access">Quyền đọc thông báo Hotspot</string>
-    <string name="perm_phone_state">Quyền trạng thái điện thoại</string>
-    <string name="perm_overlay">Quyền hiển thị trên ứng dụng khác</string>
+    <string name="perm_post_notifications">Gửi thông báo</string>
+    <string name="perm_notification_access">Đọc thông báo</string>
+    <string name="perm_phone_state">Đọc trạng thái điện thoại</string>
+    <string name="perm_overlay">Hiện trên ứng dụng khác</string>
     <string name="theme">Giao diện</string>
     <string name="theme_header">🎨 Giao diện</string>
     <string name="theme_subtitle">Chỉnh giao diện và chế độ màu sắc ứng dụng</string>
@@ -117,7 +113,6 @@
     <string name="notch_pill_title">Độ rộng viên thuốc</string>
     <string name="btn_set_notch_position">Chỉnh vị trí tai thỏ</string>
     <string name="notch_instruction_text">Kéo hình tròn đến vị trí tai thỏ mong muốn, sau đó chạm ra ngoài để lưu.</string>
-    <string name="permission_already_granted">Quyền đã được cấp.</string>
 
     <string name="hotspot_title">Thiết bị Hotspot</string>
     <string name="status_connected">Đã kết nối</string>

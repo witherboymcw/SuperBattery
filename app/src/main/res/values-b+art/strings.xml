@@ -7,7 +7,7 @@
 
     <string name="calendar_widget_name">Calendar</string>
     <string name="appwidget_text">SKIBIDI</string>
-    <string name="add_widget">Drop that like a hot brotato</string>
+    <string name="add_widget">Drop! Hot brotato!</string>
     <string name="app_widget_description">Juice level and raw voltage flexing</string>
     <string name="battery_details_widget_description">How cooked the battery is and who is leeching your hotspot</string>
 
@@ -52,11 +52,6 @@
     <string name="waiting_for_samples">Let me cook… (gathering stats)</string>
     <string name="settings">Tweaks</string>
     <string name="language_subtitle">Pick yo mama tongue</string>
-    <string name="allow_notifications">🔔 Enable yapping</string>
-    <string name="allow_notifications_subtitle">Get pinged when your battery is cooked</string>
-    <string name="manage_notification_access_subtitle">How many are leeching your aura</string>
-    <string name="permission_phone_state_title">📶 Cell tower aura check</string>
-    <string name="permission_phone_state_subtitle">Let us see if you\'re cooked in Ala-bar-ma</string>
     <string name="update_frequency">⏱️ Ping speed</string>
     <string name="update_frequency_subtitle">How fast lore drops</string>
     <string name="update_every_half_second">Sweaty mode (0.5s)</string>
@@ -79,10 +74,13 @@
 
     <string name="language">🌐 Yapping dialect</string>
     <string name="at_system">Bro thinks I care 💀</string>
-    <string name="language_english">English (Standard NPC)</string>
+
+    <string name="language_english_us">Alabama flop (US)</string>
+    <string name="language_english_uk">Skibidi posh (UK)</string>
     <string name="language_vietnamese">Vietnamese</string>
+    <string name="language_simplified_chinese">Ching Chong (Simplified)</string>
     <string name="language_brainrot">Brainrot English (Sigma Rizz)</string>
-    <string name="super_permissions_header">🛡️ Super Permissions (Chad Pass)</string>
+    <string name="super_permissions_header">🛡️ SuPerMissions (Chad Pass)</string>
     <string name="super_permissions_subtitle">Control OS authorizations &amp; flex abilities</string>
     <string name="perm_post_notifications">Spam notification alerts</string>
     <string name="perm_notification_access">Spy hotspot clients</string>
@@ -101,7 +99,7 @@
     <string name="thick_chin_max_label">Level 256 (0 dp)</string>
     <string name="thick_chin_summary">Level %1$d/256 (Reduced: %2$s | Bottom: %3$s)</string>
     <string name="thick_chin_summary_edge">Level %1$d/256 (Reduced: %2$s | Bottom: 0 dp - edge maxxing)</string>
-    <string name="thick_chin_edge">-%1$s (Edge maxxing)</string>
+    <string name="thick_chin_edge">-%1$s (Edging)</string>
     <string name="assume_oled_header">🖥️ Assume OLED</string>
     <string name="assume_oled_subtitle">Automatic OLED screen detection</string>
     <string name="assume_oled_opt_none">Auto (Default Rizz)</string>
@@ -120,7 +118,6 @@
     <string name="notch_pill_title">Pill Size</string>
     <string name="btn_set_notch_position">Drag &amp; Lock Notch</string>
     <string name="notch_instruction_text">Drag the orb where the notch goes, then tap away to lock in.</string>
-    <string name="permission_already_granted">Already unlocked bro.</string>
 
     <string name="hotspot_title">Hotspot Bro Squad</string>
     <string name="status_connected">Locked In</string>
