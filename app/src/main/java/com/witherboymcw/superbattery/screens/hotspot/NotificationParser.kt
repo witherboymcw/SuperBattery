@@ -18,6 +18,20 @@ data class CompiledHotspotRule(
  */
 object HotspotNotificationParser {
 
+    private val REQUIRED_KEYWORDS = listOf(
+        "wi-fi",
+        "wifi",
+        "mạng",
+        "mang",
+        "internet",
+        "phát sóng",
+        "phat song",
+        "truy cập",
+        "truy cap",
+        "tether",
+        "hotspot"
+    )
+
     val DEFAULT_RULES: List<CompiledHotspotRule> = listOf(
         CompiledHotspotRule(
             oem = "Universal / All Brands",
@@ -42,6 +56,17 @@ object HotspotNotificationParser {
     ): HotspotState? {
         if (notificationTitle.isBlank()) return null
 
+        val combinedText = if (notificationContent.contains(notificationTitle, ignoreCase = true)) {
+            notificationContent
+        } else {
+            "$notificationTitle $notificationContent"
+        }
+
+        val hasRequiredKeyword = REQUIRED_KEYWORDS.any { keyword ->
+            combinedText.contains(keyword, ignoreCase = true)
+        }
+        if (!hasRequiredKeyword) return null
+
         val matchingRule = rules.firstOrNull { rule ->
             rule.compiledTitleRegexes.any { regex ->
                 try {
@@ -54,12 +79,6 @@ object HotspotNotificationParser {
                 }
             }
         } ?: return null
-
-        val combinedText = if (notificationContent.contains(notificationTitle, ignoreCase = true)) {
-            notificationContent
-        } else {
-            "$notificationTitle $notificationContent"
-        }
 
         if (matchingRule.noDeviceRegex.containsMatchIn(combinedText)) {
             return HotspotState.ON_EMPTY

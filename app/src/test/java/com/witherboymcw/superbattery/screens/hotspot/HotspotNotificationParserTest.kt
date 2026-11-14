@@ -90,10 +90,23 @@ class HotspotNotificationParserTest {
 
     @Test
     fun testParseNonHotspotNotification() {
-        val result = HotspotNotificationParser.parseNotification(
+        val result1 = HotspotNotificationParser.parseNotification(
             notificationTitle = "Cập nhật ứng dụng",
             notificationContent = "Tải xuống hoàn tất"
         )
-        assertNull(result)
+        assertNull(result1)
+
+        // General sharing notifications without hotspot/wifi/network/internet/tether/etc. keywords
+        val result2 = HotspotNotificationParser.parseNotification(
+            notificationTitle = "Đã bật chia sẻ vị trí",
+            notificationContent = "Không có thiết bị nào kết nối"
+        )
+        assertNull(result2)
+
+        val result3 = HotspotNotificationParser.parseNotification(
+            notificationTitle = "Chia sẻ tệp qua Bluetooth",
+            notificationContent = "1 tệp đã nhận"
+        )
+        assertNull(result3)
     }
 }
