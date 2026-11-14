@@ -14,6 +14,7 @@ object SettingsHelper {
     private const val TEMP_UNIT_KEY = BatteryWidget.TEMP_UNIT_KEY
     private const val APP_LANGUAGE_KEY = BatteryWidget.APP_LANGUAGE_KEY
     private const val USE_SYSTEM_BATTERY_KEY = BatteryWidget.USE_SYSTEM_BATTERY_KEY
+    private const val IS_DUAL_CELL_BATTERY_KEY = BatteryWidget.IS_DUAL_CELL_BATTERY_KEY
 
     fun getVoltageUnit(context: Context): VoltageUnit {
         val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
@@ -99,5 +100,17 @@ object SettingsHelper {
     fun isUseSystemBatteryCounter(context: Context): Boolean {
         return context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
             .getBoolean(USE_SYSTEM_BATTERY_KEY, false)
+    }
+
+    fun isDualCellBattery(context: Context): Boolean {
+        return context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+            .getBoolean(IS_DUAL_CELL_BATTERY_KEY, false)
+    }
+
+    fun setDualCellBattery(context: Context, isDualCell: Boolean) {
+        context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(IS_DUAL_CELL_BATTERY_KEY, isDualCell)
+            .apply()
     }
 }

@@ -2,7 +2,6 @@ package com.witherboymcw.superbattery.awareness
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.os.BatteryManager
 import android.os.SystemClock
 import com.witherboymcw.superbattery.screens.settings.SettingsHelper
@@ -29,7 +28,10 @@ data class BatteryPowerInfo(
         }
 }
 
-fun getBatteryPowerInfo(context: Context): BatteryPowerInfo? {
+fun getBatteryPowerInfo(
+    context: Context,
+    isDualCell: Boolean = SettingsHelper.isDualCellBattery(context)
+): BatteryPowerInfo? {
     val bm = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager ?: return null
     val batteryIntent = context.registerReceiver(
         null,
@@ -37,30 +39,39 @@ fun getBatteryPowerInfo(context: Context): BatteryPowerInfo? {
     ) ?: return null
 
     val status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-    val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+    val isPluggedCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
             status == BatteryManager.BATTERY_STATUS_FULL
 
     val voltageMv = batteryIntent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0)
     if (voltageMv <= 0) return null
 
-    var currentNow = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
-    if (currentNow == Int.MIN_VALUE || currentNow == 0) {
-        currentNow = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE)
-        if (currentNow == Int.MIN_VALUE || currentNow == 0) return null
+    var rawCurrent = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+    if (rawCurrent == Int.MIN_VALUE || rawCurrent == 0) {
+        rawCurrent = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE)
+        if (rawCurrent == Int.MIN_VALUE || rawCurrent == 0) return null
     }
 
-    var currentUa = kotlin.math.abs(currentNow).toFloat()
-    // Chuẩn hóa nếu kernel OEM trả về mA thay vì µA
-    if (currentUa in 1.0f..10000.0f) {
+    // Chuẩn hóa nếu kernel OEM (như Samsung) trả về mA thay vì µA
+    // Khi app đang mở trên màn hình, dòng thực tế luôn > 25mA (25,000 µA) và < 25A (25,000 mA)
+    var currentUa = kotlin.math.abs(rawCurrent).toFloat()
+    if (currentUa in 1.0f..25_000.0f) {
         currentUa *= 1000f
     }
 
-    val voltageVolts = voltageMv / 1000f
+    val cellMultiplier = if (isDualCell) 2f else 1f
+    val voltageVolts = (voltageMv / 1000f) * cellMultiplier
     val currentAmperes = currentUa / 1_000_000f
     val powerWatts = voltageVolts * currentAmperes
 
+    val isSamsung = android.os.Build.MANUFACTURER.equals("samsung", ignoreCase = true)
+    val isNetCharging = when {
+        !isPluggedCharging -> false
+        isSamsung -> rawCurrent > 0
+        else -> true // Giữ mặc định theo trạng thái sạc của hệ thống cho các hãng khác
+    }
+
     return BatteryPowerInfo(
-        isCharging = isCharging,
+        isCharging = isNetCharging,
         powerWatts = powerWatts,
         currentMilliAmperes = currentUa / 1000f,
         voltageVolts = voltageVolts
@@ -91,8 +102,11 @@ object BatteryMath {
     private var voltageRunningSum = 0L
     private var lastVoltageSampleTimeMs = Long.MIN_VALUE
 
-    fun getBatteryPowerInfo(context: Context): BatteryPowerInfo? =
-        com.witherboymcw.superbattery.awareness.getBatteryPowerInfo(context)
+    fun getBatteryPowerInfo(
+        context: Context,
+        isDualCell: Boolean = SettingsHelper.isDualCellBattery(context)
+    ): BatteryPowerInfo? =
+        com.witherboymcw.superbattery.awareness.getBatteryPowerInfo(context, isDualCell)
 
     fun getSystemBatteryPercentage(batteryIntent: Intent?): Int {
         if (batteryIntent == null) return 0

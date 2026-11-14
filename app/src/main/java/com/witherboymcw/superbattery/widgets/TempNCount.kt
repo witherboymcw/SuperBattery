@@ -53,6 +53,7 @@ class BatteryWidget : AppWidgetProvider() {
         const val EXTRA_CLOSE_SETTINGS = "com.witherboymcw.superbattery.EXTRA_CLOSE_SETTINGS"
         const val SETTINGS_PREFS = "dashboard_settings"
         const val USE_SYSTEM_BATTERY_KEY = "use_system_battery_counter"
+        const val IS_DUAL_CELL_BATTERY_KEY = "is_dual_cell_battery"
         const val APP_LANGUAGE_KEY = "app_language"
         const val TEMP_UNIT_KEY = "temp_unit"
         const val VOLTAGE_UNIT_KEY = "voltage_unit"
