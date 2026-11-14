@@ -32,7 +32,8 @@ class Language(private val activity: MainActivity) {
         val options = listOf(
             OptionItem(R.id.lang_system, "system", activity.getString(R.string.at_system)),
             OptionItem(R.id.lang_vietnamese, "vi", activity.getString(R.string.language_vietnamese)),
-            OptionItem(R.id.lang_english, "en", activity.getString(R.string.language_english)),
+            OptionItem(R.id.lang_english, "en-US", activity.getString(R.string.language_english_us)),
+            OptionItem(R.id.lang_english_uk, "en-GB", activity.getString(R.string.language_english_uk)),
             OptionItem(R.id.lang_brainrot, "art", activity.getString(R.string.language_brainrot))
         )
 

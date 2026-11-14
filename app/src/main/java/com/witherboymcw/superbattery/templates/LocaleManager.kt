@@ -16,13 +16,18 @@ import java.util.Locale
 object LocaleManager {
 
     private val BRAINROT_TAGS = setOf("en-br", "en-brainrot", "en-x-brainrot", "en-0rot")
-    private val VALID_LANGS = setOf("system", "vi", "en", "art", "en-br", "en-brainrot", "en-x-brainrot", "en-0rot")
+    private val VALID_LANGS = setOf("system", "vi", "en", "en-us", "en-gb", "en-rus", "en-rgb", "art", "en-br", "en-brainrot", "en-x-brainrot", "en-0rot")
 
     fun normalizeLanguageTag(tag: String?): String {
         if (tag == null) return "system"
         val lowerTag = tag.lowercase()
         if (lowerTag !in VALID_LANGS) return "system"
-        return if (lowerTag in BRAINROT_TAGS) "art" else lowerTag
+        if (lowerTag in BRAINROT_TAGS) return "art"
+        return when (lowerTag) {
+            "en", "en-us", "en-rus" -> "en-US"
+            "en-gb", "en-rgb" -> "en-GB"
+            else -> lowerTag
+        }
     }
 
     fun ensureInitialLanguage(context: Context) {
@@ -80,7 +85,7 @@ object LocaleManager {
         val savedLang = prefs.getString(BatteryWidget.APP_LANGUAGE_KEY, "system") ?: "system"
         val normalized = normalizeLanguageTag(savedLang)
         if (normalized == "system" || normalized.isEmpty()) {
-            return if (getSystemPrimaryLanguage() == "vi") Locale.forLanguageTag("vi") else Locale.ENGLISH
+            return if (getSystemPrimaryLanguage() == "vi") Locale.forLanguageTag("vi") else Locale.forLanguageTag("en-US")
         }
         return Locale.forLanguageTag(normalized)
     }

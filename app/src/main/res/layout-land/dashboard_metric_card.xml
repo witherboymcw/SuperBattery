@@ -39,8 +39,8 @@
                 android:layout_width="60dp"
                 android:layout_height="60dp"
                 android:layout_gravity="center"
-                app:ringStartAngle="270"
-                app:ringMaxSweep="300" />
+                app:ringStartAngle="210"
+                app:ringMaxSweep="-240" />
 
             <TextView
                 android:id="@+id/metric_value"

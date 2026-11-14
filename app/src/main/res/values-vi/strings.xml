@@ -74,7 +74,9 @@
 
     <string name="language">🌐 Ngôn ngữ</string>
     <string name="at_system">Theo hệ thống</string>
-    <string name="language_english">Tiếng Anh (English)</string>
+    <string name="language_english">Tiếng Anh (Mỹ)</string>
+    <string name="language_english_us">Tiếng Anh (Mỹ)</string>
+    <string name="language_english_uk">Tiếng Anh (Anh)</string>
     <string name="language_vietnamese">Tiếng Việt</string>
     <string name="language_brainrot">Tiếng Anh Brainrot</string>
     <string name="super_permissions_header">🛡️ Super Permissions</string>
