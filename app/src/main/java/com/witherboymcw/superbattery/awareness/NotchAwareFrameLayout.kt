@@ -119,6 +119,7 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         rootScreenY: Int,
         reductionPx: Int
     ) {
+        val halfInfluenceHeight = totalHeight / 2f
         viewGroup.clipChildren = false
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
@@ -138,13 +139,9 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
                     card.getLocationOnScreen(tempCardLoc)
                     val cardCenterY = (tempCardLoc[1] - rootScreenY) + card.height / 2f
 
-                    val denominator = if (cardCenterY < peakY) peakY else (totalHeight - peakY)
-                    val t = if (denominator > 0f) {
-                        (1f - abs(cardCenterY - peakY) / denominator).coerceIn(0f, 1f)
-                    } else 0f
-
-                    val arcDepth = if (t > 0f) peakX * (1f - (1f - t) * (1f - t)) else 0f
-                    card.translationX = arcDepth
+                    val t = (1f - abs(cardCenterY - peakY) / halfInfluenceHeight).coerceIn(0f, 1f)
+                    val smoothT = t * t * (3f - 2f * t)
+                    card.translationX = peakX * smoothT
                 }
             } else if (child is ViewGroup) {
                 child.clipChildren = false

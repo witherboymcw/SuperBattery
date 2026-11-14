@@ -1,7 +1,6 @@
 package com.witherboymcw.superbattery.awareness
 
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -18,7 +17,6 @@ import com.witherboymcw.superbattery.templates.dp
 import com.witherboymcw.superbattery.templates.getDisplayRotationCompat
 import com.witherboymcw.superbattery.widgets.BatteryWidget
 
-typealias CutoutPosition = NotchGeometry.CutoutPosition
 typealias CutoutInfo = NotchGeometry.CutoutInfo
 
 /**
@@ -84,13 +82,11 @@ object NotchAwareness {
         }
 
         val cutoutInfo = getCutoutInfo(activity, root)
-        val isLandscape = activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val position = if (isLandscape) CutoutPosition.NONE else cutoutInfo.position
 
         val shift = NotchGeometry.computeHeaderShift(
             headerType = NotchGeometry.HeaderType.HOME,
             totalWidth = homeHeader.width.toFloat(),
-            cutoutInfo = cutoutInfo.copy(position = position),
+            cutoutInfo = cutoutInfo,
             leftControlsWidth = leftControls.width.toFloat(),
             settingsButtonWidth = btnSettings.width.toFloat(),
             gap = activity.dp(4f),

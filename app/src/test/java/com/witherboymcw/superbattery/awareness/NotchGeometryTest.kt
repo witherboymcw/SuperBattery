@@ -1,8 +1,14 @@
 package com.witherboymcw.superbattery.awareness
 
+import android.content.Context
+import android.content.res.Configuration
+import android.content.res.Resources
+import android.view.View
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 class NotchGeometryTest {
 
@@ -326,5 +332,65 @@ class NotchGeometryTest {
 
         assertEquals(4, NotchGeometry.CutoutPosition.entries.size)
         assertEquals(3, NotchGeometry.HeaderType.entries.size)
+    }
+
+    @Test
+    fun testGetCutoutInfo_LandscapeWithLiveCutoutOverride() {
+        val context = mock<Context>()
+        val rootViewGroup = mock<View>()
+        val resources = mock<Resources>()
+        val configuration = Configuration().apply {
+            orientation = Configuration.ORIENTATION_LANDSCAPE
+        }
+
+        whenever(context.resources).thenReturn(resources)
+        whenever(resources.configuration).thenReturn(configuration)
+        whenever(rootViewGroup.context).thenReturn(context)
+
+        val liveCutoutOverride = NotchGeometry.CutoutInfo(
+            position = NotchGeometry.CutoutPosition.CENTER,
+            rectLeft = 400f,
+            rectRight = 600f
+        )
+
+        val result = NotchGeometry.getCutoutInfo(
+            context = context,
+            rootViewGroup = rootViewGroup,
+            liveCutoutOverride = liveCutoutOverride
+        )
+
+        assertEquals(NotchGeometry.CutoutPosition.NONE, result.position)
+        assertEquals(0f, result.rectLeft, 0.001f)
+        assertEquals(0f, result.rectRight, 0.001f)
+    }
+
+    @Test
+    fun testGetCutoutInfo_PortraitWithLiveCutoutOverride() {
+        val context = mock<Context>()
+        val rootViewGroup = mock<View>()
+        val resources = mock<Resources>()
+        val configuration = Configuration().apply {
+            orientation = Configuration.ORIENTATION_PORTRAIT
+        }
+
+        whenever(context.resources).thenReturn(resources)
+        whenever(resources.configuration).thenReturn(configuration)
+        whenever(rootViewGroup.context).thenReturn(context)
+
+        val liveCutoutOverride = NotchGeometry.CutoutInfo(
+            position = NotchGeometry.CutoutPosition.CENTER,
+            rectLeft = 400f,
+            rectRight = 600f
+        )
+
+        val result = NotchGeometry.getCutoutInfo(
+            context = context,
+            rootViewGroup = rootViewGroup,
+            liveCutoutOverride = liveCutoutOverride
+        )
+
+        assertEquals(NotchGeometry.CutoutPosition.CENTER, result.position)
+        assertEquals(400f, result.rectLeft, 0.001f)
+        assertEquals(600f, result.rectRight, 0.001f)
     }
 }

@@ -118,12 +118,13 @@ object NotchGeometry {
     }
 
     fun getCutoutInfo(context: Context, rootViewGroup: View, liveCutoutOverride: CutoutInfo? = null): CutoutInfo {
-        liveCutoutOverride?.let { return it }
         val rotation = rootViewGroup.getDisplayRotationCompat()
 
         if (context.resources.configuration.orientation != Configuration.ORIENTATION_PORTRAIT || rotation == Surface.ROTATION_180) {
             return CutoutInfo(CutoutPosition.NONE)
         }
+
+        liveCutoutOverride?.let { return it }
 
         val prefs = context.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, Context.MODE_PRIVATE)
         val notchMode = prefs.getInt(KEY_NOTCH_CUSTOM_MODE, MODE_SYSTEM)
