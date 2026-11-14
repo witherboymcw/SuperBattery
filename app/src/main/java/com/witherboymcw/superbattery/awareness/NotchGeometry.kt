@@ -223,7 +223,8 @@ object NotchGeometry {
                         )
                     }
                     CutoutPosition.CENTER -> {
-                        val groupTargetLeft = ((cutoutLeft - clearance) - groupWidth).coerceIn(margin, cutoutLeft - groupWidth)
+                        val maxGroupLeft = (cutoutLeft - groupWidth).coerceAtLeast(margin)
+                        val groupTargetLeft = ((cutoutLeft - clearance) - groupWidth).coerceIn(margin, maxGroupLeft)
                         val leftControlsTransX = groupTargetLeft - defaultLeftControlsX
                         val settingsTransX = (groupTargetLeft + leftControlsWidth + gap) - defaultSettingsX
 
@@ -244,7 +245,9 @@ object NotchGeometry {
                         }
 
                         val groupTargetLeft = (W / 2f) + (((W / 2f) - groupWidth) / 2f)
-                        val clampedGroupLeft = groupTargetLeft.coerceIn(W / 2f + gap, W - margin - groupWidth)
+                        val minGroupLeft = W / 2f + gap
+                        val maxGroupLeft = (W - margin - groupWidth).coerceAtLeast(minGroupLeft)
+                        val clampedGroupLeft = groupTargetLeft.coerceIn(minGroupLeft, maxGroupLeft)
 
                         val leftControlsTransX = clampedGroupLeft - defaultLeftControlsX
                         val settingsTransX = (clampedGroupLeft + leftControlsWidth + gap) - defaultSettingsX

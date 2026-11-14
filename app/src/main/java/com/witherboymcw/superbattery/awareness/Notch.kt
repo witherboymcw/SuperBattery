@@ -171,29 +171,28 @@ object NotchAwareness {
         val context = hostView.context
         val rotation = hostView.getDisplayRotationCompat()
 
-        if (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) return
-
         val rect = getNotchRect(context, hostView, sharedTempRect) ?: return
 
-        val clearanceDp = hostView.dp(12f)
-        val maxEdgeDistPx = hostView.dp(48f)
-        val distLeft = rect.left
-        val distRight = width - rect.right
-        val distanceFromEdge = if (rotation == Surface.ROTATION_270) distRight else distLeft
-        if (distanceFromEdge > maxEdgeDistPx) return
-
-        val isRight = rotation == Surface.ROTATION_270 || rect.centerX() > width / 2f
-
-        if (isRight) {
-            if (context.theme.resolveAttribute(android.R.attr.colorBackground, sharedTypedValue, true)) {
-                maskPaint.color = sharedTypedValue.data
-            } else {
-                maskPaint.color = Color.BLACK
+        if (rotation != Surface.ROTATION_0 && rotation != Surface.ROTATION_180) {
+            val clearanceDp = hostView.dp(12f)
+            val maxEdgeDistPx = hostView.dp(48f)
+            val distLeft = rect.left
+            val distRight = width - rect.right
+            val distanceFromEdge = if (rotation == Surface.ROTATION_270) distRight else distLeft
+            if (distanceFromEdge <= maxEdgeDistPx) {
+                val isRight = rotation == Surface.ROTATION_270 || rect.centerX() > width / 2f
+                if (isRight) {
+                    if (context.theme.resolveAttribute(android.R.attr.colorBackground, sharedTypedValue, true)) {
+                        maskPaint.color = sharedTypedValue.data
+                    } else {
+                        maskPaint.color = Color.BLACK
+                    }
+                    val circleRadius = maxOf(rect.width(), rect.height()) / 2f + clearanceDp
+                    maskPath.reset()
+                    maskPath.addCircle(rect.centerX(), rect.centerY(), circleRadius, Path.Direction.CW)
+                    canvas.drawPath(maskPath, maskPaint)
+                }
             }
-            val circleRadius = maxOf(rect.width(), rect.height()) / 2f + clearanceDp
-            maskPath.reset()
-            maskPath.addCircle(rect.centerX(), rect.centerY(), circleRadius, Path.Direction.CW)
-            canvas.drawPath(maskPath, maskPaint)
         }
 
         val prefs = context.getSharedPreferences(BatteryWidget.SETTINGS_PREFS, Context.MODE_PRIVATE)

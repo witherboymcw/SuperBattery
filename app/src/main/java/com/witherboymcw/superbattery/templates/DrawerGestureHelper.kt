@@ -46,20 +46,20 @@ class DrawerGestureHelper(context: Context) {
         val rawDx = abs(dx)
         val rawDy = abs(dy)
         val effectiveDx = rawDx * sensitivity
-        return effectiveDx > touchSlop && rawDx > rawDy
+        return effectiveDx > touchSlop && rawDx > rawDy * 0.8f
     }
 
     fun isFlingLeft(xVelocity: Float): Boolean {
-        return xVelocity < -(minFlingVelocity * 0.25f)
+        return xVelocity < -(minFlingVelocity * 0.15f)
     }
 
     fun isFlingRight(xVelocity: Float): Boolean {
-        return xVelocity > (minFlingVelocity * 0.25f)
+        return xVelocity > (minFlingVelocity * 0.15f)
     }
 
     fun getSwipeThreshold(context: Context): Float {
         val isLandscape = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        return if (isLandscape) 0.18f else 0.40f
+        return if (isLandscape) 0.12f else 0.22f
     }
 
     fun isTouchInView(view: View?, rawX: Float, rawY: Float): Boolean {

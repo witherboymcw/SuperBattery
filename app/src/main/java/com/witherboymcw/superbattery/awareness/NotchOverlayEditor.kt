@@ -72,9 +72,19 @@ object NotchOverlayEditor {
         }
 
         val wm = activity.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val displayMetrics = activity.resources.displayMetrics
-        val screenWidth = displayMetrics.widthPixels.toFloat()
-        val screenHeight = displayMetrics.heightPixels.toFloat()
+        val screenWidth: Float
+        val screenHeight: Float
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = wm.currentWindowMetrics.bounds
+            screenWidth = bounds.width().toFloat()
+            screenHeight = bounds.height().toFloat()
+        } else {
+            val dm = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getRealMetrics(dm)
+            screenWidth = dm.widthPixels.toFloat()
+            screenHeight = dm.heightPixels.toFloat()
+        }
 
         val isLandscape = activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val rotation = activity.getDisplayRotationCompat()
@@ -372,11 +382,19 @@ object NotchOverlayEditor {
                         val dx = event.rawX - touchStartX
                         val dy = event.rawY - touchStartY
                         if (isLandscape || rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+                            if (isCenter && abs(dy) > 10f) {
+                                isCenter = false
+                                radioManual.isChecked = true
+                            }
                             if (!isCenter) {
                                 currentY = initialY + dy
                             }
                             currentX = initialX + dx
                         } else {
+                            if (isCenter && abs(dx) > 10f) {
+                                isCenter = false
+                                radioManual.isChecked = true
+                            }
                             if (!isCenter) {
                                 currentX = initialX + dx
                             }
@@ -408,9 +426,17 @@ object NotchOverlayEditor {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
                 @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
-        )
+        ).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
 
         try {
             wm.addView(overlayView, params)

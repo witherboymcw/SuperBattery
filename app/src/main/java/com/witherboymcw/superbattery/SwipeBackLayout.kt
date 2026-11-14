@@ -28,6 +28,7 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
 
     private var startX = 0f
     private var startY = 0f
+    private var dragStartX = 0f
     private var isSwiping = false
     private val gestureHelper = DrawerGestureHelper(context)
 
@@ -41,6 +42,7 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 startX = ev.rawX
                 startY = ev.rawY
+                dragStartX = ev.rawX
                 isSwiping = false
             }
             MotionEvent.ACTION_MOVE -> {
@@ -50,6 +52,7 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
                 if (!isSwiping && rawDx > 0 && gestureHelper.isHorizontalSwipe(rawDx, dy, swipeSensitivity)) {
                     if (!gestureHelper.isTouchInInteractiveChild(this, ev.rawX, ev.rawY)) {
                         isSwiping = true
+                        dragStartX = ev.rawX
                         parent?.requestDisallowInterceptTouchEvent(true)
                     }
                 }
@@ -78,6 +81,7 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 startX = ev.rawX
                 startY = ev.rawY
+                dragStartX = ev.rawX
                 isSwiping = false
                 handled = true // Need to handle DOWN to receive MOVE
             }
@@ -88,11 +92,14 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
                 if (!isSwiping && rawDx > 0 && gestureHelper.isHorizontalSwipe(rawDx, dy, swipeSensitivity)) {
                     if (!gestureHelper.isTouchInInteractiveChild(this, ev.rawX, ev.rawY)) {
                         isSwiping = true
+                        dragStartX = ev.rawX
                         parent?.requestDisallowInterceptTouchEvent(true)
                     }
                 }
                 if (isSwiping) {
-                    val clampedDx = (rawDx * swipeSensitivity).coerceAtLeast(0f)
+                    val dragDx = ev.rawX - dragStartX
+                    val rawClampedDx = if (swipeDirection == SWIPE_DIRECTION_LEFT) -dragDx else dragDx
+                    val clampedDx = (rawClampedDx * swipeSensitivity).coerceAtLeast(0f)
                     val signedDx = if (swipeDirection == SWIPE_DIRECTION_LEFT) -clampedDx else clampedDx
                     swipeListener?.onSwipeProgress(signedDx)
                     handled = true
@@ -100,9 +107,9 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (isSwiping) {
-                    val dx = ev.rawX - startX
-                    val rawDx = if (swipeDirection == SWIPE_DIRECTION_LEFT) -dx else dx
-                    val clampedDx = (rawDx * swipeSensitivity).coerceAtLeast(0f)
+                    val dragDx = ev.rawX - dragStartX
+                    val rawClampedDx = if (swipeDirection == SWIPE_DIRECTION_LEFT) -dragDx else dragDx
+                    val clampedDx = (rawClampedDx * swipeSensitivity).coerceAtLeast(0f)
                     val widthVal = width.toFloat().takeIf { it > 0 } ?: 1080f
                     val threshold = gestureHelper.getSwipeThreshold(context)
 

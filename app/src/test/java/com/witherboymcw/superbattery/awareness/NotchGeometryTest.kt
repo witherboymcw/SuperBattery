@@ -281,6 +281,41 @@ class NotchGeometryTest {
     }
 
     @Test
+    fun testComputeHomeHeaderShift_CenterPosition_Near35PercentBoundary_NoException() {
+        val totalWidth = 1080f
+        // cX near 35% boundary (0.35 * 1080 = 378f), cutoutLeft = 306f
+        val cutoutInfo = NotchGeometry.CutoutInfo(NotchGeometry.CutoutPosition.CENTER, rectLeft = 306f, rectRight = 450f)
+
+        val leftControlsWidth = 300f
+        val settingsButtonWidth = 50f
+        val titleWidth = 200f
+
+        val defaultLeftControlsX = 16f
+        val defaultSettingsX = 320f
+        val defaultTitleCenterX = 540f
+
+        // cutoutLeft (306f) - groupWidth (354f) = -48f < margin (16f)
+        val result = NotchGeometry.computeHeaderShift(
+            headerType = NotchGeometry.HeaderType.HOME,
+            totalWidth = totalWidth,
+            cutoutInfo = cutoutInfo,
+            leftControlsWidth = leftControlsWidth,
+            settingsButtonWidth = settingsButtonWidth,
+            gap = gap,
+            titleWidth = titleWidth,
+            defaultLeftControlsX = defaultLeftControlsX,
+            defaultSettingsX = defaultSettingsX,
+            defaultTitleCenterX = defaultTitleCenterX,
+            margin = margin,
+            clearance = clearance
+        )
+
+        assertNotNull(result)
+        val expectedLeftTransX = margin - defaultLeftControlsX
+        assertEquals(expectedLeftTransX, result.leftControlsTranslationX, 0.01f)
+    }
+
+    @Test
     fun testNotchGeometryConstantsAndEnums() {
         assertEquals(0, NotchGeometry.MODE_SYSTEM)
         assertEquals(1, NotchGeometry.MODE_FORCE)
