@@ -46,7 +46,7 @@
     <string name="ram_title">WAM</string>
 
 
-    <string name="temperature_title">Thermal cook level</string>
+    <string name="temperature_title">Cookedness</string>
     <string name="temp_status_nominal">Chillin\'</string>
     <string name="temp_status_hot">Searin\'</string>
     <string name="temp_status_critical">Fried</string>

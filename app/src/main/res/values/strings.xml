@@ -43,7 +43,7 @@
     <string name="ram_title">RAM</string>
     <string name="current_voltage_format" translatable="false">%1$d mV</string>
     <string name="current_ram_format" translatable="false">%1$d%%</string>
-    <string name="temperature_title">Battery temperature</string>
+    <string name="temperature_title">Temperature</string>
     <string name="temp_status_nominal">Nominal</string>
     <string name="temp_status_hot">Hot</string>
     <string name="temp_status_critical">Critical</string>

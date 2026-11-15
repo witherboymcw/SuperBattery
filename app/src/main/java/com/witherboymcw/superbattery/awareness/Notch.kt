@@ -4,10 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
-import android.util.TypedValue
-import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -43,16 +40,11 @@ object NotchAwareness {
     const val MIN_NOTCH_PILL_WIDTH = NotchGeometry.MIN_NOTCH_PILL_WIDTH
     const val MAX_NOTCH_PILL_WIDTH = NotchGeometry.MAX_NOTCH_PILL_WIDTH
 
-    private val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
     private val notchPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         color = Color.BLACK
     }
-    private val maskPath = Path()
     private val sharedTempRect = RectF()
-    private val sharedTypedValue = TypedValue()
 
     fun getNotchRect(context: Context, hostView: View, tempRect: RectF = RectF()): RectF? {
         return NotchGeometry.getNotchRect(context, hostView, tempRect)
@@ -169,33 +161,9 @@ object NotchAwareness {
         tvHotspotTitle.translationX = shift.titleTranslationX
     }
 
-    fun drawRadialMask(canvas: Canvas, width: Int, height: Int, hostView: View) {
+    fun drawNotchOverlay(canvas: Canvas, hostView: View) {
         val context = hostView.context
-        val rotation = hostView.getDisplayRotationCompat()
-
         val rect = getNotchRect(context, hostView, sharedTempRect) ?: return
-
-        if (rotation != Surface.ROTATION_0 && rotation != Surface.ROTATION_180) {
-            val clearanceDp = hostView.dp(12f)
-            val maxEdgeDistPx = hostView.dp(48f)
-            val distLeft = rect.left
-            val distRight = width - rect.right
-            val distanceFromEdge = if (rotation == Surface.ROTATION_270) distRight else distLeft
-            if (distanceFromEdge <= maxEdgeDistPx) {
-                val isRight = rotation == Surface.ROTATION_270 || rect.centerX() > width / 2f
-                if (isRight) {
-                    if (context.theme.resolveAttribute(android.R.attr.colorBackground, sharedTypedValue, true)) {
-                        maskPaint.color = sharedTypedValue.data
-                    } else {
-                        maskPaint.color = Color.BLACK
-                    }
-                    val circleRadius = maxOf(rect.width(), rect.height()) / 2f + clearanceDp
-                    maskPath.reset()
-                    maskPath.addCircle(rect.centerX(), rect.centerY(), circleRadius, Path.Direction.CW)
-                    canvas.drawPath(maskPath, maskPaint)
-                }
-            }
-        }
 
         if (com.witherboymcw.superbattery.settings.AppPreferences.getNotchCustomMode(context, MODE_SYSTEM) == MODE_FORCE) {
             val cornerRadius = minOf(rect.width(), rect.height()) / 2f

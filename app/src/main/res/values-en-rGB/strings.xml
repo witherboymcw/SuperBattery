@@ -35,7 +35,7 @@
     <string name="voltage_title">Voltage</string>
     <string name="charging_true">Charging</string>
     <string name="ram_title">RAM</string>
-    <string name="temperature_title">Battery temperature</string>
+    <string name="temperature_title">Temperature</string>
     <string name="temp_status_nominal">Nominal</string>
     <string name="temp_status_hot">Hot</string>
     <string name="temp_status_critical">Critical</string>

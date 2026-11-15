@@ -10,48 +10,19 @@
     android:focusable="true"
     android:visibility="gone">
 
-    <ScrollView
-        android:id="@+id/hotspot_scroll_view"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/hotspot_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipChildren="false"
         android:clipToPadding="false"
         android:focusable="true"
         android:focusableInTouchMode="true"
+        android:nestedScrollingEnabled="true"
         android:paddingStart="16dp"
         android:paddingTop="16dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="24dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clipChildren="false"
-            android:orientation="vertical">
-
-            <!-- Hotspot Title inside ScrollView so it scrolls away -->
-            <TextView
-                android:id="@+id/tv_hotspot_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"
-                android:gravity="center"
-                android:text="@string/hotspot_title"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textSize="26sp"
-                android:textStyle="bold" />
-
-            <!-- Container for 20 Hotspot Device Cards -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/hotspot_recycler_view"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clipChildren="false"
-                android:nestedScrollingEnabled="false" />
-        </LinearLayout>
-    </ScrollView>
+        android:paddingBottom="24dp" />
 
     <!-- Persistent Circular Back Button (pointing right to return to main) -->
     <com.google.android.material.card.MaterialCardView

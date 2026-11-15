@@ -1,7 +1,6 @@
 package com.witherboymcw.superbattery.screens.hotspot
 
 import android.content.Context
-import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
@@ -13,8 +12,10 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.OledThemeAllInOne
 import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.awareness.NotchAwareness
 
 class HotspotClientDiffCallback : DiffUtil.ItemCallback<HotspotClient>() {
     override fun areItemsTheSame(oldItem: HotspotClient, newItem: HotspotClient): Boolean {
@@ -29,18 +30,33 @@ class HotspotClientDiffCallback : DiffUtil.ItemCallback<HotspotClient>() {
 /**
  * Shared RecyclerView.Adapter backed by DiffUtil for rendering hotspot client devices
  * across both Portrait and Landscape master-detail views.
+ *
+ * In Portrait / Single-Column mode, a header item is prepended at index 0 to contain
+ * [R.id.tv_hotspot_title] so it scrolls away naturally with the list.
  */
 class HotspotClientAdapter(
     private val isLandscape: Boolean,
     private val onClientClick: (client: HotspotClient) -> Unit,
     private val onStatusChanged: (client: HotspotClient, isDenied: Boolean) -> Unit,
     private val onAliasChanged: (client: HotspotClient, newAlias: String?) -> Unit
-) : ListAdapter<HotspotClient, HotspotClientAdapter.ViewHolder>(HotspotClientDiffCallback()) {
+) : ListAdapter<HotspotClient, RecyclerView.ViewHolder>(HotspotClientDiffCallback()) {
 
     var selectedMac: String? = null
     private val expandedMacs = mutableSetOf<String>()
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    val hasHeader: Boolean
+        get() = !isLandscape
+
+    companion object {
+        const val VIEW_TYPE_HEADER = 0
+        const val VIEW_TYPE_CLIENT = 1
+    }
+
+    class HeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvTitle: TextView = itemView.findViewById(R.id.tv_hotspot_title)
+    }
+
+    class ClientViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val headerView: View = itemView.findViewById(R.id.header_hotspot_device)
         val dropdownView: View = itemView.findViewById(R.id.dropdown_hotspot_device)
         val tvName: TextView = itemView.findViewById(R.id.tv_device_name)
@@ -61,79 +77,102 @@ class HotspotClientAdapter(
         var textWatcher: TextWatcher? = null
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.card_hotspot_device, parent, false)
-        OledThemeAllInOne.applyCardTheme(view, parent.context)
-        return ViewHolder(view)
+    override fun getItemViewType(position: Int): Int {
+        return if (hasHeader && position == 0) VIEW_TYPE_HEADER else VIEW_TYPE_CLIENT
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val client = getItem(position)
-        val context = holder.itemView.context
+    override fun getItemCount(): Int {
+        val baseCount = super.getItemCount()
+        return if (hasHeader) baseCount + 1 else baseCount
+    }
 
-        holder.tvMac.text = client.mac
-        holder.tvStatus.text = getLocalizedStatus(context, client)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == VIEW_TYPE_HEADER) {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.header_hotspot_title, parent, false)
+            HeaderViewHolder(view)
+        } else {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.card_hotspot_device, parent, false)
+            OledThemeAllInOne.applyCardTheme(view, parent.context)
+            ClientViewHolder(view)
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is HeaderViewHolder) {
+            (holder.itemView.context as? MainActivity)?.let { activity ->
+                holder.itemView.post { NotchAwareness.updateHotspotHeaderLayout(activity) }
+            }
+            return
+        }
+
+        val clientHolder = holder as? ClientViewHolder ?: return
+        val clientPosition = if (hasHeader) position - 1 else position
+        val client = getItem(clientPosition)
+        val context = clientHolder.itemView.context
+
+        clientHolder.tvMac.text = client.mac
+        clientHolder.tvStatus.text = getLocalizedStatus(context, client)
 
         if (isLandscape) {
-            holder.dropdownView.visibility = View.GONE
-            holder.tvName.text = client.displayName
+            clientHolder.dropdownView.visibility = View.GONE
+            clientHolder.tvName.text = client.displayName
 
-            holder.headerView.setOnClickListener {
+            clientHolder.headerView.setOnClickListener {
                 selectedMac = client.mac
                 onClientClick(client)
             }
         } else {
             val macKey = client.mac.lowercase()
             val isExpanded = expandedMacs.contains(macKey)
-            holder.dropdownView.visibility = if (isExpanded) View.VISIBLE else View.GONE
-            holder.ivArrow.rotation = if (isExpanded) 180f else 0f
-            holder.tvName.text = if (isExpanded) client.deviceName else client.displayName
+            clientHolder.dropdownView.visibility = if (isExpanded) View.VISIBLE else View.GONE
+            clientHolder.ivArrow.rotation = if (isExpanded) 180f else 0f
+            clientHolder.tvName.text = if (isExpanded) client.deviceName else client.displayName
 
-            holder.tvIp.text = context.getString(R.string.hotspot_ip_address, client.ipAddress)
-            holder.tvData.text = context.getString(R.string.hotspot_data_used, com.witherboymcw.superbattery.utils.Formatters.formatByteSize(client.totalDataBytes))
-            holder.tvTime.text = context.getString(R.string.hotspot_connected_time, com.witherboymcw.superbattery.utils.Formatters.formatConnectedTime(context, client.lastConnectedTimeMs, client.isCurrentlyOnline))
+            clientHolder.tvIp.text = context.getString(R.string.hotspot_ip_address, client.ipAddress)
+            clientHolder.tvData.text = context.getString(R.string.hotspot_data_used, com.witherboymcw.superbattery.utils.Formatters.formatByteSize(client.totalDataBytes))
+            clientHolder.tvTime.text = context.getString(R.string.hotspot_connected_time, com.witherboymcw.superbattery.utils.Formatters.formatConnectedTime(context, client.lastConnectedTimeMs, client.isCurrentlyOnline))
 
             if (client.isDenied) {
-                holder.radioDenied.isChecked = true
-                holder.radioAllowed.isChecked = false
+                clientHolder.radioDenied.isChecked = true
+                clientHolder.radioAllowed.isChecked = false
             } else {
-                holder.radioAllowed.isChecked = true
-                holder.radioDenied.isChecked = false
+                clientHolder.radioAllowed.isChecked = true
+                clientHolder.radioDenied.isChecked = false
             }
 
-            holder.radioAllowed.setOnClickListener {
+            clientHolder.radioAllowed.setOnClickListener {
                 if (client.isDenied) {
                     onStatusChanged(client, false)
                 }
             }
 
-            holder.radioDenied.setOnClickListener {
+            clientHolder.radioDenied.setOnClickListener {
                 if (!client.isDenied) {
                     onStatusChanged(client, true)
                 }
             }
 
-            holder.bindTextWatcher(client)
+            clientHolder.bindTextWatcher(client)
 
-            holder.headerView.setOnClickListener {
+            clientHolder.headerView.setOnClickListener {
                 val expanded = expandedMacs.contains(macKey)
                 if (expanded) {
                     expandedMacs.remove(macKey)
-                    holder.dropdownView.visibility = View.GONE
-                    holder.ivArrow.animate().rotation(0f).setDuration(200L).start()
-                    holder.tvName.text = client.displayName
+                    clientHolder.dropdownView.visibility = View.GONE
+                    clientHolder.ivArrow.animate().rotation(0f).setDuration(200L).start()
+                    clientHolder.tvName.text = client.displayName
                 } else {
                     expandedMacs.add(macKey)
-                    holder.dropdownView.visibility = View.VISIBLE
-                    holder.ivArrow.animate().rotation(180f).setDuration(200L).start()
-                    holder.tvName.text = client.deviceName
+                    clientHolder.dropdownView.visibility = View.VISIBLE
+                    clientHolder.ivArrow.animate().rotation(180f).setDuration(200L).start()
+                    clientHolder.tvName.text = client.deviceName
                 }
                 onClientClick(client)
             }
         }
     }
 
-    private fun ViewHolder.bindTextWatcher(client: HotspotClient) {
+    private fun ClientViewHolder.bindTextWatcher(client: HotspotClient) {
         textWatcher?.let { etAlias.removeTextChangedListener(it) }
         textWatcher = com.witherboymcw.superbattery.utils.Formatters.bindAliasTextWatcher(
             etAlias = etAlias,

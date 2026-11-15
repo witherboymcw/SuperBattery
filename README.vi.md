@@ -89,6 +89,7 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
 ## 📜 Bản quyền & Ghi nhận (Credits & License)
 * **Mã nguồn ứng dụng:** Phát hành theo giấy phép [MIT License](LICENSE).
 * **Thuật toán Âm lịch:** Module `VietnameseLunarCalendar.kt` sử dụng thuật toán tính Âm lịch Việt Nam của **Hồ Ngọc Đức**.
+* *(Nếu bạn thấy dự án hữu ích, có thể [Ủng hộ tác giả](donate_me.txt))*
 
 ---
 

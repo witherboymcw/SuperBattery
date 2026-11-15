@@ -6,7 +6,6 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
 import android.widget.RadioButton
-import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
@@ -16,6 +15,7 @@ import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.SwipeBackFrameLayout
 import com.witherboymcw.superbattery.awareness.FoldableAwareness
+import com.witherboymcw.superbattery.awareness.NotchAwareFrameLayout
 import com.witherboymcw.superbattery.awareness.NotchAwareness
 import com.witherboymcw.superbattery.ui.DrawerScreen
 import com.witherboymcw.superbattery.ui.Motion
@@ -96,6 +96,11 @@ internal class HotspotViewController : DrawerScreen(
 
         recyclerView?.layoutManager = LinearLayoutManager(activity)
         recyclerView?.adapter = adapter
+        recyclerView?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                (hotspotContainer as? NotchAwareFrameLayout)?.updateChildOffsets()
+            }
+        })
 
         clientsJob?.cancel()
         clientsJob = activity.lifecycleScope.launch {
@@ -119,11 +124,12 @@ internal class HotspotViewController : DrawerScreen(
             }
         }
 
-        val savedScrollY = savedInstanceState?.getInt(KEY_HOTSPOT_SCROLL_Y, -1) ?: -1
-        if (savedScrollY >= 0) {
-            val scrollView = activity.findViewById<ScrollView>(R.id.hotspot_scroll_view)
-                ?: activity.findViewById<ScrollView>(R.id.hotspot_scroll_left)
-            scrollView?.post { scrollView.scrollTo(0, savedScrollY) }
+        val savedPosition = savedInstanceState?.getInt(KEY_HOTSPOT_SCROLL_POSITION, -1) ?: -1
+        val savedOffset = savedInstanceState?.getInt(KEY_HOTSPOT_SCROLL_OFFSET, 0) ?: 0
+        if (savedPosition >= 0) {
+            recyclerView?.post {
+                (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(savedPosition, savedOffset)
+            }
         }
 
         (activity as? MainActivity)?.let { NotchAwareness.updateHotspotHeaderLayout(it) }
@@ -189,6 +195,8 @@ internal class HotspotViewController : DrawerScreen(
     }
 
     companion object {
+        const val KEY_HOTSPOT_SCROLL_POSITION = "key_hotspot_scroll_position"
+        const val KEY_HOTSPOT_SCROLL_OFFSET = "key_hotspot_scroll_offset"
         const val KEY_HOTSPOT_SCROLL_Y = "key_hotspot_scroll_y"
     }
 }

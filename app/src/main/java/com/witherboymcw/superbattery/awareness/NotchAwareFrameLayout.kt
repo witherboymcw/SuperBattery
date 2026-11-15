@@ -6,13 +6,17 @@ import android.graphics.Canvas
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.Surface
+import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.ScrollView
+import androidx.core.widget.NestedScrollView
+import androidx.recyclerview.widget.RecyclerView
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.SwipeBackFrameLayout
 import com.witherboymcw.superbattery.core.dp
 import com.witherboymcw.superbattery.core.getDisplayRotationCompat
+import java.util.WeakHashMap
 import kotlin.math.abs
 
 /**
@@ -43,6 +47,8 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         updateChildOffsets()
     }
 
+    private val attachedRecyclerViews = WeakHashMap<RecyclerView, RecyclerView.OnScrollListener>()
+
     private val tempNotchRect = RectF()
     private val tempRootLoc = IntArray(2)
     private val tempCardLoc = IntArray(2)
@@ -64,6 +70,7 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         if (viewTreeObserver.isAlive) {
             viewTreeObserver.removeOnScrollChangedListener(scrollChangeListener)
         }
+        attachedRecyclerViews.clear()
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
@@ -71,7 +78,7 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         updateChildOffsets()
     }
 
-    private fun updateChildOffsets() {
+    fun updateChildOffsets() {
         val rotation = getDisplayRotationCompat()
 
         if (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) {
@@ -110,6 +117,18 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         applyDetourToScrollChildren(this, peakX, peakY, totalHeight, tempRootLoc[1], reductionPx)
     }
 
+    private fun ensureRecyclerViewScrollListener(rv: RecyclerView) {
+        if (!attachedRecyclerViews.containsKey(rv)) {
+            val listener = object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    updateChildOffsets()
+                }
+            }
+            rv.addOnScrollListener(listener)
+            attachedRecyclerViews[rv] = listener
+        }
+    }
+
     private fun applyDetourToScrollChildren(
         viewGroup: ViewGroup,
         peakX: Float,
@@ -122,13 +141,33 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         viewGroup.clipChildren = false
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
-            if ((child.id == R.id.settings_scroll_left || child.id == R.id.hotspot_scroll_left) && child is ScrollView) {
+            if (child.id == R.id.settings_scroll_left && (child is ScrollView || child is NestedScrollView)) {
                 child.clipChildren = false
                 child.elevation = dp(10f)
                 val scrollContent = child.getChildAt(0) as? ViewGroup ?: continue
                 scrollContent.clipChildren = false
                 for (j in 0 until scrollContent.childCount) {
                     val card = scrollContent.getChildAt(j)
+                    val lp = card.layoutParams as? ViewGroup.MarginLayoutParams
+                    if (lp != null && lp.rightMargin != reductionPx) {
+                        lp.rightMargin = reductionPx
+                        card.layoutParams = lp
+                    }
+
+                    card.getLocationOnScreen(tempCardLoc)
+                    val cardCenterY = (tempCardLoc[1] - rootScreenY) + card.height / 2f
+
+                    val t = (1f - abs(cardCenterY - peakY) / halfInfluenceHeight).coerceIn(0f, 1f)
+                    val smoothT = t * t * (3f - 2f * t)
+                    card.translationX = peakX * smoothT
+                }
+            } else if (child.id == R.id.hotspot_recycler_view && child is RecyclerView) {
+                child.clipChildren = false
+                child.elevation = dp(10f)
+                ensureRecyclerViewScrollListener(child)
+                for (j in 0 until child.childCount) {
+                    val card = child.getChildAt(j)
+                    if (card.id == R.id.tv_hotspot_title || card.findViewById<View>(R.id.tv_hotspot_title) != null) continue
                     val lp = card.layoutParams as? ViewGroup.MarginLayoutParams
                     if (lp != null && lp.rightMargin != reductionPx) {
                         lp.rightMargin = reductionPx
@@ -152,11 +191,22 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
     private fun resetAllChildTranslations(viewGroup: ViewGroup) {
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
-            if (child is ScrollView) {
+            if (child is ScrollView || child is NestedScrollView) {
                 val scrollContent = child.getChildAt(0) as? ViewGroup ?: continue
                 for (j in 0 until scrollContent.childCount) {
                     val card = scrollContent.getChildAt(j)
                     if (card.id == R.id.tv_settings_title || card.id == R.id.tv_hotspot_title) continue
+                    card.translationX = 0f
+                    val lp = card.layoutParams as? ViewGroup.MarginLayoutParams
+                    if (lp != null && lp.rightMargin != 0) {
+                        lp.rightMargin = 0
+                        card.layoutParams = lp
+                    }
+                }
+            } else if (child is RecyclerView) {
+                for (j in 0 until child.childCount) {
+                    val card = child.getChildAt(j)
+                    if (card.id == R.id.tv_settings_title || card.id == R.id.tv_hotspot_title || card.findViewById<View>(R.id.tv_hotspot_title) != null) continue
                     card.translationX = 0f
                     val lp = card.layoutParams as? ViewGroup.MarginLayoutParams
                     if (lp != null && lp.rightMargin != 0) {
@@ -173,6 +223,6 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
     override fun dispatchDraw(canvas: Canvas) {
         updateChildOffsets()
         super.dispatchDraw(canvas)
-        NotchAwareness.drawRadialMask(canvas, width, height, this)
+        NotchAwareness.drawNotchOverlay(canvas, this)
     }
 }

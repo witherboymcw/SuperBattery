@@ -234,6 +234,15 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         rightScrollView?.let {
             outState.putInt(KEY_SETTINGS_SCROLL_RIGHT_Y, it.scrollY)
         }
+        val hotspotRv = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.hotspot_recycler_view)
+        val hotspotLm = hotspotRv?.layoutManager as? androidx.recyclerview.widget.LinearLayoutManager
+        if (hotspotLm != null) {
+            val firstPos = hotspotLm.findFirstVisibleItemPosition()
+            val firstChild = hotspotLm.findViewByPosition(firstPos)
+            val topOffset = firstChild?.top ?: 0
+            outState.putInt(com.witherboymcw.superbattery.screens.hotspot.HotspotViewController.KEY_HOTSPOT_SCROLL_POSITION, firstPos)
+            outState.putInt(com.witherboymcw.superbattery.screens.hotspot.HotspotViewController.KEY_HOTSPOT_SCROLL_OFFSET, topOffset)
+        }
     }
 
     override fun onResume() {

@@ -19,8 +19,8 @@
         android:orientation="horizontal">
 
         <!-- Column 1 (Left): List of Hotspot Device Cards -->
-        <ScrollView
-            android:id="@+id/hotspot_scroll_left"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/hotspot_recycler_view"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -30,18 +30,11 @@
             android:clipToPadding="false"
             android:focusable="true"
             android:focusableInTouchMode="true"
+            android:nestedScrollingEnabled="true"
             android:paddingStart="16dp"
             android:paddingTop="12dp"
             android:paddingEnd="8dp"
-            android:paddingBottom="24dp">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/hotspot_recycler_view"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clipChildren="false"
-                android:nestedScrollingEnabled="false" />
-        </ScrollView>
+            android:paddingBottom="24dp" />
 
         <!-- Column 2 (Right): Selected Device Detail Panel (Non-scrollable, spans to bottom) -->
         <LinearLayout

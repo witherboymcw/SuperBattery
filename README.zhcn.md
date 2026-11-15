@@ -88,6 +88,7 @@ _“既然已经外接了大容量定制电芯，为什么不顺便把它当作�
 ## 📜 开源协议与致谢 (Credits & License)
 * **应用程序源码：** 基于 [MIT License](LICENSE) 开源发布。
 * **农历转换算法：** `VietnameseLunarCalendar.kt` 模块采用了 **Ho Ngoc Duc（胡玉德）** 编写的越南农历转换算法。
+* *(如果您觉得本项目有用，可以[支持作者](donate_me.txt))*
 
 ---
 

@@ -162,17 +162,16 @@ object ChinAwareness {
         }
 
         // 3. Hotspot Screen
-        val singleHotspotScrollView = activity.findViewById<View>(R.id.hotspot_scroll_view)
-        if (singleHotspotScrollView != null) {
-            val p = paddingResult.singleScrollViewPadding
-            singleHotspotScrollView.setPaddingRelative(p.left, p.top, p.right, p.bottom)
-        } else {
-            val scrollLeft = activity.findViewById<View>(R.id.hotspot_scroll_left)
-            val scrollRight = activity.findViewById<View>(R.id.hotspot_scroll_right)
+        val hotspotRecyclerView = activity.findViewById<View>(R.id.hotspot_recycler_view)
+        val scrollRight = activity.findViewById<View>(R.id.hotspot_scroll_right)
+        if (scrollRight != null) {
             val pLeft = paddingResult.splitLeftScrollViewPadding
             val pRight = paddingResult.splitRightScrollViewPadding
-            scrollLeft?.setPaddingRelative(pLeft.left, pLeft.top, pLeft.right, pLeft.bottom)
-            scrollRight?.setPaddingRelative(pRight.left, pRight.top, pRight.right, pRight.bottom)
+            hotspotRecyclerView?.setPaddingRelative(pLeft.left, pLeft.top, pLeft.right, pLeft.bottom)
+            scrollRight.setPaddingRelative(pRight.left, pRight.top, pRight.right, pRight.bottom)
+        } else {
+            val p = paddingResult.singleScrollViewPadding
+            hotspotRecyclerView?.setPaddingRelative(p.left, p.top, p.right, p.bottom)
         }
     }
 
