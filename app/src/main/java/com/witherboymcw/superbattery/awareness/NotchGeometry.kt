@@ -60,6 +60,22 @@ object NotchGeometry {
         val titleTranslationX: Float = 0f
     )
 
+    data class HeaderMetrics(
+        val headerType: HeaderType,
+        val totalWidth: Float,
+        val cutoutInfo: CutoutInfo,
+        val leftControlsWidth: Float = 0f,
+        val settingsButtonWidth: Float = 0f,
+        val gap: Float = 0f,
+        val titleWidth: Float = 0f,
+        val defaultLeftControlsX: Float = 0f,
+        val defaultSettingsX: Float = 0f,
+        val defaultTitleCenterX: Float = 0f,
+        val defaultBackLeft: Float = 0f,
+        val margin: Float = 16f,
+        val clearance: Float = 12f
+    )
+
     fun getNotchRect(context: Context, hostView: View, tempRect: RectF = RectF()): RectF? {
         val notchMode = AppPreferences.getNotchCustomMode(context, MODE_SYSTEM)
         if (notchMode == MODE_IGNORE) return null
@@ -193,153 +209,154 @@ object NotchGeometry {
         margin: Float = 16f,
         clearance: Float = 12f
     ): HeaderShiftResult {
-        val W = totalWidth
-        val cutoutLeft = cutoutInfo.rectLeft
-        val cutoutRight = cutoutInfo.rectRight
+        return computeHeaderShift(HeaderMetrics(
+            headerType, totalWidth, cutoutInfo, leftControlsWidth, settingsButtonWidth, gap,
+            titleWidth, defaultLeftControlsX, defaultSettingsX, defaultTitleCenterX, defaultBackLeft, margin, clearance
+        ))
+    }
 
-        return when (headerType) {
-            HeaderType.HOME -> {
-                val groupWidth = leftControlsWidth + gap + settingsButtonWidth
-                when (cutoutInfo.position) {
-                    CutoutPosition.NONE -> {
-                        val groupTargetLeft = margin
-                        val leftControlsTransX = groupTargetLeft - defaultLeftControlsX
-                        val settingsTransX = (groupTargetLeft + leftControlsWidth + gap) - defaultSettingsX
+    fun computeHeaderShift(metrics: HeaderMetrics): HeaderShiftResult {
+        return when (metrics.headerType) {
+            HeaderType.HOME -> computeHomeHeaderShift(metrics)
+            HeaderType.SETTINGS -> computeSettingsHeaderShift(metrics)
+            HeaderType.HOTSPOT -> computeHotspotHeaderShift(metrics)
+        }
+    }
 
-                        val controlsRight = groupTargetLeft + groupWidth
-                        val leftBoundary = controlsRight + clearance
-                        val rightBoundary = W - margin
+    private fun centerTitle(leftBound: Float, rightBound: Float, titleWidth: Float): Float {
+        return if (leftBound + titleWidth <= rightBound) {
+            (leftBound + rightBound) / 2f
+        } else {
+            leftBound + titleWidth / 2f
+        }
+    }
 
-                        val targetTitleCenterX = if (leftBoundary + titleWidth <= rightBoundary) {
-                            (leftBoundary + rightBoundary) / 2f
-                        } else {
-                            leftBoundary + titleWidth / 2f
-                        }
-                        HeaderShiftResult(
-                            leftControlsTranslationX = leftControlsTransX,
-                            rightControlsTranslationX = settingsTransX,
-                            titleTranslationX = targetTitleCenterX - defaultTitleCenterX
-                        )
-                    }
-                    CutoutPosition.CENTER -> {
-                        val maxGroupLeft = (cutoutLeft - groupWidth).coerceAtLeast(margin)
-                        val groupTargetLeft = ((cutoutLeft - clearance) - groupWidth).coerceIn(margin, maxGroupLeft)
-                        val leftControlsTransX = groupTargetLeft - defaultLeftControlsX
-                        val settingsTransX = (groupTargetLeft + leftControlsWidth + gap) - defaultSettingsX
+    private fun computeHomeHeaderShift(m: HeaderMetrics): HeaderShiftResult {
+        val W = m.totalWidth
+        val cutoutLeft = m.cutoutInfo.rectLeft
+        val cutoutRight = m.cutoutInfo.rectRight
+        val groupWidth = m.leftControlsWidth + m.gap + m.settingsButtonWidth
 
-                        val targetTitleCenterX = W * 0.75f
-                        HeaderShiftResult(
-                            leftControlsTranslationX = leftControlsTransX,
-                            rightControlsTranslationX = settingsTransX,
-                            titleTranslationX = targetTitleCenterX - defaultTitleCenterX
-                        )
-                    }
-                    CutoutPosition.TOP_LEFT -> {
-                        val leftBoundary = (cutoutRight + margin).coerceAtLeast(0f)
-                        val rightBoundary = W / 2f - clearance
-                        val targetTitleCenterX = if (leftBoundary < rightBoundary) {
-                            (leftBoundary + rightBoundary) / 2f
-                        } else {
-                            leftBoundary + titleWidth / 2f
-                        }
+        return when (m.cutoutInfo.position) {
+            CutoutPosition.NONE -> {
+                val groupTargetLeft = m.margin
+                val leftControlsTransX = groupTargetLeft - m.defaultLeftControlsX
+                val settingsTransX = (groupTargetLeft + m.leftControlsWidth + m.gap) - m.defaultSettingsX
 
-                        val groupTargetLeft = (W / 2f) + (((W / 2f) - groupWidth) / 2f)
-                        val minGroupLeft = W / 2f + gap
-                        val maxGroupLeft = (W - margin - groupWidth).coerceAtLeast(minGroupLeft)
-                        val clampedGroupLeft = groupTargetLeft.coerceIn(minGroupLeft, maxGroupLeft)
+                val controlsRight = groupTargetLeft + groupWidth
+                val leftBoundary = controlsRight + m.clearance
+                val rightBoundary = W - m.margin
 
-                        val leftControlsTransX = clampedGroupLeft - defaultLeftControlsX
-                        val settingsTransX = (clampedGroupLeft + leftControlsWidth + gap) - defaultSettingsX
-
-                        HeaderShiftResult(
-                            leftControlsTranslationX = leftControlsTransX,
-                            rightControlsTranslationX = settingsTransX,
-                            titleTranslationX = targetTitleCenterX - defaultTitleCenterX
-                        )
-                    }
-                    CutoutPosition.TOP_RIGHT -> {
-                        val clampedGroupLeft = margin
-                        val leftControlsTransX = clampedGroupLeft - defaultLeftControlsX
-                        val settingsTransX = (clampedGroupLeft + leftControlsWidth + gap) - defaultSettingsX
-
-                        val controlsRight = clampedGroupLeft + groupWidth
-                        val leftBoundary = controlsRight + clearance
-                        val rightBoundary = (cutoutLeft - clearance).coerceAtMost(W)
-
-                        val targetTitleCenterX = if (leftBoundary < rightBoundary) {
-                            (leftBoundary + rightBoundary) / 2f
-                        } else {
-                            leftBoundary + titleWidth / 2f
-                        }
-                        HeaderShiftResult(
-                            leftControlsTranslationX = leftControlsTransX,
-                            rightControlsTranslationX = settingsTransX,
-                            titleTranslationX = targetTitleCenterX - defaultTitleCenterX
-                        )
-                    }
-                }
+                val targetTitleCenterX = centerTitle(leftBoundary, rightBoundary, m.titleWidth)
+                HeaderShiftResult(
+                    leftControlsTranslationX = leftControlsTransX,
+                    rightControlsTranslationX = settingsTransX,
+                    titleTranslationX = targetTitleCenterX - m.defaultTitleCenterX
+                )
             }
-            HeaderType.SETTINGS -> {
-                when (cutoutInfo.position) {
-                    CutoutPosition.NONE, CutoutPosition.TOP_RIGHT -> {
-                        HeaderShiftResult(0f, 0f, 0f)
-                    }
-                    CutoutPosition.CENTER -> {
-                        val targetTitleCenterX = W * 0.75f
-                        HeaderShiftResult(
-                            leftControlsTranslationX = 0f,
-                            titleTranslationX = targetTitleCenterX - defaultTitleCenterX
-                        )
-                    }
-                    CutoutPosition.TOP_LEFT -> {
-                        val targetBackLeft = (cutoutRight + margin).coerceAtLeast(margin)
-                        val backTransX = targetBackLeft - defaultBackLeft
+            CutoutPosition.CENTER -> {
+                val maxGroupLeft = (cutoutLeft - groupWidth).coerceAtLeast(m.margin)
+                val groupTargetLeft = ((cutoutLeft - m.clearance) - groupWidth).coerceIn(m.margin, maxGroupLeft)
+                val leftControlsTransX = groupTargetLeft - m.defaultLeftControlsX
+                val settingsTransX = (groupTargetLeft + m.leftControlsWidth + m.gap) - m.defaultSettingsX
 
-                        val shiftedBackRight = targetBackLeft + leftControlsWidth
-                        val leftBoundary = shiftedBackRight + clearance
-                        val rightBoundary = W - margin
-                        val targetTitleCenterX = if (leftBoundary + titleWidth <= rightBoundary) {
-                            (leftBoundary + rightBoundary) / 2f
-                        } else {
-                            leftBoundary + titleWidth / 2f
-                        }
-                        HeaderShiftResult(
-                            leftControlsTranslationX = backTransX,
-                            titleTranslationX = targetTitleCenterX - defaultTitleCenterX
-                        )
-                    }
-                }
+                val targetTitleCenterX = W * 0.75f
+                HeaderShiftResult(
+                    leftControlsTranslationX = leftControlsTransX,
+                    rightControlsTranslationX = settingsTransX,
+                    titleTranslationX = targetTitleCenterX - m.defaultTitleCenterX
+                )
             }
-            HeaderType.HOTSPOT -> {
-                when (cutoutInfo.position) {
-                    CutoutPosition.NONE, CutoutPosition.TOP_LEFT -> {
-                        HeaderShiftResult(0f, 0f, 0f)
-                    }
-                    CutoutPosition.CENTER -> {
-                        val targetTitleCenterX = W * 0.25f
-                        HeaderShiftResult(
-                            rightControlsTranslationX = 0f,
-                            titleTranslationX = targetTitleCenterX - defaultTitleCenterX
-                        )
-                    }
-                    CutoutPosition.TOP_RIGHT -> {
-                        val targetBackRight = (cutoutLeft - margin).coerceAtMost(W - margin)
-                        val targetBackLeft = targetBackRight - leftControlsWidth
-                        val backTransX = targetBackLeft - defaultBackLeft
+            CutoutPosition.TOP_LEFT -> {
+                val leftBoundary = (cutoutRight + m.margin).coerceAtLeast(0f)
+                val rightBoundary = W / 2f - m.clearance
+                val targetTitleCenterX = centerTitle(leftBoundary, rightBoundary, m.titleWidth)
 
-                        val leftBoundary = margin
-                        val rightBoundary = targetBackLeft - clearance
-                        val targetTitleCenterX = if (leftBoundary + titleWidth <= rightBoundary) {
-                            (leftBoundary + rightBoundary) / 2f
-                        } else {
-                            leftBoundary + titleWidth / 2f
-                        }
-                        HeaderShiftResult(
-                            rightControlsTranslationX = backTransX,
-                            titleTranslationX = targetTitleCenterX - defaultTitleCenterX
-                        )
-                    }
-                }
+                val groupTargetLeft = (W / 2f) + (((W / 2f) - groupWidth) / 2f)
+                val minGroupLeft = W / 2f + m.gap
+                val maxGroupLeft = (W - m.margin - groupWidth).coerceAtLeast(minGroupLeft)
+                val clampedGroupLeft = groupTargetLeft.coerceIn(minGroupLeft, maxGroupLeft)
+
+                val leftControlsTransX = clampedGroupLeft - m.defaultLeftControlsX
+                val settingsTransX = (clampedGroupLeft + m.leftControlsWidth + m.gap) - m.defaultSettingsX
+
+                HeaderShiftResult(
+                    leftControlsTranslationX = leftControlsTransX,
+                    rightControlsTranslationX = settingsTransX,
+                    titleTranslationX = targetTitleCenterX - m.defaultTitleCenterX
+                )
+            }
+            CutoutPosition.TOP_RIGHT -> {
+                val clampedGroupLeft = m.margin
+                val leftControlsTransX = clampedGroupLeft - m.defaultLeftControlsX
+                val settingsTransX = (clampedGroupLeft + m.leftControlsWidth + m.gap) - m.defaultSettingsX
+
+                val controlsRight = clampedGroupLeft + groupWidth
+                val leftBoundary = controlsRight + m.clearance
+                val rightBoundary = (cutoutLeft - m.clearance).coerceAtMost(W)
+
+                val targetTitleCenterX = centerTitle(leftBoundary, rightBoundary, m.titleWidth)
+                HeaderShiftResult(
+                    leftControlsTranslationX = leftControlsTransX,
+                    rightControlsTranslationX = settingsTransX,
+                    titleTranslationX = targetTitleCenterX - m.defaultTitleCenterX
+                )
+            }
+        }
+    }
+
+    private fun computeSettingsHeaderShift(m: HeaderMetrics): HeaderShiftResult {
+        return when (m.cutoutInfo.position) {
+            CutoutPosition.NONE, CutoutPosition.TOP_RIGHT -> {
+                HeaderShiftResult(0f, 0f, 0f)
+            }
+            CutoutPosition.CENTER -> {
+                val targetTitleCenterX = m.totalWidth * 0.75f
+                HeaderShiftResult(
+                    leftControlsTranslationX = 0f,
+                    titleTranslationX = targetTitleCenterX - m.defaultTitleCenterX
+                )
+            }
+            CutoutPosition.TOP_LEFT -> {
+                val targetBackLeft = (m.cutoutInfo.rectRight + m.margin).coerceAtLeast(m.margin)
+                val backTransX = targetBackLeft - m.defaultBackLeft
+
+                val shiftedBackRight = targetBackLeft + m.leftControlsWidth
+                val leftBoundary = shiftedBackRight + m.clearance
+                val rightBoundary = m.totalWidth - m.margin
+                val targetTitleCenterX = centerTitle(leftBoundary, rightBoundary, m.titleWidth)
+                HeaderShiftResult(
+                    leftControlsTranslationX = backTransX,
+                    titleTranslationX = targetTitleCenterX - m.defaultTitleCenterX
+                )
+            }
+        }
+    }
+
+    private fun computeHotspotHeaderShift(m: HeaderMetrics): HeaderShiftResult {
+        return when (m.cutoutInfo.position) {
+            CutoutPosition.NONE, CutoutPosition.TOP_LEFT -> {
+                HeaderShiftResult(0f, 0f, 0f)
+            }
+            CutoutPosition.CENTER -> {
+                val targetTitleCenterX = m.totalWidth * 0.25f
+                HeaderShiftResult(
+                    rightControlsTranslationX = 0f,
+                    titleTranslationX = targetTitleCenterX - m.defaultTitleCenterX
+                )
+            }
+            CutoutPosition.TOP_RIGHT -> {
+                val targetBackRight = (m.cutoutInfo.rectLeft - m.margin).coerceAtMost(m.totalWidth - m.margin)
+                val targetBackLeft = targetBackRight - m.leftControlsWidth
+                val backTransX = targetBackLeft - m.defaultBackLeft
+
+                val leftBoundary = m.margin
+                val rightBoundary = targetBackLeft - m.clearance
+                val targetTitleCenterX = centerTitle(leftBoundary, rightBoundary, m.titleWidth)
+                HeaderShiftResult(
+                    rightControlsTranslationX = backTransX,
+                    titleTranslationX = targetTitleCenterX - m.defaultTitleCenterX
+                )
             }
         }
     }

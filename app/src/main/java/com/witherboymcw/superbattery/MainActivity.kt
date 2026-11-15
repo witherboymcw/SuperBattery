@@ -374,6 +374,7 @@ class MainActivity : AppCompatActivity() {
         hotspotViewController.unbind()
         (findViewById<android.view.View>(R.id.settings_container) as? SwipeBackFrameLayout)?.swipeListener = null
         (findViewById<android.view.View>(R.id.hotspot_container) as? SwipeBackFrameLayout)?.swipeListener = null
+        com.witherboymcw.superbattery.awareness.NotchAwareness.dismissNotchPositionOverlay()
         super.onDestroy()
     }
 
