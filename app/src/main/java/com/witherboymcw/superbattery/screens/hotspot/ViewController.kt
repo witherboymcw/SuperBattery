@@ -147,8 +147,8 @@ internal class HotspotViewController : DrawerScreen(
             detailCardTitle?.text = client.deviceName
             detailCardMac?.text = client.mac
             detailIp?.text = getString(R.string.hotspot_ip_address, client.ipAddress)
-            detailData?.text = getString(R.string.hotspot_data_used, formatByteSize(client.totalDataBytes))
-            detailTime?.text = getString(R.string.hotspot_connected_time, formatConnectedTime(client.lastConnectedTimeMs, client.isCurrentlyOnline))
+            detailData?.text = getString(R.string.hotspot_data_used, com.witherboymcw.superbattery.utils.Formatters.formatByteSize(client.totalDataBytes))
+            detailTime?.text = getString(R.string.hotspot_connected_time, com.witherboymcw.superbattery.utils.Formatters.formatConnectedTime(activity, client.lastConnectedTimeMs, client.isCurrentlyOnline))
 
             if (client.isDenied) {
                 detailRadioDenied?.isChecked = true
@@ -173,57 +173,15 @@ internal class HotspotViewController : DrawerScreen(
             // Remove previous TextWatcher before attaching a new one
             activeDetailTextWatcher?.let { detailEtAlias?.removeTextChangedListener(it) }
 
-            detailEtAlias?.setText(client.customAlias ?: client.deviceName)
-            detailBtnRemoveAlias?.visibility = if (client.customAlias != null) View.VISIBLE else View.GONE
-
-            var isUpdatingText = false
-            val newWatcher = object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    if (isUpdatingText) return
-                    val inputStr = s?.toString()?.trim() ?: ""
-                    val newAlias = if (inputStr.isNotBlank() && inputStr != client.deviceName) inputStr else null
-                    if (client.customAlias != newAlias) {
-                        HotspotManager.updateClientAlias(activity, client.mac, newAlias)
-                        detailBtnRemoveAlias?.visibility = if (newAlias != null) View.VISIBLE else View.GONE
-                    }
-                }
-                override fun afterTextChanged(s: Editable?) {}
+            if (detailEtAlias != null && detailBtnRemoveAlias != null) {
+                activeDetailTextWatcher = com.witherboymcw.superbattery.utils.Formatters.bindAliasTextWatcher(
+                    etAlias = detailEtAlias,
+                    btnRemoveAlias = detailBtnRemoveAlias,
+                    deviceName = client.deviceName,
+                    currentAlias = client.customAlias,
+                    onAliasChanged = { newAlias -> HotspotManager.updateClientAlias(activity, client.mac, newAlias) }
+                )
             }
-            activeDetailTextWatcher = newWatcher
-            detailEtAlias?.addTextChangedListener(newWatcher)
-
-            detailBtnRemoveAlias?.setOnClickListener {
-                isUpdatingText = true
-                detailEtAlias?.setText(client.deviceName)
-                isUpdatingText = false
-                detailBtnRemoveAlias?.visibility = View.GONE
-                HotspotManager.updateClientAlias(activity, client.mac, null)
-            }
-        }
-    }
-
-    private fun formatByteSize(bytes: Long): String {
-        if (bytes <= 0L) return "0 MB"
-        val kb = bytes / 1024f
-        val mb = kb / 1024f
-        val gb = mb / 1024f
-        return when {
-            gb >= 1.0f -> String.format(Locale.US, "%.1f GB", gb)
-            mb >= 1.0f -> String.format(Locale.US, "%.1f MB", mb)
-            else -> String.format(Locale.US, "%.1f KB", kb)
-        }
-    }
-
-    private fun formatConnectedTime(timeMs: Long, isOnline: Boolean): String {
-        if (timeMs <= 0L) return "Offline"
-        if (isOnline) {
-            val diffMinutes = ((System.currentTimeMillis() - timeMs) / 60_000L).coerceAtLeast(1)
-            val hours = diffMinutes / 60
-            val mins = diffMinutes % 60
-            return if (hours > 0) "${hours}h ${mins}m" else "${mins}m"
-        } else {
-            return "Offline"
         }
     }
 

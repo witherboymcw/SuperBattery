@@ -189,39 +189,37 @@ class HistoryGraphView @JvmOverloads constructor(
             }
         }
 
+        val secondsPerWindow = TIME_WINDOW_MS / 1_000L
+        val windowStart = nowMs - TIME_WINDOW_MS
+        val plotHeight = bottom - top
+
+        drawGrid(canvas, left, top, right, bottom, density, secondsPerWindow, plotWidth)
+        drawAxisLabels(canvas, left, top, right, bottom, density, secondsPerWindow, plotWidth)
+        drawLine(canvas, left, top, right, bottom, windowStart, plotWidth, plotHeight)
+    }
+
+    private fun drawGrid(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        density: Float,
+        secondsPerWindow: Long,
+        plotWidth: Float
+    ) {
         if (plotBgPaint.color != Color.TRANSPARENT) {
             canvas.drawRect(left, top, right, bottom, plotBgPaint)
         }
 
-        val labelX = left - 6f * density
-        val secondsPerWindow = TIME_WINDOW_MS / 1_000L
-        val windowStart = nowMs - TIME_WINDOW_MS
-
-        // Y-axis grid lines and labels (Right-aligned at labelX)
-        textPaint.textAlign = Paint.Align.RIGHT
+        // Y-axis grid lines
         for (i in 0..4) {
             val fraction = i / 4f
             val y = top + (bottom - top) * fraction
             canvas.drawLine(left, y, right, y, gridPaint)
-            if (!hideYAxisLabels && i > 0 && i < 4) {
-                val baseline = y - (fontMetrics.ascent + fontMetrics.descent) / 2f
-                canvas.drawText(yLabelTexts[i], labelX, baseline, textPaint)
-            }
         }
-        if (!hideYAxisLabels) {
-            val maxLabelBaseline = top - (fontMetrics.ascent + fontMetrics.descent) / 2f
-            val minLabelBaseline = bottom - (fontMetrics.ascent + fontMetrics.descent) / 2f
-            canvas.drawText(yLabelTexts[0], labelX, maxLabelBaseline, textPaint)
-            if (!suppressMinYLabel) {
-                canvas.drawText(yLabelTexts[4], labelX, minLabelBaseline, textPaint)
-            }
-        }
-        textPaint.textAlign = Paint.Align.LEFT
 
-        // X-axis ruler ticks and labels (every 20s)
-        val timeLabelBaseline = height - paddingBottom - fontMetrics.descent
-        val plotHeight = bottom - top
-
+        // X-axis ruler ticks and grid lines
         var secondsAgo = 0L
         while (secondsAgo <= secondsPerWindow) {
             val x = right - (secondsAgo.toFloat() / secondsPerWindow) * plotWidth
@@ -229,22 +227,72 @@ class HistoryGraphView @JvmOverloads constructor(
             if (isMajor) {
                 canvas.drawLine(x, top, x, bottom, majorGridPaint)
                 canvas.drawLine(x, bottom, x, bottom + 7f * density, tickPaint)
-                if (secondsAgo != 0L) {
-                    val secIdx = secondsAgo.toInt()
-                    if (secIdx in timeLabelCache.indices) {
-                        val label = timeLabelCache[secIdx]
-                        val labelW = timeLabelWidthCache[secIdx]
-                        val textLabelX = (x - labelW / 2f).coerceIn(left, right - labelW)
-                        canvas.drawText(label, textLabelX, timeLabelBaseline, textPaint)
-                    }
-                }
             } else {
                 canvas.drawLine(x, bottom, x, bottom + 3f * density, tickPaint)
             }
             secondsAgo++
         }
+    }
 
-        // Visible points index window (Zero allocation)
+    private fun drawAxisLabels(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        density: Float,
+        secondsPerWindow: Long,
+        plotWidth: Float
+    ) {
+        val labelX = left - 6f * density
+
+        // Y-axis labels
+        if (!hideYAxisLabels) {
+            textPaint.textAlign = Paint.Align.RIGHT
+            for (i in 1..3) {
+                val fraction = i / 4f
+                val y = top + (bottom - top) * fraction
+                val baseline = y - (fontMetrics.ascent + fontMetrics.descent) / 2f
+                canvas.drawText(yLabelTexts[i], labelX, baseline, textPaint)
+            }
+            val maxLabelBaseline = top - (fontMetrics.ascent + fontMetrics.descent) / 2f
+            val minLabelBaseline = bottom - (fontMetrics.ascent + fontMetrics.descent) / 2f
+            canvas.drawText(yLabelTexts[0], labelX, maxLabelBaseline, textPaint)
+            if (!suppressMinYLabel) {
+                canvas.drawText(yLabelTexts[4], labelX, minLabelBaseline, textPaint)
+            }
+            textPaint.textAlign = Paint.Align.LEFT
+        }
+
+        // X-axis time labels
+        val timeLabelBaseline = height - paddingBottom - fontMetrics.descent
+        var secondsAgo = 0L
+        while (secondsAgo <= secondsPerWindow) {
+            val isMajor = secondsAgo % 20L == 0L
+            if (isMajor && secondsAgo != 0L) {
+                val x = right - (secondsAgo.toFloat() / secondsPerWindow) * plotWidth
+                val secIdx = secondsAgo.toInt()
+                if (secIdx in timeLabelCache.indices) {
+                    val label = timeLabelCache[secIdx]
+                    val labelW = timeLabelWidthCache[secIdx]
+                    val textLabelX = (x - labelW / 2f).coerceIn(left, right - labelW)
+                    canvas.drawText(label, textLabelX, timeLabelBaseline, textPaint)
+                }
+            }
+            secondsAgo++
+        }
+    }
+
+    private fun drawLine(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        windowStart: Long,
+        plotWidth: Float,
+        plotHeight: Float
+    ) {
         var startIndex = -1
         var endIndex = -1
         val numPoints = points.size

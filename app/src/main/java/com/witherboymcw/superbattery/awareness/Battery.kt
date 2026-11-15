@@ -145,13 +145,17 @@ object BatteryMath {
     ): BatteryPowerInfo? =
         com.witherboymcw.superbattery.awareness.getBatteryPowerInfo(context, isDualCell)
 
+    fun getSystemBatteryPercentage(level: Int, scale: Int): Int {
+        return if (level >= 0 && scale > 0) {
+            (level * 100f / scale).toInt()
+        } else 0
+    }
+
     fun getSystemBatteryPercentage(batteryIntent: Intent?): Int {
         if (batteryIntent == null) return 0
         val level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
         val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-        return if (level >= 0 && scale > 0) {
-            (level * 100f / scale).toInt()
-        } else 0
+        return getSystemBatteryPercentage(level, scale)
     }
 
     fun getBatteryPercentage(context: Context, batteryIntent: Intent?, voltageMv: Int): Int {
@@ -161,6 +165,18 @@ object BatteryMath {
     fun getBatteryPercentage(isSystemBattery: Boolean, batteryIntent: Intent?, voltageMv: Int): Int {
         return if (isSystemBattery) {
             getSystemBatteryPercentage(batteryIntent)
+        } else {
+            if (voltageMv > 0) calculatePercentage(voltageMv) else 0
+        }
+    }
+
+    fun getBatteryPercentage(context: Context, batteryInfo: com.witherboymcw.superbattery.BatteryInfo, voltageMv: Int): Int {
+        return getBatteryPercentage(SettingsHelper.isUseSystemBatteryCounter(context), batteryInfo.level, batteryInfo.scale, voltageMv)
+    }
+
+    fun getBatteryPercentage(isSystemBattery: Boolean, level: Int, scale: Int, voltageMv: Int): Int {
+        return if (isSystemBattery) {
+            getSystemBatteryPercentage(level, scale)
         } else {
             if (voltageMv > 0) calculatePercentage(voltageMv) else 0
         }

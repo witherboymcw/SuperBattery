@@ -7,53 +7,46 @@ import com.witherboymcw.superbattery.TempUnit
 import com.witherboymcw.superbattery.VoltageUnit
 
 /**
- * Immutable UI State representing formatted data for the main dashboard screen.
+ * Immutable UI State representing raw data for the main dashboard screen.
  */
 data class DashboardUiState(
     // Battery
     val batteryTitleRes: Int = R.string.metric_battery,
-    val batteryValueText: String = "—",
-    val batteryPercent: Int = 0,
-    val batteryColor: Int = 0,
-
-    // Voltage
+    val batteryPercent: Int? = null,
+    val voltageMv: Int = 0,
     val voltageTitleRes: Int = R.string.voltage_title,
-    val voltageCurrentText: String = "—",
-    val voltagePowerText: String = "—",
+    val hasPowerInfo: Boolean = false,
+    val powerWatts: Float = 0f,
+    val isCharging: Boolean = false,
+
+    // Voltage Graph
     val voltageSamples: Collection<HistoryGraphView.Sample> = emptyList(),
-    val minVoltage: Float = 0f,
-    val maxVoltage: Float = 0f,
-    val voltageSuffix: String = "",
-    val voltageDecimalPlaces: Int = 0,
+    val minVoltageMv: Float = 0f,
+    val maxVoltageMv: Float = 0f,
     val voltageUnit: VoltageUnit = VoltageUnit.MV,
     val isUseSystemBattery: Boolean = false,
 
     // RAM
-    val ramCurrentPercentText: String = "—",
-    val ramUsageDetailText: String = "—",
+    val usedRamMb: Long = 0L,
+    val totalRamMb: Long = 0L,
     val ramSamples: Collection<HistoryGraphView.Sample> = emptyList(),
-    val maxRam: Float = 0f,
-    val ramSuffix: String = "",
-    val ramDecimalPlaces: Int = 0,
     val ramUnit: RamUnit = RamUnit.MB,
-    val totalMb: Long = 0L,
 
     // Temperature
-    val temperatureCurrentText: String = "—",
+    val temperatureC: Float = 0f,
     val temperatureStatusRes: Int = R.string.temp_status_nominal,
     val temperatureSamples: Collection<HistoryGraphView.Sample> = emptyList(),
-    val minTemp: Float = 0f,
-    val maxTemp: Float = 0f,
-    val tempSuffix: String = "",
     val tempUnit: TempUnit = TempUnit.CELSIUS,
 
     // Network Speed
     val isNetworkSupported: Boolean = true,
-    val netTxTotalText: String = "—",
-    val netTxSpeedText: String = "—",
-    val netRxTotalText: String = "—",
-    val netRxSpeedText: String = "—",
+    val netTxTotalBytes: Long = 0L,
+    val netTxSpeedBps: Long = 0L,
+    val netRxTotalBytes: Long = 0L,
+    val netRxSpeedBps: Long = 0L,
 
     // Metadata
-    val sampleTime: Long = 0L
+    val sampleTime: Long = 0L,
+    val batteryLevel: Int = -1,
+    val batteryScale: Int = -1
 )

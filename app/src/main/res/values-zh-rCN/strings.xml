@@ -112,6 +112,7 @@
     <string name="status_connected">已连接</string>
     <string name="status_allowed">允许</string>
     <string name="status_denied">已拒绝</string>
+    <string name="status_offline">离线</string>
     <string name="hotspot_device_details">设备详情</string>
     <string name="hotspot_status_header">访问状态</string>
     <string name="hotspot_alias_header">别名</string>

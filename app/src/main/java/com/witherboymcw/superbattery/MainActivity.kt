@@ -521,7 +521,6 @@ class MainActivity : AppCompatActivity() {
         memory?.getMemoryInfo(memoryInfo)
 
         val uiState = dashboardViewModel.buildUiState(
-            context = this,
             batteryInfo = batteryInfo,
             powerInfo = powerInfo,
             networkSpeed = networkSpeed,
@@ -533,7 +532,7 @@ class MainActivity : AppCompatActivity() {
             isUseSystemBattery = SettingsHelper.isUseSystemBatteryCounter(this)
         )
 
-        dashboardRenderer.renderDashboardUiState(uiState, batteryInfo.rawIntent)
+        dashboardRenderer.renderDashboardUiState(uiState)
     }
 
     internal fun applyThickChinPadding(overrideLevel: Int? = thickChinOverrideLevel) {

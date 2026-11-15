@@ -1,15 +1,14 @@
 package com.witherboymcw.superbattery.templates
 
-import android.graphics.Color
 import com.witherboymcw.superbattery.R
 
 /**
  * Centralized palette and threshold state resolvers for battery, voltage, RAM, and temperature metrics.
  */
 object MetricColors {
-    val COLOR_GREEN: Int = Color.rgb(0, 230, 118)
-    val COLOR_AMBER: Int = Color.rgb(255, 179, 0)
-    val COLOR_RED: Int = Color.rgb(255, 82, 82)
+    val COLOR_GREEN: Int = 0xFF00E676.toInt()
+    val COLOR_AMBER: Int = 0xFFFFB300.toInt()
+    val COLOR_RED: Int = 0xFFFF5252.toInt()
 
     fun getBatteryColor(percent: Int): Int = when {
         percent >= 20 -> COLOR_GREEN

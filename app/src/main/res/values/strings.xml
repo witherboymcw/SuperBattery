@@ -140,6 +140,7 @@
     <string name="status_connected">Connected</string>
     <string name="status_allowed">Allowed</string>
     <string name="status_denied">Denied</string>
+    <string name="status_offline">Offline</string>
     <string name="hotspot_device_details">Device Details</string>
     <string name="hotspot_ip_address" translatable="false">IP Address: %1$s</string>
     <string name="hotspot_data_used" translatable="false">Data Used: %1$s</string>

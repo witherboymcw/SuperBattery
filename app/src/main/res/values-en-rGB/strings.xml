@@ -109,6 +109,7 @@
     <string name="status_connected">Connected</string>
     <string name="status_allowed">Allowed</string>
     <string name="status_denied">Denied</string>
+    <string name="status_offline">Offline</string>
     <string name="hotspot_device_details">Device Details</string>
     <string name="hotspot_status_header">Access Status</string>
     <string name="hotspot_alias_header">Alias</string>

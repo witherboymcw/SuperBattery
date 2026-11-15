@@ -1,18 +1,15 @@
 package com.witherboymcw.superbattery
 
 import android.app.Activity
-import android.content.Intent
 import android.content.res.Configuration
-import android.graphics.Color
 import android.media.AudioManager
-import android.view.View
 import com.witherboymcw.superbattery.awareness.BatteryMath
 import com.witherboymcw.superbattery.awareness.FoldableAwareness
-import com.witherboymcw.superbattery.awareness.getBatteryPowerInfo
 import com.witherboymcw.superbattery.screens.dashboard.DashboardUiState
 import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 import com.witherboymcw.superbattery.templates.MetricColors
 import com.witherboymcw.superbattery.templates.MetricGraphBinder
+import com.witherboymcw.superbattery.utils.Formatters
 
 class DashboardRenderer(private val views: DashboardViews, private val activity: Activity) {
 
@@ -60,57 +57,97 @@ class DashboardRenderer(private val views: DashboardViews, private val activity:
         views.btnRingerModeToggle?.alpha = 1.0f
     }
 
-    fun renderDashboardUiState(state: DashboardUiState, batteryIntent: Intent?) {
-        setBatteryCard(state.batteryTitleRes, state.batteryValueText, state.batteryPercent, state.batteryColor)
+    fun renderDashboardUiState(state: DashboardUiState) {
+        val dash = activity.getString(R.string.placeholder_dash)
+        val locale = SettingsHelper.getAppLocale(activity)
 
-        views.tvVoltageCurrent?.text = state.voltageCurrentText
-        views.tvVoltagePower?.text = state.voltagePowerText
+        // 1. Battery Card
+        val batteryValueText = state.batteryPercent?.let { "$it%" } ?: dash
+        val batteryColor = MetricColors.getBatteryColor(state.batteryPercent ?: 0)
+        setBatteryCard(state.batteryTitleRes, batteryValueText, state.batteryPercent ?: 0, batteryColor)
+
+        // 2. Voltage Section
         views.tvVoltageTitle?.setText(state.voltageTitleRes)
+        views.tvVoltageCurrent?.text = if (state.voltageMv > 0) {
+            SettingsHelper.formatVoltage(state.voltageMv, state.voltageUnit)
+        } else dash
+
+        views.tvVoltagePower?.text = if (state.hasPowerInfo) {
+            val signedWatts = if (state.isCharging) state.powerWatts else -state.powerWatts
+            val sign = if (state.isCharging && signedWatts > 0f) "+" else ""
+            String.format(locale, "%s%.1fW", sign, signedWatts)
+        } else dash
+
+        val (minVoltage, maxVoltage, voltageSuffix) = when (state.voltageUnit) {
+            VoltageUnit.MV -> Triple(state.minVoltageMv, state.maxVoltageMv, " " + activity.getString(R.string.unit_mv))
+            VoltageUnit.V -> Triple(state.minVoltageMv / 1000f, state.maxVoltageMv / 1000f, " " + activity.getString(R.string.unit_v))
+        }
+        val voltageDecimalPlaces = if (state.voltageUnit == VoltageUnit.V) 2 else 0
 
         MetricGraphBinder.updateGraph(
             graph = views.voltageGraph,
             samples = state.voltageSamples,
-            minValue = state.minVoltage,
-            maxValue = state.maxVoltage,
-            suffix = state.voltageSuffix,
+            minValue = minVoltage,
+            maxValue = maxVoltage,
+            suffix = voltageSuffix,
             currentTimeMs = state.sampleTime,
-            decimalPlaces = state.voltageDecimalPlaces,
+            decimalPlaces = voltageDecimalPlaces,
             valueTransform = { rawMv -> SettingsHelper.convertVoltage(rawMv, state.voltageUnit) },
             valueColor = { voltage ->
                 val rawMv = SettingsHelper.convertToVoltageMv(voltage, state.voltageUnit).toInt()
-                val percent = BatteryMath.getBatteryPercentage(state.isUseSystemBattery, batteryIntent, rawMv)
+                val percent = BatteryMath.getBatteryPercentage(state.isUseSystemBattery, state.batteryLevel, state.batteryScale, rawMv)
                 MetricColors.getBatteryColor(percent)
             }
         )
 
-        views.tvRamCurrent?.text = state.ramCurrentPercentText
-        views.tvRamUsageDetail?.text = state.ramUsageDetailText
+        // 3. RAM Section
+        val usedPercent = if (state.totalRamMb > 0) (state.usedRamMb * 100 / state.totalRamMb).toInt() else 0
+        views.tvRamCurrent?.text = activity.getString(R.string.current_ram_format, usedPercent)
+
+        val ramValConverted = SettingsHelper.convertRam(state.usedRamMb.toFloat(), state.ramUnit)
+        val ramSuffixStr = activity.getString(if (state.ramUnit == RamUnit.GB) R.string.unit_gb else R.string.unit_mb)
+        views.tvRamUsageDetail?.text = if (state.ramUnit == RamUnit.GB) {
+            String.format(locale, "%.1f %s", ramValConverted, ramSuffixStr)
+        } else {
+            String.format(locale, "%.0f %s", ramValConverted, ramSuffixStr)
+        }
+
+        val maxRam = SettingsHelper.convertRam(state.totalRamMb.toFloat(), state.ramUnit).coerceAtLeast(0.1f)
+        val ramSuffix = " " + activity.getString(if (state.ramUnit == RamUnit.GB) R.string.unit_gb else R.string.unit_mb)
+        val ramDecimalPlaces = if (state.ramUnit == RamUnit.GB) 1 else 0
 
         MetricGraphBinder.updateGraph(
             graph = views.ramGraph,
             samples = state.ramSamples,
             minValue = 0f,
-            maxValue = state.maxRam,
-            suffix = state.ramSuffix,
+            maxValue = maxRam,
+            suffix = ramSuffix,
             currentTimeMs = state.sampleTime,
-            decimalPlaces = state.ramDecimalPlaces,
+            decimalPlaces = ramDecimalPlaces,
             valueTransform = { rawMb -> SettingsHelper.convertRam(rawMb, state.ramUnit) },
             valueColor = { ramVal ->
                 val ramMb = SettingsHelper.convertToRamMb(ramVal, state.ramUnit)
-                val ramUsedPercent = if (state.totalMb > 0) ramMb * 100f / state.totalMb else 0f
+                val ramUsedPercent = if (state.totalRamMb > 0) ramMb * 100f / state.totalRamMb else 0f
                 MetricColors.getRamColor(ramUsedPercent)
             }
         )
 
-        views.tvTemperatureCurrent?.text = state.temperatureCurrentText
+        // 4. Temperature Section
+        views.tvTemperatureCurrent?.text = SettingsHelper.formatDashboardTemperature(activity, state.temperatureC)
         views.tvTemperatureStatus?.text = activity.getString(state.temperatureStatusRes)
+
+        val (minTemp, maxTemp, tempSuffix) = when (state.tempUnit) {
+            TempUnit.CELSIUS -> Triple(0f, 60f, activity.getString(R.string.unit_celsius))
+            TempUnit.FAHRENHEIT -> Triple(32f, 140f, activity.getString(R.string.unit_fahrenheit))
+            TempUnit.KELVIN -> Triple(273f, 333f, " " + activity.getString(R.string.unit_kelvin))
+        }
 
         MetricGraphBinder.updateGraph(
             graph = views.tempGraph,
             samples = state.temperatureSamples,
-            minValue = state.minTemp,
-            maxValue = state.maxTemp,
-            suffix = state.tempSuffix,
+            minValue = minTemp,
+            maxValue = maxTemp,
+            suffix = tempSuffix,
             currentTimeMs = state.sampleTime,
             decimalPlaces = 0,
             valueTransform = { rawC -> SettingsHelper.convertTemperature(rawC, state.tempUnit) },
@@ -120,9 +157,18 @@ class DashboardRenderer(private val views: DashboardViews, private val activity:
             }
         )
 
-        views.tvNetTxTotal?.text = state.netTxTotalText
-        views.tvNetTxSpeed?.text = state.netTxSpeedText
-        views.tvNetRxTotal?.text = state.netRxTotalText
-        views.tvNetRxSpeed?.text = state.netRxSpeedText
+        // 5. Network Speed Section
+        if (!state.isNetworkSupported) {
+            val unavail = activity.getString(R.string.network_unavailable)
+            views.tvNetTxTotal?.text = unavail
+            views.tvNetTxSpeed?.text = dash
+            views.tvNetRxTotal?.text = unavail
+            views.tvNetRxSpeed?.text = dash
+        } else {
+            views.tvNetTxTotal?.text = Formatters.formatByteSize(state.netTxTotalBytes)
+            views.tvNetTxSpeed?.text = Formatters.formatByteSize(state.netTxSpeedBps) + "/s"
+            views.tvNetRxTotal?.text = Formatters.formatByteSize(state.netRxTotalBytes)
+            views.tvNetRxSpeed?.text = Formatters.formatByteSize(state.netRxSpeedBps) + "/s"
+        }
     }
 }

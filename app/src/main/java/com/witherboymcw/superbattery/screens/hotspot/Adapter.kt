@@ -90,8 +90,8 @@ class HotspotClientAdapter(
             holder.tvName.text = if (isExpanded) client.deviceName else client.displayName
 
             holder.tvIp.text = context.getString(R.string.hotspot_ip_address, client.ipAddress)
-            holder.tvData.text = context.getString(R.string.hotspot_data_used, formatByteSize(client.totalDataBytes))
-            holder.tvTime.text = context.getString(R.string.hotspot_connected_time, formatConnectedTime(client.lastConnectedTimeMs, client.isCurrentlyOnline))
+            holder.tvData.text = context.getString(R.string.hotspot_data_used, com.witherboymcw.superbattery.utils.Formatters.formatByteSize(client.totalDataBytes))
+            holder.tvTime.text = context.getString(R.string.hotspot_connected_time, com.witherboymcw.superbattery.utils.Formatters.formatConnectedTime(context, client.lastConnectedTimeMs, client.isCurrentlyOnline))
 
             if (client.isDenied) {
                 holder.radioDenied.isChecked = true
@@ -135,39 +135,18 @@ class HotspotClientAdapter(
 
     private fun ViewHolder.bindTextWatcher(client: HotspotClient) {
         textWatcher?.let { etAlias.removeTextChangedListener(it) }
-        etAlias.setText(client.customAlias ?: client.deviceName)
-        btnRemoveAlias.visibility = if (client.customAlias != null) View.VISIBLE else View.GONE
-
-        var isUpdating = false
-        val newWatcher = object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                if (isUpdating) return
-                val inputStr = s?.toString()?.trim() ?: ""
-                val newAlias = if (inputStr.isNotBlank() && inputStr != client.deviceName) inputStr else null
-                if (client.customAlias != newAlias) {
-                    onAliasChanged(client, newAlias)
-                    btnRemoveAlias.visibility = if (newAlias != null) View.VISIBLE else View.GONE
-                    if (dropdownView.visibility == View.GONE) {
-                        tvName.text = newAlias ?: client.deviceName
-                    }
+        textWatcher = com.witherboymcw.superbattery.utils.Formatters.bindAliasTextWatcher(
+            etAlias = etAlias,
+            btnRemoveAlias = btnRemoveAlias,
+            deviceName = client.deviceName,
+            currentAlias = client.customAlias,
+            onAliasChanged = { newAlias -> onAliasChanged(client, newAlias) },
+            onUiTextUpdate = { updatedText ->
+                if (dropdownView.visibility == View.GONE) {
+                    tvName.text = updatedText
                 }
             }
-            override fun afterTextChanged(s: Editable?) {}
-        }
-        textWatcher = newWatcher
-        etAlias.addTextChangedListener(newWatcher)
-
-        btnRemoveAlias.setOnClickListener {
-            isUpdating = true
-            etAlias.setText(client.deviceName)
-            isUpdating = false
-            btnRemoveAlias.visibility = View.GONE
-            onAliasChanged(client, null)
-            if (dropdownView.visibility == View.GONE) {
-                tvName.text = client.deviceName
-            }
-        }
+        )
     }
 
     private fun getLocalizedStatus(context: Context, client: HotspotClient): String {
@@ -176,21 +155,5 @@ class HotspotClientAdapter(
             client.isCurrentlyOnline -> context.getString(R.string.status_connected)
             else -> context.getString(R.string.status_allowed)
         }
-    }
-
-    private fun formatByteSize(bytes: Long): String {
-        if (bytes <= 0) return "0 B"
-        val units = arrayOf("B", "KB", "MB", "GB", "TB")
-        val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.lastIndex)
-        return String.format(java.util.Locale.getDefault(), "%.1f %s", bytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
-    }
-
-    private fun formatConnectedTime(lastMs: Long, isOnline: Boolean): String {
-        if (isOnline) return "Online Now"
-        if (lastMs <= 0) return "Never"
-        val diffMs = System.currentTimeMillis() - lastMs
-        val mins = (diffMs / (1000 * 60)).toInt()
-        val hours = mins / 60
-        return if (hours > 0) "${hours}h ${mins % 60}m" else "${mins}m"
     }
 }
