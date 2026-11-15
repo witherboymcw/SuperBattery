@@ -8,6 +8,7 @@ import com.witherboymcw.superbattery.TempUnit
 import com.witherboymcw.superbattery.VoltageUnit
 import com.witherboymcw.superbattery.awareness.BatteryPowerInfo
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -83,16 +84,20 @@ class DashboardViewModelTest {
 
     @Test
     fun testVoltageShiftState() {
-        // Sample below 4000mV
-        viewModel.addVoltageSample(3800f, 1000L)
-        var bounds = viewModel.getVoltageBoundsMv()
-        assertEquals(3300f, bounds.first)
-        assertEquals(4300f, bounds.second)
+        val now = 1_000L
 
-        // Sample above 4250mV triggers shift
-        viewModel.addVoltageSample(4300f, 2000L)
-        bounds = viewModel.getVoltageBoundsMv()
-        assertEquals(3550f, bounds.first)
-        assertEquals(4550f, bounds.second)
+        // Default range
+        assertEquals(Pair(3300f, 4300f), viewModel.getVoltageBoundsMv())
+        assertFalse(viewModel.isVoltageShiftedHigh)
+
+        // Add high voltage > 4250mV triggers shift high
+        viewModel.addVoltageSample(4280f, now)
+        assertTrue(viewModel.isVoltageShiftedHigh)
+        assertEquals(Pair(3550f, 4550f), viewModel.getVoltageBoundsMv())
+
+        // Add new sample far in the future (> 60s), replacing old sample with normal voltage < 4000mV
+        viewModel.addVoltageSample(3800f, now + 70_000L)
+        assertFalse(viewModel.isVoltageShiftedHigh)
+        assertEquals(Pair(3300f, 4300f), viewModel.getVoltageBoundsMv())
     }
 }

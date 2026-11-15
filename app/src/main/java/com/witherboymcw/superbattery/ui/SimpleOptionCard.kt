@@ -54,6 +54,8 @@ class SimpleOptionCard {
         ) {
             setupExpandableHeader(headerView, dropdownView, arrowView, savedInstanceStateKey, savedInstanceState, onHeaderClick)
 
+            radioGroup?.setOnCheckedChangeListener(null)
+
             val initialOption = options.firstOrNull { it.value == currentValue } ?: options.firstOrNull()
             if (initialOption != null && radioGroup != null) {
                 radioGroup.check(initialOption.id)
