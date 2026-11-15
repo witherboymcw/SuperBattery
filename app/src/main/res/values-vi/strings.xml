@@ -31,13 +31,16 @@
     <string name="dashboard_title">Bảng điều khiển</string>
     <string name="metric_battery">Pin</string>
     <string name="network_stats">Mạng</string>
+    <string name="network_upload">Tải lên</string>
+    <string name="network_download">Tải xuống</string>
 
 
 
 
     <string name="network_unavailable">Không khả dụng</string>
     <string name="voltage_title">Điện áp</string>
-    <string name="ram_title">RAM đã sử dụng</string>
+    <string name="charging_true">Đang sạc</string>
+    <string name="ram_title">RAM</string>
 
 
     <string name="temperature_title">Nhiệt độ pin</string>
@@ -48,18 +51,16 @@
     <string name="waiting_for_samples">Đang thu thập dữ liệu…</string>
     <string name="settings">Cài đặt</string>
     <string name="language_subtitle">Chọn ngôn ngữ hiển thị</string>
-    <string name="allow_notifications">🔔 Gửi thông báo</string>
-    <string name="allow_notifications_subtitle">Được cập nhật trạng thái hệ thống và cảnh báo</string>
-    <string name="manage_notification_access_subtitle">Cần thiết để đếm số lượng thiết bị kết nối Wi-Fi</string>
-    <string name="permission_phone_state_title">📶 Quyền trạng thái điện thoại</string>
-    <string name="permission_phone_state_subtitle">Phát hiện trạng thái sóng di động</string>
     <string name="update_frequency">⏱️ Tần suất cập nhật</string>
     <string name="update_frequency_subtitle">Chỉnh tần suất làm mới dữ liệu hệ thống</string>
     <string name="update_every_half_second">Mỗi 0,5 giây</string>
     <string name="update_every_second">Mỗi 1 giây</string>
     <string name="update_every_two_seconds">Mỗi 2 giây</string>
-    <string name="use_system_battery_counter">🔋 Sử dụng bộ đếm pin hệ thống</string>
+    <string name="use_system_battery_counter">Sử dụng bộ đếm pin hệ thống</string>
     <string name="use_system_battery_counter_subtitle">Dùng % pin từ HĐH thay vì tính từ điện áp thực tế</string>
+    <string name="hardware_preferences">⚙️ Cấu hình phần cứng</string>
+    <string name="hardware_preferences_subtitle">Chỉ thay đổi nếu bạn biết mình đang làm gì</string>
+    <string name="dual_serial_cell_battery">Pin nối tiếp 2 cell (Dual cell)</string>
     <string name="voltage_unit_header">⚡ Đơn vị điện áp</string>
     <string name="voltage_unit_subtitle">Hiển thị điện áp pin theo Millivolt hoặc Volt</string>
 
@@ -73,9 +74,18 @@
 
     <string name="language">🌐 Ngôn ngữ</string>
     <string name="at_system">Theo hệ thống</string>
-    <string name="language_english">Tiếng Anh (English)</string>
+
+    <string name="language_english_us">Tiếng Anh (Mỹ)</string>
+    <string name="language_english_uk">Tiếng Anh (Anh)</string>
     <string name="language_vietnamese">Tiếng Việt</string>
+    <string name="language_simplified_chinese">Tiếng Trung (Giản thể)</string>
     <string name="language_brainrot">Tiếng Anh Brainrot</string>
+    <string name="super_permissions_header">🛡️ Cấp quyền ứng dụng</string>
+    <string name="super_permissions_subtitle">Quản lý quyền hệ thống và cờ sử dụng ứng dụng</string>
+    <string name="perm_post_notifications">Gửi thông báo</string>
+    <string name="perm_notification_access">Đọc thông báo</string>
+    <string name="perm_phone_state">Đọc trạng thái điện thoại</string>
+    <string name="perm_overlay">Hiện trên ứng dụng khác</string>
     <string name="theme">Giao diện</string>
     <string name="theme_header">🎨 Giao diện</string>
     <string name="theme_subtitle">Chỉnh giao diện và chế độ màu sắc ứng dụng</string>
@@ -104,7 +114,24 @@
     <string name="notch_position">Vị trí tai thỏ</string>
     <string name="notch_pos_center">Căn giữa</string>
     <string name="notch_pos_not_center">Lệch tâm</string>
+    <string name="notch_size_title">Kích thước tai thỏ</string>
+    <string name="notch_pill_title">Độ rộng viên thuốc</string>
     <string name="btn_set_notch_position">Chỉnh vị trí tai thỏ</string>
     <string name="notch_instruction_text">Kéo hình tròn đến vị trí tai thỏ mong muốn, sau đó chạm ra ngoài để lưu.</string>
-    <string name="permission_already_granted">Quyền đã được cấp.</string>
+
+    <string name="hotspot_title">Thiết bị Hotspot</string>
+    <string name="status_connected">Đã kết nối</string>
+    <string name="status_allowed">Được phép</string>
+    <string name="status_denied">Bị chặn</string>
+    <string name="hotspot_device_details">Chi tiết thiết bị</string>
+    <string name="hotspot_status_header">Trạng thái truy cập</string>
+    <string name="hotspot_alias_header">Biệt danh</string>
+    <string name="hotspot_alias_hint">Nhập biệt danh…</string>
+    <string name="btn_rename">✏️ Đổi tên</string>
+    <string name="btn_remove_alias">🗑️ Xoá biệt danh</string>
+    <string name="dialog_rename_title">Đổi tên thiết bị</string>
+    <string name="dialog_rename_message">Nhập biệt danh cho %1$s:</string>
+    <string name="btn_save">Lưu</string>
+    <string name="btn_cancel">Hủy</string>
+    <string name="hotspot_root_required">Yêu cầu quyền Root để thực thi lệnh iptables</string>
 </resources>

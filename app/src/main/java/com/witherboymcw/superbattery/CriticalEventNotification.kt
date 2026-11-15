@@ -30,8 +30,7 @@ internal object CriticalEventNotification {
             prefs.edit().putBoolean(stateKey, false).apply()
             return
         }
-        if (wasActive || (Build.VERSION.SDK_INT >= 33 &&
-                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) return
+        if (wasActive || !com.witherboymcw.superbattery.settings.Permissions.isPostNotificationsEnabled(context)) return
 
         createChannel(context)
         val intent = PendingIntent.getActivity(

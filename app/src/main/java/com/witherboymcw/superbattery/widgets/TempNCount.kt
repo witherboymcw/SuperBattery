@@ -1,0 +1,161 @@
+package com.witherboymcw.superbattery.widgets
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
+import android.os.SystemClock
+import android.widget.RemoteViews
+import com.witherboymcw.superbattery.CriticalEventNotification
+import com.witherboymcw.superbattery.MainActivity
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.awareness.BatteryMath
+import com.witherboymcw.superbattery.screens.hotspot.HotspotNotificationListener
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
+
+class BatteryWidget : AppWidgetProvider() {
+
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        updateBatteryWidgets(context, appWidgetManager, appWidgetIds)
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        val action = intent.action
+
+        if (action == ACTION_MANUAL_REFRESH ||
+            action == ACTION_AUTO_UPDATE ||
+            action == Intent.ACTION_POWER_CONNECTED ||
+            action == Intent.ACTION_POWER_DISCONNECTED ||
+            action == Intent.ACTION_SCREEN_ON
+        ) {
+
+            if (action == ACTION_MANUAL_REFRESH) {
+                handleWidgetTap(context)
+            }
+
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+            updateAllWidgets(context, appWidgetManager)
+        }
+    }
+
+    companion object {
+        const val ACTION_MANUAL_REFRESH = "com.witherboymcw.superbattery.ACTION_MANUAL_REFRESH"
+        const val ACTION_AUTO_UPDATE = "com.witherboymcw.superbattery.ACTION_AUTO_UPDATE"
+        const val EXTRA_CLOSE_SETTINGS = "com.witherboymcw.superbattery.EXTRA_CLOSE_SETTINGS"
+        const val SETTINGS_PREFS = com.witherboymcw.superbattery.settings.AppPreferences.PREFS_NAME
+        const val USE_SYSTEM_BATTERY_KEY = com.witherboymcw.superbattery.settings.AppPreferences.KEY_USE_SYSTEM_BATTERY_COUNTER
+        const val IS_DUAL_CELL_BATTERY_KEY = com.witherboymcw.superbattery.settings.AppPreferences.KEY_IS_DUAL_CELL_BATTERY
+        const val APP_LANGUAGE_KEY = com.witherboymcw.superbattery.settings.AppPreferences.KEY_APP_LANGUAGE
+        const val TEMP_UNIT_KEY = com.witherboymcw.superbattery.settings.AppPreferences.KEY_TEMP_UNIT
+        const val VOLTAGE_UNIT_KEY = com.witherboymcw.superbattery.settings.AppPreferences.KEY_VOLTAGE_UNIT
+        const val RAM_UNIT_KEY = com.witherboymcw.superbattery.settings.AppPreferences.KEY_RAM_UNIT
+
+        internal var lastWidgetTapTimestampMs: Long = 0L
+
+        internal fun isDoubleTap(nowMs: Long, lastTapMs: Long): Boolean {
+            val interval = nowMs - lastTapMs
+            return interval in 50..400
+        }
+
+        internal fun handleWidgetTap(context: Context) {
+            val now = SystemClock.elapsedRealtime()
+            if (isDoubleTap(now, lastWidgetTapTimestampMs)) {
+                lastWidgetTapTimestampMs = 0L
+                val mainIntent = Intent(context, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    putExtra(EXTRA_CLOSE_SETTINGS, true)
+                }
+                context.startActivity(mainIntent)
+            } else {
+                lastWidgetTapTimestampMs = now
+            }
+            HotspotNotificationListener.refreshFromWidgetTap()
+        }
+
+        internal fun updateAppWidget(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            appWidgetId: Int,
+            batteryStatus: Intent?,
+            smoothedVoltageMv: Int,
+            percent: Int = BatteryMath.getBatteryPercentage(context, batteryStatus, smoothedVoltageMv)
+        ) {
+            val views = RemoteViews(context.packageName, R.layout.battery_widget)
+            
+            views.setTextViewText(R.id.appwidget_percent, "$percent%")
+            val percentColor = BatteryMath.percentageColor(percent)
+            views.setTextColor(R.id.appwidget_percent, percentColor)
+            
+            val voltageUnit = SettingsHelper.getVoltageUnit(context)
+            views.setTextViewText(R.id.appwidget_voltage, SettingsHelper.formatVoltage(smoothedVoltageMv, voltageUnit))
+
+            val tapIntent = Intent(context, WidgetTapTrampolineActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            }
+            val tapPendingIntent = PendingIntent.getActivity(
+                context,
+                appWidgetId,
+                tapIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_root, tapPendingIntent)
+
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+
+        internal fun updateAllWidgets(context: Context, appWidgetManager: AppWidgetManager) {
+            val batteryIds = appWidgetManager.getAppWidgetIds(
+                ComponentName(context, BatteryWidget::class.java)
+            )
+            updateBatteryWidgets(context, appWidgetManager, batteryIds)
+
+            val detailsIds = appWidgetManager.getAppWidgetIds(
+                ComponentName(context, BatteryDetailsWidget::class.java)
+            )
+            if (detailsIds.isNotEmpty()) {
+                detailsIds.forEach { BatteryDetailsWidget.updateAppWidget(context, appWidgetManager, it) }
+            }
+
+            CalendarWidgetProvider.updateAllWidgets(context, appWidgetManager)
+            SuperWidgetProvider.updateAllWidgets(context, appWidgetManager)
+        }
+
+        private fun updateBatteryWidgets(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            appWidgetIds: IntArray
+        ) {
+            val batteryStatus = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val rawVoltageMv = batteryStatus?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
+            val smoothedVoltageMv = BatteryMath.getSmoothedVoltage(rawVoltageMv)
+            val percent = BatteryMath.getBatteryPercentage(context, batteryStatus, smoothedVoltageMv)
+
+            val isSystemBattery = SettingsHelper.isUseSystemBatteryCounter(context)
+            val isBatteryLevelCritical = !isSystemBattery && percent in 1..10
+            val localizedContext = SettingsHelper.getLocalizedContext(context)
+            updateCriticalEvent(
+                context,
+                "battery_percent",
+                isBatteryLevelCritical,
+                localizedContext.getString(R.string.critical_percent_title),
+                localizedContext.getString(R.string.critical_percent_message, percent)
+            )
+
+            if (appWidgetIds.isEmpty()) return
+            appWidgetIds.forEach { updateAppWidget(context, appWidgetManager, it, batteryStatus, smoothedVoltageMv, percent) }
+        }
+
+        internal fun updateCriticalEvent(context: Context, key: String, active: Boolean, title: String, message: String) {
+            CriticalEventNotification.update(context, key, active, title, message)
+        }
+    }
+}

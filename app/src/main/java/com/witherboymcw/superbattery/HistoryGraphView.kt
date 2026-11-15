@@ -8,6 +8,7 @@ import android.graphics.Path
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 import kotlin.math.max
 
 class HistoryGraphView @JvmOverloads constructor(
@@ -29,7 +30,7 @@ class HistoryGraphView @JvmOverloads constructor(
     }
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = Color.rgb(0, 230, 118)
+        color = com.witherboymcw.superbattery.templates.MetricColors.COLOR_GREEN
     }
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -147,6 +148,13 @@ class HistoryGraphView @JvmOverloads constructor(
     }
 
     var suppressMinYLabel: Boolean = false
+    var hideYAxisLabels: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
 
     override fun onDetachedFromWindow() {
         removeCallbacks(axisOffsetRunnable)
@@ -158,8 +166,8 @@ class HistoryGraphView @JvmOverloads constructor(
 
         textPaint.getFontMetrics(fontMetrics)
         val density = resources.displayMetrics.density
-        val labelWidth = cachedLabelWidth
-        val left = paddingLeft + labelWidth + 10f * density
+        val labelWidth = if (hideYAxisLabels) 0f else cachedLabelWidth
+        val left = paddingLeft + (if (hideYAxisLabels) 4f * density else labelWidth + 10f * density)
         val right = width - paddingRight - 4f
         val labelHeight = fontMetrics.descent - fontMetrics.ascent
         val strokeInset = linePaint.strokeWidth / 2f + 2f * density
@@ -195,21 +203,23 @@ class HistoryGraphView @JvmOverloads constructor(
             val fraction = i / 4f
             val y = top + (bottom - top) * fraction
             canvas.drawLine(left, y, right, y, gridPaint)
-            if (i in 1..3) {
+            if (!hideYAxisLabels && i > 0 && i < 4) {
                 val baseline = y - (fontMetrics.ascent + fontMetrics.descent) / 2f
                 canvas.drawText(yLabelTexts[i], labelX, baseline, textPaint)
             }
         }
-        val maxLabelBaseline = top - (fontMetrics.ascent + fontMetrics.descent) / 2f
-        val minLabelBaseline = bottom - (fontMetrics.ascent + fontMetrics.descent) / 2f
-        canvas.drawText(yLabelTexts[0], labelX, maxLabelBaseline, textPaint)
-        if (!suppressMinYLabel) {
-            canvas.drawText(yLabelTexts[4], labelX, minLabelBaseline, textPaint)
+        if (!hideYAxisLabels) {
+            val maxLabelBaseline = top - (fontMetrics.ascent + fontMetrics.descent) / 2f
+            val minLabelBaseline = bottom - (fontMetrics.ascent + fontMetrics.descent) / 2f
+            canvas.drawText(yLabelTexts[0], labelX, maxLabelBaseline, textPaint)
+            if (!suppressMinYLabel) {
+                canvas.drawText(yLabelTexts[4], labelX, minLabelBaseline, textPaint)
+            }
         }
         textPaint.textAlign = Paint.Align.LEFT
 
         // X-axis ruler ticks and labels (every 20s)
-        val timeLabelBaseline = height - paddingBottom - fontMetrics.descent + 8f * density
+        val timeLabelBaseline = height - paddingBottom - fontMetrics.descent
         val plotHeight = bottom - top
 
         var secondsAgo = 0L
@@ -221,10 +231,12 @@ class HistoryGraphView @JvmOverloads constructor(
                 canvas.drawLine(x, bottom, x, bottom + 7f * density, tickPaint)
                 if (secondsAgo != 0L) {
                     val secIdx = secondsAgo.toInt()
-                    val label = timeLabelCache[secIdx]
-                    val labelW = timeLabelWidthCache[secIdx]
-                    val textLabelX = (x - labelW / 2f).coerceIn(left, right - labelW)
-                    canvas.drawText(label, textLabelX, timeLabelBaseline, textPaint)
+                    if (secIdx in timeLabelCache.indices) {
+                        val label = timeLabelCache[secIdx]
+                        val labelW = timeLabelWidthCache[secIdx]
+                        val textLabelX = (x - labelW / 2f).coerceIn(left, right - labelW)
+                        canvas.drawText(label, textLabelX, timeLabelBaseline, textPaint)
+                    }
                 }
             } else {
                 canvas.drawLine(x, bottom, x, bottom + 3f * density, tickPaint)
@@ -239,7 +251,7 @@ class HistoryGraphView @JvmOverloads constructor(
         var pIdx = 0
         while (pIdx < numPoints) {
             val ts = points[pIdx].timestampMs
-            if (ts in windowStart..nowMs) {
+            if (ts >= windowStart && ts <= nowMs) {
                 if (startIndex == -1) startIndex = pIdx
                 endIndex = pIdx
             }

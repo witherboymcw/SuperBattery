@@ -1,6 +1,8 @@
 package com.witherboymcw.superbattery
 
 import android.content.Context
+import com.witherboymcw.superbattery.screens.hotspot.HotspotNotificationListener
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 
 internal object DeviceConnectionCounter {
     fun displayText(context: Context): String {

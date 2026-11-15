@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.witherboymcw.superbattery.DashboardLayout
+    <com.witherboymcw.superbattery.screens.dashboard.DashboardLayout
         android:id="@+id/dashboard"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -91,198 +91,13 @@
                 android:layout_height="104dp"
                 android:tag="battery" />
 
-            <com.google.android.material.card.MaterialCardView
+            <include
                 android:id="@+id/card_network"
+                layout="@layout/dashboard_network_card"
                 android:layout_width="0dp"
                 android:layout_height="104dp"
                 android:layout_marginStart="10dp"
-                android:layout_weight="1"
-                app:cardBackgroundColor="?attr/colorSurface"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="1dp"
-                app:strokeColor="?attr/colorOutline"
-                app:strokeWidth="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal"
-                    android:padding="12dp">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:textAlignment="center"
-                            android:text="@string/network_stats"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="0dp"
-                            android:layout_weight="1"
-                            android:gravity="center_vertical"
-                            android:orientation="vertical">
-
-                            <!-- Row 1: Upload (Tải lên) -->
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:id="@+id/net_tx_total"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:ellipsize="end"
-                                    android:gravity="start"
-                                    android:textAlignment="viewStart"
-                                    android:maxLines="1"
-                                    android:text="—"
-                                    android:textSize="22sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginStart="2dp"
-                                    android:layout_marginEnd="2dp"
-                                    android:gravity="center"
-                                    android:text="↑"
-                                    android:textColor="?android:attr/textColorSecondary"
-                                    android:textSize="22sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:id="@+id/net_tx_speed"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:ellipsize="end"
-                                    android:gravity="end"
-                                    android:textAlignment="viewEnd"
-                                    android:maxLines="1"
-                                    android:text="—"
-                                    android:textSize="22sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
-
-                            <!-- Row 2: Download (Tải xuống) -->
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:id="@+id/net_rx_total"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:ellipsize="end"
-                                    android:gravity="start"
-                                    android:textAlignment="viewStart"
-                                    android:maxLines="1"
-                                    android:text="—"
-                                    android:textSize="22sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginStart="2dp"
-                                    android:layout_marginEnd="2dp"
-                                    android:gravity="center"
-                                    android:text="↓"
-                                    android:textColor="?android:attr/textColorSecondary"
-                                    android:textSize="22sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:id="@+id/net_rx_speed"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:ellipsize="end"
-                                    android:gravity="end"
-                                    android:textAlignment="viewEnd"
-                                    android:maxLines="1"
-                                    android:text="—"
-                                    android:textSize="22sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:layout_marginStart="8dp"
-                        android:gravity="center_horizontal"
-                        android:orientation="vertical">
-
-                        <FrameLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="0dp"
-                            android:layout_weight="1">
-
-                            <ImageView
-                                android:id="@+id/iv_network_wifi"
-                                android:layout_width="16dp"
-                                android:layout_height="16dp"
-                                android:layout_gravity="center"
-                                android:alpha="0.4"
-                                android:contentDescription="Wi-Fi"
-                                android:src="@drawable/ic_wifi"
-                                app:tint="?attr/colorControlNormal" />
-                        </FrameLayout>
-
-                        <FrameLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="0dp"
-                            android:layout_weight="1">
-
-                            <ImageView
-                                android:id="@+id/iv_network_bluetooth"
-                                android:layout_width="16dp"
-                                android:layout_height="16dp"
-                                android:layout_gravity="center"
-                                android:alpha="0.4"
-                                android:contentDescription="Bluetooth"
-                                android:src="@drawable/ic_bluetooth"
-                                app:tint="?attr/colorControlNormal" />
-                        </FrameLayout>
-
-                        <LinearLayout
-                            android:id="@+id/layout_sim_signals"
-                            android:layout_width="wrap_content"
-                            android:layout_height="0dp"
-                            android:layout_weight="1"
-                            android:gravity="center">
-
-                            <ImageView
-                                android:id="@+id/iv_network_sim_1"
-                                android:layout_width="16dp"
-                                android:layout_height="16dp"
-                                android:alpha="0.4"
-                                android:contentDescription="SIM Signal"
-                                android:src="@drawable/ic_signal_cellular"
-                                app:tint="?attr/colorControlNormal" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                android:layout_weight="1" />
         </LinearLayout>
 
         <com.google.android.material.card.MaterialCardView
@@ -309,6 +124,7 @@
                     android:layout_height="wrap_content">
 
                     <TextView
+                        android:id="@+id/tv_voltage_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="start|center_vertical"
@@ -479,7 +295,8 @@
                     android:contentDescription="@string/temperature_title" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-    </com.witherboymcw.superbattery.DashboardLayout>
+    </com.witherboymcw.superbattery.screens.dashboard.DashboardLayout>
 
     <include layout="@layout/layout_settings" />
+    <include layout="@layout/layout_hotspot" />
 </FrameLayout>
