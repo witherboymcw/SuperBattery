@@ -268,8 +268,13 @@ class MainActivity : AppCompatActivity(), SettingsHost {
 
     private fun bindLayout() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
-            val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
-            view.setPadding(navBars.left, 0, navBars.right, navBars.bottom)
+            val isMiniSquare = FoldableAwareness.isMiniSquareMode(this)
+            if (isMiniSquare) {
+                view.setPadding(0, 0, 0, 0)
+            } else {
+                val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+                view.setPadding(navBars.left, 0, navBars.right, navBars.bottom)
+            }
             applyThickChinPadding()
             CornerAwareness.applyAsymmetricCorners(this, insets)
             NotchAwareness.updateAllHeaders(this)
@@ -300,10 +305,17 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         }
     }
 
-    private fun hideSystemBars() {
+    internal fun hideSystemBars() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+        val isMiniSquare = FoldableAwareness.isMiniSquareMode(this)
+        if (isMiniSquare) {
+            windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
+            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+        } else {
+            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+        }
     }
 
     private fun updateLayoutIfNeeded(savedInstanceState: Bundle? = null): Boolean {

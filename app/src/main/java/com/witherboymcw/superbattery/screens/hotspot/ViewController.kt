@@ -32,7 +32,14 @@ internal class HotspotViewController : DrawerScreen(
     private var clientsJob: kotlinx.coroutines.Job? = null
 
     override fun onPostOpen(activity: ComponentActivity) {
-        (activity as? MainActivity)?.let { NotchAwareness.updateHotspotHeaderLayout(it) }
+        (activity as? MainActivity)?.let {
+            NotchAwareness.updateHotspotHeaderLayout(it)
+            it.hideSystemBars()
+        }
+    }
+
+    override fun onPostClose(activity: ComponentActivity) {
+        (activity as? MainActivity)?.hideSystemBars()
     }
 
     fun bind(activity: ComponentActivity, savedInstanceState: Bundle? = null) {

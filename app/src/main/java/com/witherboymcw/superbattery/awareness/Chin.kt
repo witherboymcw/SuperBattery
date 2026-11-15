@@ -79,13 +79,16 @@ object ChinAwareness {
         val reduced16Px = ((16f - reductionDp).coerceAtLeast(0f) * density).roundToInt()
         val reduced24Px = ((24f - reductionDp).coerceAtLeast(8f) * density).roundToInt()
 
+        val dashboardLeftPx = if (isMiniSquare) default12Px else (if (rotation == Surface.ROTATION_270) reduced16Px else default16Px)
         val dashboardTopPx = if (isMiniSquare) default8Px else (if (rotation == Surface.ROTATION_180) reduced16Px else default16Px)
+        val dashboardRightPx = if (isMiniSquare) default12Px else (if (rotation == Surface.ROTATION_90) reduced16Px else default16Px)
+        val dashboardBottomPx = if (isMiniSquare) default12Px else (if (rotation == Surface.ROTATION_0) reduced16Px else default16Px)
 
         val dashboardPadding = ChinPaddingValues(
-            left = if (rotation == Surface.ROTATION_270) reduced16Px else default16Px,
+            left = dashboardLeftPx,
             top = dashboardTopPx,
-            right = if (rotation == Surface.ROTATION_90) reduced16Px else default16Px,
-            bottom = if (rotation == Surface.ROTATION_0) reduced16Px else default16Px
+            right = dashboardRightPx,
+            bottom = dashboardBottomPx
         )
 
         val singleScrollViewPadding = ChinPaddingValues(

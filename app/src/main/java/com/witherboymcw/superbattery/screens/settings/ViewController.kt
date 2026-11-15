@@ -40,7 +40,14 @@ internal class SettingsViewController : DrawerScreen(
     }
 
     override fun onPostOpen(activity: ComponentActivity) {
-        (activity as? MainActivity)?.let { NotchAwareness.updateSettingsHeaderLayout(it) }
+        (activity as? MainActivity)?.let {
+            NotchAwareness.updateSettingsHeaderLayout(it)
+            it.hideSystemBars()
+        }
+    }
+
+    override fun onPostClose(activity: ComponentActivity) {
+        (activity as? MainActivity)?.hideSystemBars()
     }
 
     fun flushThickChinCommit() {
