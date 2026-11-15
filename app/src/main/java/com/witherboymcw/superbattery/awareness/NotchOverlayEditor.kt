@@ -35,6 +35,8 @@ import kotlin.math.abs
  */
 object NotchOverlayEditor {
 
+    private const val TAG = "NotchOverlayEditor"
+
     var liveCutoutOverride: NotchGeometry.CutoutInfo? = null
         private set
 
@@ -54,7 +56,9 @@ object NotchOverlayEditor {
                 activity.startActivity(
                     Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${activity.packageName}"))
                 )
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to open overlay permission settings", e)
+            }
             return
         }
 
@@ -148,11 +152,17 @@ object NotchOverlayEditor {
 
             try {
                 wm.addView(overlayView, params)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to attach notch editor overlay", e)
+            }
         }
 
         fun dismiss() {
-            try { wm.removeView(overlayView) } catch (_: Exception) {}
+            try {
+                wm.removeView(overlayView)
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to remove notch editor overlay", e)
+            }
         }
 
         private fun updateCutoutLayout() {

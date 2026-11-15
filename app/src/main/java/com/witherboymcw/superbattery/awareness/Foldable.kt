@@ -11,6 +11,8 @@ import kotlin.math.min
 
 object FoldableAwareness {
 
+    private const val TAG = "FoldableAwareness"
+
     @Volatile
     private var isFoldingFeatureDetected: Boolean = false
 
@@ -65,7 +67,8 @@ object FoldableAwareness {
             val isSmallSize = maxDp < 600f && minDp < 520f
 
             isNearSquare && isSmallSize
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to detect mini square display", e)
             false
         }
     }

@@ -4,17 +4,21 @@ import android.app.NotificationManager
 import android.content.Context
 import android.media.AudioManager
 import android.os.Build
+import android.util.Log
 
 /**
  * Source module responsible for querying and toggling system audio ringer mode (Normal, Vibrate, Silent).
  */
 class AudioRingerSource {
 
+    companion object { private const val TAG = "AudioRingerSource" }
+
     fun getRingerMode(context: Context): Int {
         return try {
             val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
             am?.ringerMode ?: AudioManager.RINGER_MODE_NORMAL
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read ringer mode", e)
             AudioManager.RINGER_MODE_NORMAL
         }
     }
@@ -36,14 +40,17 @@ class AudioRingerSource {
                 onPermissionRequired?.invoke()
                 try {
                     am.ringerMode = AudioManager.RINGER_MODE_NORMAL
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to restore normal ringer mode", e)
+                }
                 return AudioManager.RINGER_MODE_NORMAL
             }
         }
 
         try {
             am.ringerMode = nextMode
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to change ringer mode", e)
             // Guard against missing permissions
         }
 

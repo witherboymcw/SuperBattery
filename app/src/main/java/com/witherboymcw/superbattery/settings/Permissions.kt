@@ -21,6 +21,7 @@ import com.witherboymcw.superbattery.ui.SimpleCheckboxCard
 class Permissions(private val activity: MainActivity) {
 
     companion object {
+        private const val TAG = "Permissions"
         const val KEY_SUPER_PERMISSIONS_DROPDOWN_OPEN = "super_permissions_dropdown_open"
 
         fun isPostNotificationsEnabled(context: Context): Boolean {
@@ -108,7 +109,9 @@ class Permissions(private val activity: MainActivity) {
                     if (isChecked && !hasNotificationAccess(activity)) {
                         try {
                             activity.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) {
+                            android.util.Log.w(TAG, "Failed to open notification listener settings", e)
+                        }
                     }
                     updateStatuses()
                 }
@@ -145,7 +148,9 @@ class Permissions(private val activity: MainActivity) {
                                         Uri.parse("package:${activity.packageName}")
                                     )
                                 )
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) {
+                                android.util.Log.w(TAG, "Failed to open overlay settings", e)
+                            }
                         }
                     }
                     updateStatuses()

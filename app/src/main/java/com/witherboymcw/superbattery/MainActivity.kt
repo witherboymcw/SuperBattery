@@ -114,7 +114,8 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         systemMonitorManager = SystemMonitorManager(this)
         try {
             startService(Intent(this, BatteryMonitorService::class.java))
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to start battery monitor service", e)
             // Guard against background service execution limits on Android 8.0+
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -143,7 +144,9 @@ class MainActivity : AppCompatActivity(), SettingsHost {
                                 }
                                 updateLayoutIfNeeded()
                             }
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        android.util.Log.w(TAG, "Failed to observe window layout changes", e)
+                    }
                 }
                 launch {
                     refreshIntervalState.collectLatest { intervalMs ->
@@ -503,7 +506,9 @@ class MainActivity : AppCompatActivity(), SettingsHost {
                 Toast.makeText(this, R.string.grant_notification_access, Toast.LENGTH_SHORT).show()
                 try {
                     startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    android.util.Log.w(TAG, "Failed to open notification policy settings", e)
+                }
             }
             dashboardRenderer.updateRingerModeIcon(mode)
         }
@@ -552,6 +557,7 @@ class MainActivity : AppCompatActivity(), SettingsHost {
 
 
     companion object {
+        private const val TAG = "MainActivity"
         private const val DEFAULT_REFRESH_INTERVAL_MS = com.witherboymcw.superbattery.settings.AppPreferences.DEFAULT_REFRESH_INTERVAL_MS
         internal const val NOTIFICATION_PERMISSION_REQUEST = 1001
         internal const val PHONE_STATE_PERMISSION_REQUEST = 1002

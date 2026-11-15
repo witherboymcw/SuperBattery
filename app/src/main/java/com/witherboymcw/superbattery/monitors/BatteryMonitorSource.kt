@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.witherboymcw.superbattery.monitors.BatteryInfo
 
@@ -11,6 +12,8 @@ import com.witherboymcw.superbattery.monitors.BatteryInfo
  * Source module responsible for querying and building BatteryInfo snapshots.
  */
 class BatteryMonitorSource {
+
+    companion object { private const val TAG = "BatteryMonitorSource" }
 
     fun getBatteryIntent(context: Context): Intent? {
         return try {
@@ -20,7 +23,8 @@ class BatteryMonitorSource {
                 IntentFilter(Intent.ACTION_BATTERY_CHANGED),
                 ContextCompat.RECEIVER_EXPORTED
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read battery status", e)
             null
         }
     }

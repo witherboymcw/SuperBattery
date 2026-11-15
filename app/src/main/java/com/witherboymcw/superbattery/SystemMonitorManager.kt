@@ -115,7 +115,8 @@ class SystemMonitorManager(context: Context) {
                 filter,
                 ContextCompat.RECEIVER_EXPORTED
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to register system monitor receiver", e)
             isMonitoring = false
         }
 
@@ -141,8 +142,8 @@ class SystemMonitorManager(context: Context) {
         if (!isMonitoring) return
         try {
             appContext.unregisterReceiver(receiver)
-        } catch (_: Exception) {
-            android.util.Log.w(TAG, "Failed to unregister broadcast receiver")
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to unregister broadcast receiver", e)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

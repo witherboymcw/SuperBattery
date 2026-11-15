@@ -24,6 +24,7 @@ import org.json.JSONArray
 import java.lang.ref.WeakReference
 
 object HotspotRuleLoader {
+    private const val TAG = "HotspotRuleLoader"
     private const val RULES_FILE = "hotspot_rules.json"
 
     @Volatile
@@ -72,7 +73,7 @@ object HotspotRuleLoader {
             }
             list
         } catch (e: Exception) {
-            Log.e("HotspotRuleLoader", "Failed to load $RULES_FILE from assets, using default rules", e)
+            Log.e(TAG, "Failed to load $RULES_FILE from assets, using default rules", e)
             emptyList()
         }
     }
@@ -97,7 +98,7 @@ class HotspotNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        Log.d(LOG_TAG, "=== CONNECTED ===")
+        Log.d(TAG, "=== CONNECTED ===")
         connectedListenerRef = WeakReference(this)
         registerStateChangeReceiver()
         registerDateFormatObserver()
@@ -105,7 +106,7 @@ class HotspotNotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
-        Log.d(LOG_TAG, "=== DISCONNECTED ===")
+        Log.d(TAG, "=== DISCONNECTED ===")
         cleanup()
         super.onListenerDisconnected()
     }
@@ -119,7 +120,8 @@ class HotspotNotificationListener : NotificationListenerService() {
         if (stateReceiverRegistered) {
             try {
                 unregisterReceiver(stateChangeReceiver)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to unregister state receiver", e)
             } finally {
                 stateReceiverRegistered = false
             }
@@ -127,7 +129,8 @@ class HotspotNotificationListener : NotificationListenerService() {
         if (dateFormatObserverRegistered) {
             try {
                 contentResolver.unregisterContentObserver(dateFormatObserver)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to unregister date format observer", e)
             } finally {
                 dateFormatObserverRegistered = false
             }
@@ -141,12 +144,12 @@ class HotspotNotificationListener : NotificationListenerService() {
         val notification = sbn ?: return
         val newStatus = hotspotStatusFromNotification(notification)
         if (newStatus == null) {
-            Log.d(LOG_TAG, "Notification not recognized as hotspot status")
+            Log.d(TAG, "Notification not recognized as hotspot status")
             return
         }
-        Log.d(LOG_TAG, "Recognized hotspot status: $newStatus")
+        Log.d(TAG, "Recognized hotspot status: $newStatus")
         if (setCurrentStatus(this, newStatus)) {
-            Log.d(LOG_TAG, "Status changed -> requesting widget refresh")
+            Log.d(TAG, "Status changed -> requesting widget refresh")
             refreshWidgets()
         }
     }
@@ -159,7 +162,7 @@ class HotspotNotificationListener : NotificationListenerService() {
     }
 
     private fun checkHotspotNotification(excludingKey: String? = null) {
-        val activeNotifs = try { activeNotifications } catch (_: Exception) { return }
+        val activeNotifs = try { activeNotifications } catch (e: Exception) { Log.w(TAG, "Failed to read active notifications", e); return }
         if (activeNotifs == null) return
         val statuses = activeNotifs.asSequence()
             .filterNotNull()
@@ -186,8 +189,8 @@ class HotspotNotificationListener : NotificationListenerService() {
         val notif = sbn.notification ?: return null
         val extras = notif.extras ?: return null
 
-        val titleCharSeq = try { extras.getCharSequence(Notification.EXTRA_TITLE) } catch (_: Exception) { null }
-        val bigTitleCharSeq = try { extras.getCharSequence(Notification.EXTRA_TITLE_BIG) } catch (_: Exception) { null }
+        val titleCharSeq = try { extras.getCharSequence(Notification.EXTRA_TITLE) } catch (e: Exception) { Log.w(TAG, "Failed to read notification title", e); null }
+        val bigTitleCharSeq = try { extras.getCharSequence(Notification.EXTRA_TITLE_BIG) } catch (e: Exception) { Log.w(TAG, "Failed to read expanded notification title", e); null }
         val notificationTitle = listOfNotNull(titleCharSeq, bigTitleCharSeq)
             .filter { it.isNotBlank() }
             .joinToString(" ")
@@ -210,13 +213,15 @@ class HotspotNotificationListener : NotificationListenerService() {
         ).forEach { extraKey ->
             try {
                 appendText(extras.getCharSequence(extraKey))
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to read notification extra $extraKey", e)
             }
         }
 
         try {
             appendText(notif.tickerText)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read notification ticker", e)
         }
 
         try {
@@ -227,10 +232,12 @@ class HotspotNotificationListener : NotificationListenerService() {
                         is Array<*> -> value.filterIsInstance<CharSequence>().forEach { appendText(it) }
                         is Iterable<*> -> value.filterIsInstance<CharSequence>().forEach { appendText(it) }
                     }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to read notification extra $key", e)
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to enumerate notification extras", e)
         }
 
         val notificationContent = sb.toString()
@@ -290,12 +297,12 @@ class HotspotNotificationListener : NotificationListenerService() {
     }
 
     private fun refreshWidgets() {
-        Log.d(LOG_TAG, "Calling BatteryWidget.updateAllWidgets()")
+        Log.d(TAG, "Calling BatteryWidget.updateAllWidgets()")
         BatteryWidget.updateAllWidgets(this, AppWidgetManager.getInstance(this))
     }
 
     companion object {
-        private const val LOG_TAG = "HotspotListener"
+        private const val TAG = "HotspotListener"
         private const val PREFERENCES_NAME = "hotspot_notification_state"
         private const val KEY_STATE = "state"
         private const val KEY_CLIENTS = "clients"

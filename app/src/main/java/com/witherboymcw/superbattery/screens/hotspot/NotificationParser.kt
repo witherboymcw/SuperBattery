@@ -18,6 +18,8 @@ data class CompiledHotspotRule(
  */
 object HotspotNotificationParser {
 
+    private const val TAG = "HotspotParser"
+
     private val REQUIRED_KEYWORDS = listOf(
         "wi-fi",
         "wifi",
@@ -71,7 +73,8 @@ object HotspotNotificationParser {
             rule.compiledTitleRegexes.any { regex ->
                 try {
                     regex.containsMatchIn(notificationTitle)
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    android.util.Log.w(TAG, "Failed to match notification title with rule ${rule.oem}", e)
                     notificationTitle.contains("hotspot", ignoreCase = true) ||
                             notificationTitle.contains("tethering", ignoreCase = true) ||
                             notificationTitle.contains("chia sẻ", ignoreCase = true) ||

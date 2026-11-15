@@ -19,6 +19,8 @@ import com.witherboymcw.superbattery.R
  */
 object CornerAwareness {
 
+    private const val TAG = "CornerAwareness"
+
     const val DEFAULT_CORNER_RADIUS_DP = 12f
     const val CORNER_OFFSET_DP = 16f
 
@@ -84,7 +86,8 @@ object CornerAwareness {
             val currentBounds = calculator.computeCurrentWindowMetrics(activity).bounds
             val maxBounds = calculator.computeMaximumWindowMetrics(activity).bounds
             checkWindowScreenCornerTouches(currentBounds, maxBounds)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to calculate screen corner touches", e)
             Pair(true, true)
         }
     }

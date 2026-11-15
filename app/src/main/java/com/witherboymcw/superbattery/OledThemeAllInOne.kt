@@ -41,6 +41,7 @@ internal fun checkGuaranteedOledConditions(
  * Hardware OLED display detector.
  */
 object OledDetector {
+    private const val TAG = "OledTheme"
     fun isGuaranteedOled(context: Context): Boolean {
         val hasFingerprint = context.packageManager.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT)
         val hasUdfps = context.packageManager.hasSystemFeature("android.hardware.fingerprint.under_display")
@@ -55,9 +56,19 @@ object OledDetector {
         }
         val wide = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && display?.isWideColorGamut == true
         val hdr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) display?.hdrCapabilities else null
-        val doze = try { Settings.Secure.getInt(context.contentResolver, "doze_always_on", 0) != 0 } catch (_: Exception) { false }
+        val doze = try {
+            Settings.Secure.getInt(context.contentResolver, "doze_always_on", 0) != 0
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to read doze setting", e)
+            false
+        }
         val id = context.resources.getIdentifier("config_dozeAlwaysOn", "bool", "android")
-        val configDoze = id != 0 && try { context.resources.getBoolean(id) } catch (_: Exception) { false }
+        val configDoze = id != 0 && try {
+            context.resources.getBoolean(id)
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to read always-on display configuration", e)
+            false
+        }
         return checkGuaranteedOledConditions(
             hasFingerprint,
             hasUdfps,

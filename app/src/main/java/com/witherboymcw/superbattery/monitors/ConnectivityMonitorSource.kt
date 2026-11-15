@@ -11,6 +11,7 @@ import android.os.Build
 import android.telephony.ServiceState
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
+import android.util.Log
 import androidx.annotation.RequiresApi
 import com.witherboymcw.superbattery.settings.Permissions
 
@@ -18,6 +19,8 @@ import com.witherboymcw.superbattery.settings.Permissions
  * Source module responsible for Wi-Fi, Bluetooth, and SIM telephony connectivity state tracking.
  */
 class ConnectivityMonitorSource {
+
+    companion object { private const val TAG = "ConnectivityMonitor" }
 
     private var telephonyCallback: Any? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -35,7 +38,8 @@ class ConnectivityMonitorSource {
                 @Suppress("DEPRECATION")
                 info != null && info.isConnected && info.type == ConnectivityManager.TYPE_WIFI
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to query Wi-Fi state", e)
             false
         }
     }
@@ -59,7 +63,8 @@ class ConnectivityMonitorSource {
             }
             networkCallback = callback
             cm.registerNetworkCallback(request, callback)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to register Wi-Fi callback", e)
             onWifiChanged(false)
         }
     }
@@ -69,7 +74,9 @@ class ConnectivityMonitorSource {
             try {
                 val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
                 cm?.unregisterNetworkCallback(callback)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to unregister Wi-Fi callback", e)
+            }
             networkCallback = null
         }
     }
@@ -79,7 +86,8 @@ class ConnectivityMonitorSource {
             val bm = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
             val adapter = bm?.adapter ?: @Suppress("DEPRECATION") BluetoothAdapter.getDefaultAdapter()
             adapter != null && adapter.isEnabled
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to query Bluetooth state", e)
             false
         }
     }
@@ -94,7 +102,8 @@ class ConnectivityMonitorSource {
             } else {
                 false
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to query SIM state", e)
             false
         }
     }
@@ -110,7 +119,9 @@ class ConnectivityMonitorSource {
             }
             telephonyCallback = callback
             tm.registerTelephonyCallback(context.mainExecutor, callback)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to register telephony callback", e)
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
@@ -120,6 +131,8 @@ class ConnectivityMonitorSource {
             val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager ?: return
             tm.unregisterTelephonyCallback(callback)
             telephonyCallback = null
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to unregister telephony callback", e)
+        }
     }
 }

@@ -16,6 +16,7 @@ import org.json.JSONArray
 import java.util.concurrent.TimeUnit
 
 object HotspotManager {
+    private const val TAG = "HotspotManager"
     private const val PREFS_HOTSPOT = "hotspot_manager_prefs"
     private const val KEY_PERSISTED_CLIENTS = "persisted_hotspot_clients"
     val MAC_REGEX = Regex("^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
@@ -48,7 +49,8 @@ object HotspotManager {
                         clientMap[client.mac.lowercase()] = client
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to load saved hotspot clients; resetting client list", e)
                 clientMap.clear()
             }
         }
@@ -81,7 +83,7 @@ object HotspotManager {
     fun updateClientStatus(context: Context, mac: String, isDenied: Boolean) {
         val appContext = context.applicationContext
         if (!MAC_REGEX.matches(mac)) {
-            Log.w("HotspotManager", "Invalid MAC address format: $mac")
+            Log.w(TAG, "Invalid MAC address format: $mac")
             return
         }
 
@@ -94,7 +96,7 @@ object HotspotManager {
                 } ?: return@synchronized null to null
 
                 if (!MAC_REGEX.matches(existingClient.mac)) {
-                    Log.w("HotspotManager", "Invalid client MAC address format: ${existingClient.mac}")
+                    Log.w(TAG, "Invalid client MAC address format: ${existingClient.mac}")
                     return@synchronized null to null
                 }
 
@@ -120,7 +122,7 @@ object HotspotManager {
                     savePersistedClients(appContext)
                 }
             } else {
-                Log.w("HotspotManager", "Failed to execute root commands for ${client.mac}. Reverting UI state.")
+                Log.w(TAG, "Failed to execute root commands for ${client.mac}. Reverting UI state.")
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         appContext,
@@ -175,7 +177,7 @@ object HotspotManager {
                 false
             }
         } catch (e: Exception) {
-            Log.e("HotspotManager", "Error executing root commands", e)
+            Log.e(TAG, "Error executing root commands", e)
             try { process?.destroyForcibly() } catch (_: Exception) {}
             false
         }
