@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery.templates
+package com.witherboymcw.superbattery.ui
 
 import android.view.View
 import android.view.ViewGroup

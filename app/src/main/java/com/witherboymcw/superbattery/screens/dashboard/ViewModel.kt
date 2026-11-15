@@ -2,17 +2,17 @@ package com.witherboymcw.superbattery.screens.dashboard
 
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
-import com.witherboymcw.superbattery.BatteryInfo
+import com.witherboymcw.superbattery.monitors.BatteryInfo
 import com.witherboymcw.superbattery.HistoryGraphView
 import com.witherboymcw.superbattery.MetricHistoryManager
-import com.witherboymcw.superbattery.NetworkSpeed
+import com.witherboymcw.superbattery.monitors.NetworkSpeed
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.RamUnit
 import com.witherboymcw.superbattery.TempUnit
 import com.witherboymcw.superbattery.VoltageUnit
 import com.witherboymcw.superbattery.awareness.BatteryMath
 import com.witherboymcw.superbattery.awareness.BatteryPowerInfo
-import com.witherboymcw.superbattery.templates.MetricColors
+import com.witherboymcw.superbattery.core.MetricColors
 
 class DashboardViewModel(
     val metricHistoryManager: MetricHistoryManager = MetricHistoryManager()

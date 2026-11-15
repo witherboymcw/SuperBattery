@@ -9,57 +9,14 @@ import android.media.AudioManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.witherboymcw.superbattery.monitors.AudioRingerSource
+import com.witherboymcw.superbattery.monitors.BatteryInfo
 import com.witherboymcw.superbattery.monitors.BatteryMonitorSource
 import com.witherboymcw.superbattery.monitors.ConnectivityMonitorSource
+import com.witherboymcw.superbattery.monitors.NetworkSpeed
 import com.witherboymcw.superbattery.monitors.NetworkTrafficSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
-/**
- * Data class representing current battery status snapshot.
- */
-data class BatteryInfo(
-    val voltageMv: Int = 0,
-    val temperatureC: Float = 0f,
-    val level: Int = -1,
-    val scale: Int = -1,
-    val status: Int = -1,
-    val isCharging: Boolean = false,
-    @Transient val rawIntent: Intent? = null
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is BatteryInfo) return false
-        return voltageMv == other.voltageMv &&
-                temperatureC == other.temperatureC &&
-                level == other.level &&
-                scale == other.scale &&
-                status == other.status &&
-                isCharging == other.isCharging
-    }
-
-    override fun hashCode(): Int {
-        var result = voltageMv
-        result = 31 * result + temperatureC.hashCode()
-        result = 31 * result + level
-        result = 31 * result + scale
-        result = 31 * result + status
-        result = 31 * result + isCharging.hashCode()
-        return result
-    }
-}
-
-/**
- * Data class representing current network speed snapshot.
- */
-data class NetworkSpeed(
-    val rxRate: Long = 0L,
-    val txRate: Long = 0L,
-    val totalRxBytes: Long = -1L,
-    val totalTxBytes: Long = -1L,
-    val isSupported: Boolean = true
-)
 
 /**
  * SystemMonitorManager is an independent coordinator responsible for orchestrating dedicated
@@ -184,7 +141,9 @@ class SystemMonitorManager(context: Context) {
         if (!isMonitoring) return
         try {
             appContext.unregisterReceiver(receiver)
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            android.util.Log.w(TAG, "Failed to unregister broadcast receiver")
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             connectivitySource.unregisterTelephonyCallback(appContext)
@@ -221,6 +180,7 @@ class SystemMonitorManager(context: Context) {
     fun getBatteryInfo(): BatteryInfo = batterySource.getBatteryInfo(appContext)
 
     companion object {
+        private const val TAG = "SystemMonitorManager"
         private const val ACTION_SIM_STATE_CHANGED = "android.intent.action.SIM_STATE_CHANGED"
         private const val ACTION_SIM_CARD_STATE_CHANGED = "android.telephony.action.SIM_CARD_STATE_CHANGED"
     }

@@ -1,10 +1,10 @@
 package com.witherboymcw.superbattery
 
 import android.view.View
-import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import com.witherboymcw.superbattery.screens.dashboard.DashboardLayout
 import com.witherboymcw.superbattery.screens.hotspot.HotspotViewController
 import com.witherboymcw.superbattery.screens.settings.SettingsViewController
+import com.witherboymcw.superbattery.ui.Motion
 
 /**
  * Helper responsible for orchestrating DashboardLayout dual swipe gestures
@@ -26,7 +26,7 @@ internal object DrawerNavigationHelper {
         dashboard.canSwipe = { !settingsViewController.isOpen && !hotspotViewController.isOpen }
         dashboard.dualSwipeListener = object : DashboardLayout.DualSwipeListener {
             override fun onSwipeStart(direction: DashboardLayout.SwipeDirection) {
-                val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: 1080f
+                val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
                 if (direction == DashboardLayout.SwipeDirection.LEFT_TO_SETTINGS) {
                     containerSettings?.visibility = View.VISIBLE
                     containerSettings?.translationX = screenWidth
@@ -38,7 +38,7 @@ internal object DrawerNavigationHelper {
             }
 
             override fun onSwipeProgress(direction: DashboardLayout.SwipeDirection, dx: Float, targetX: Float) {
-                val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: 1080f
+                val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
                 if (direction == DashboardLayout.SwipeDirection.LEFT_TO_SETTINGS) {
                     containerSettings?.visibility = View.VISIBLE
                     containerSettings?.translationX = targetX
@@ -51,20 +51,20 @@ internal object DrawerNavigationHelper {
             }
 
             override fun onSwipeEnd(direction: DashboardLayout.SwipeDirection, shouldOpen: Boolean) {
-                val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: 1080f
+                val screenWidth = dashboard.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
                 if (direction == DashboardLayout.SwipeDirection.LEFT_TO_SETTINGS) {
                     if (shouldOpen) {
                         settingsViewController.isOpen = true
                         containerSettings?.animate()
                             ?.translationX(0f)
                             ?.setDuration(200L)
-                            ?.setInterpolator(FastOutSlowInInterpolator())
+                            ?.setInterpolator(Motion.interpolator)
                             ?.withLayer()
                             ?.start()
                         activity.dashboardViews.btnSettings?.animate()
                             ?.rotation(90f)
                             ?.setDuration(200L)
-                            ?.setInterpolator(FastOutSlowInInterpolator())
+                            ?.setInterpolator(Motion.interpolator)
                             ?.start()
                         settingsViewController.backCallback.isEnabled = true
                     } else {
@@ -72,14 +72,14 @@ internal object DrawerNavigationHelper {
                         containerSettings?.animate()
                             ?.translationX(screenWidth)
                             ?.setDuration(200L)
-                            ?.setInterpolator(FastOutSlowInInterpolator())
+                            ?.setInterpolator(Motion.interpolator)
                             ?.withLayer()
                             ?.withEndAction { containerSettings.visibility = View.GONE }
                             ?.start()
                         activity.dashboardViews.btnSettings?.animate()
                             ?.rotation(0f)
                             ?.setDuration(200L)
-                            ?.setInterpolator(FastOutSlowInInterpolator())
+                            ?.setInterpolator(Motion.interpolator)
                             ?.start()
                     }
                 } else if (direction == DashboardLayout.SwipeDirection.RIGHT_TO_HOTSPOT) {
@@ -88,7 +88,7 @@ internal object DrawerNavigationHelper {
                         containerHotspot?.animate()
                             ?.translationX(0f)
                             ?.setDuration(200L)
-                            ?.setInterpolator(FastOutSlowInInterpolator())
+                            ?.setInterpolator(Motion.interpolator)
                             ?.withLayer()
                             ?.start()
                         hotspotViewController.backCallback.isEnabled = true
@@ -97,7 +97,7 @@ internal object DrawerNavigationHelper {
                         containerHotspot?.animate()
                             ?.translationX(-screenWidth)
                             ?.setDuration(200L)
-                            ?.setInterpolator(FastOutSlowInInterpolator())
+                            ?.setInterpolator(Motion.interpolator)
                             ?.withLayer()
                             ?.withEndAction { containerHotspot.visibility = View.GONE }
                             ?.start()

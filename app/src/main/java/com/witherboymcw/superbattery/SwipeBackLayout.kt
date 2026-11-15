@@ -1,10 +1,13 @@
 package com.witherboymcw.superbattery
 
+import android.app.Activity
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.widget.FrameLayout
-import com.witherboymcw.superbattery.templates.DrawerGestureHelper
+import com.witherboymcw.superbattery.awareness.FoldableAwareness
+import com.witherboymcw.superbattery.ui.DrawerGestureHelper
+import com.witherboymcw.superbattery.ui.Motion
 
 open class SwipeBackFrameLayout @JvmOverloads constructor(
     context: Context,
@@ -110,8 +113,10 @@ open class SwipeBackFrameLayout @JvmOverloads constructor(
                     val dragDx = ev.rawX - dragStartX
                     val rawClampedDx = if (swipeDirection == SWIPE_DIRECTION_LEFT) -dragDx else dragDx
                     val clampedDx = (rawClampedDx * swipeSensitivity).coerceAtLeast(0f)
-                    val widthVal = width.toFloat().takeIf { it > 0 } ?: 1080f
-                    val threshold = gestureHelper.getSwipeThreshold(context)
+                    val widthVal = width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
+                    val activity = context as? Activity
+                    val isMiniSquare = activity != null && FoldableAwareness.isMiniSquareMode(activity)
+                    val threshold = gestureHelper.getSwipeThreshold(context, isMiniSquare)
 
                     var isFling = false
                     if (ev.action == MotionEvent.ACTION_UP) {

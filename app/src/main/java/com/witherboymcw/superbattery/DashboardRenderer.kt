@@ -7,8 +7,9 @@ import com.witherboymcw.superbattery.awareness.BatteryMath
 import com.witherboymcw.superbattery.awareness.FoldableAwareness
 import com.witherboymcw.superbattery.screens.dashboard.DashboardUiState
 import com.witherboymcw.superbattery.screens.settings.SettingsHelper
-import com.witherboymcw.superbattery.templates.MetricColors
-import com.witherboymcw.superbattery.templates.MetricGraphBinder
+import com.witherboymcw.superbattery.core.MetricColors
+import com.witherboymcw.superbattery.core.SupportedLanguage
+import com.witherboymcw.superbattery.ui.MetricGraphBinder
 import com.witherboymcw.superbattery.utils.Formatters
 
 class DashboardRenderer(private val views: DashboardViews, private val activity: Activity) {
@@ -24,7 +25,7 @@ class DashboardRenderer(private val views: DashboardViews, private val activity:
         val isLandscape = activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val useLandscapeRing = isLandscape || isMiniSquare
         val locale = SettingsHelper.getAppLocale(activity)
-        val supportedLang = com.witherboymcw.superbattery.templates.SupportedLanguage.fromLanguageCode(locale.language)
+        val supportedLang = SupportedLanguage.fromLanguageCode(locale.language)
 
         if (useLandscapeRing) {
             views.batteryRing?.startAngle = 270f

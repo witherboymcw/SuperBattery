@@ -2,7 +2,7 @@ package com.witherboymcw.superbattery.monitors
 
 import android.net.TrafficStats
 import android.os.SystemClock
-import com.witherboymcw.superbattery.NetworkSpeed
+import com.witherboymcw.superbattery.monitors.NetworkSpeed
 
 /**
  * Source module responsible for measuring network bytes via TrafficStats and calculating upload/download rates.

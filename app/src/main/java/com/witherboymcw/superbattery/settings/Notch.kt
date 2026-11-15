@@ -14,6 +14,7 @@ import android.widget.TextView
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.awareness.NotchAwareness
+import com.witherboymcw.superbattery.ui.SimpleSeekbarCard
 
 class Notch(private val activity: MainActivity) {
 
@@ -129,25 +130,25 @@ class Notch(private val activity: MainActivity) {
                 NotchAwareness.updateAllHeaders(activity)
             }
 
-            com.witherboymcw.superbattery.templates.SimpleSeekbarCard.setupRepeatButton(
+            SimpleSeekbarCard.setupRepeatButton(
                 btnSizeMinus10,
                 -10,
                 { updateSize(it.toFloat()) },
                 { AppPreferences.getNotchRadius(activity, NotchAwareness.DEFAULT_NOTCH_RADIUS).toInt() }
             )
-            com.witherboymcw.superbattery.templates.SimpleSeekbarCard.setupRepeatButton(
+            SimpleSeekbarCard.setupRepeatButton(
                 btnSizeMinus1,
                 -1,
                 { updateSize(it.toFloat()) },
                 { AppPreferences.getNotchRadius(activity, NotchAwareness.DEFAULT_NOTCH_RADIUS).toInt() }
             )
-            com.witherboymcw.superbattery.templates.SimpleSeekbarCard.setupRepeatButton(
+            SimpleSeekbarCard.setupRepeatButton(
                 btnSizePlus1,
                 1,
                 { updateSize(it.toFloat()) },
                 { AppPreferences.getNotchRadius(activity, NotchAwareness.DEFAULT_NOTCH_RADIUS).toInt() }
             )
-            com.witherboymcw.superbattery.templates.SimpleSeekbarCard.setupRepeatButton(
+            SimpleSeekbarCard.setupRepeatButton(
                 btnSizePlus10,
                 10,
                 { updateSize(it.toFloat()) },
@@ -177,25 +178,25 @@ class Notch(private val activity: MainActivity) {
                 NotchAwareness.updateAllHeaders(activity)
             }
 
-            com.witherboymcw.superbattery.templates.SimpleSeekbarCard.setupRepeatButton(
+            SimpleSeekbarCard.setupRepeatButton(
                 btnPillMinus10,
                 -10,
                 { updatePill(it.toFloat()) },
                 { AppPreferences.getNotchPillWidth(activity, NotchAwareness.DEFAULT_NOTCH_PILL_WIDTH).toInt() }
             )
-            com.witherboymcw.superbattery.templates.SimpleSeekbarCard.setupRepeatButton(
+            SimpleSeekbarCard.setupRepeatButton(
                 btnPillMinus1,
                 -1,
                 { updatePill(it.toFloat()) },
                 { AppPreferences.getNotchPillWidth(activity, NotchAwareness.DEFAULT_NOTCH_PILL_WIDTH).toInt() }
             )
-            com.witherboymcw.superbattery.templates.SimpleSeekbarCard.setupRepeatButton(
+            SimpleSeekbarCard.setupRepeatButton(
                 btnPillPlus1,
                 1,
                 { updatePill(it.toFloat()) },
                 { AppPreferences.getNotchPillWidth(activity, NotchAwareness.DEFAULT_NOTCH_PILL_WIDTH).toInt() }
             )
-            com.witherboymcw.superbattery.templates.SimpleSeekbarCard.setupRepeatButton(
+            SimpleSeekbarCard.setupRepeatButton(
                 btnPillPlus10,
                 10,
                 { updatePill(it.toFloat()) },

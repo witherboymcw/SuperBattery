@@ -7,8 +7,8 @@ import android.os.Build
 import android.view.Surface
 import android.view.View
 import com.witherboymcw.superbattery.settings.AppPreferences
-import com.witherboymcw.superbattery.templates.dp
-import com.witherboymcw.superbattery.templates.getDisplayRotationCompat
+import com.witherboymcw.superbattery.core.dp
+import com.witherboymcw.superbattery.core.getDisplayRotationCompat
 
 /**
  * Pure geometry engine and status calculations for display cutouts, simulated notch bounds,

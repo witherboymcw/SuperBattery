@@ -25,8 +25,8 @@ import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.settings.AppPreferences
 import com.witherboymcw.superbattery.settings.Permissions
-import com.witherboymcw.superbattery.templates.dp
-import com.witherboymcw.superbattery.templates.getDisplayRotationCompat
+import com.witherboymcw.superbattery.core.dp
+import com.witherboymcw.superbattery.core.getDisplayRotationCompat
 import java.lang.ref.WeakReference
 import kotlin.math.abs
 

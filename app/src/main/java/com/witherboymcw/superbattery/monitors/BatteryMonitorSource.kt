@@ -5,7 +5,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.core.content.ContextCompat
-import com.witherboymcw.superbattery.BatteryInfo
+import com.witherboymcw.superbattery.monitors.BatteryInfo
 
 /**
  * Source module responsible for querying and building BatteryInfo snapshots.

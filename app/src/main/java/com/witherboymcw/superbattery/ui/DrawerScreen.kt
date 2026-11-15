@@ -1,12 +1,19 @@
-package com.witherboymcw.superbattery.templates
+package com.witherboymcw.superbattery.ui
 
 import android.view.View
 import androidx.activity.BackEventCompat
+import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.IdRes
-import androidx.interpolator.view.animation.FastOutSlowInInterpolator
-import com.witherboymcw.superbattery.MainActivity
 
+/**
+ * Base class for slide-in drawer screens (Settings, Hotspot).
+ *
+ * Uses [ComponentActivity] instead of the concrete MainActivity to remove the
+ * upward dependency on the root package. For action-button animation the host
+ * Activity must implement [SettingsHost]; if it does not, button animations are
+ * silently skipped.
+ */
 open class DrawerScreen(
     @param:IdRes private val containerId: Int,
     private val slideDirection: SlideDirection = SlideDirection.FROM_RIGHT,
@@ -17,7 +24,7 @@ open class DrawerScreen(
         FROM_LEFT
     }
 
-    protected var activityRef: MainActivity? = null
+    protected var activityRef: ComponentActivity? = null
     var isOpen: Boolean = false
 
     private val signMultiplier: Float
@@ -28,7 +35,7 @@ open class DrawerScreen(
 
         override fun handleOnBackStarted(backEvent: BackEventCompat) {
             val container = activityRef?.findViewById<View>(containerId) ?: return
-            initialWidth = container.width.toFloat().takeIf { it > 0f } ?: 1080f
+            initialWidth = container.width.toFloat().takeIf { it > 0f } ?: Motion.FALLBACK_WIDTH
         }
 
         override fun handleOnBackProgressed(backEvent: BackEventCompat) {
@@ -42,7 +49,7 @@ open class DrawerScreen(
             container.animate()
                 .translationX(0f)
                 .setDuration(150L)
-                .setInterpolator(FastOutSlowInInterpolator())
+                .setInterpolator(Motion.interpolator)
                 .start()
         }
 
@@ -52,16 +59,16 @@ open class DrawerScreen(
         }
     }
 
-    open fun openScreen(activity: MainActivity) {
+    open fun openScreen(activity: ComponentActivity) {
         val container = activity.findViewById<View>(containerId) ?: return
         isOpen = true
         container.visibility = View.VISIBLE
-        val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
+        val width = container.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
         container.translationX = signMultiplier * width
         container.animate()
             .translationX(0f)
             .setDuration(280L)
-            .setInterpolator(FastOutSlowInInterpolator())
+            .setInterpolator(Motion.interpolator)
             .withLayer()
             .start()
 
@@ -70,18 +77,18 @@ open class DrawerScreen(
         onPostOpen(activity)
     }
 
-    open fun closeScreen(activity: MainActivity, animate: Boolean = true) {
+    open fun closeScreen(activity: ComponentActivity, animate: Boolean = true) {
         onPreClose()
         val container = activity.findViewById<View>(containerId) ?: return
         if (container.visibility != View.VISIBLE) return
         isOpen = false
         backCallback.isEnabled = false
         if (animate) {
-            val width = container.width.toFloat().takeIf { it > 0 } ?: 1080f
+            val width = container.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
             container.animate()
                 .translationX(signMultiplier * width)
                 .setDuration(280L)
-                .setInterpolator(FastOutSlowInInterpolator())
+                .setInterpolator(Motion.interpolator)
                 .withLayer()
                 .withEndAction {
                     container.visibility = View.GONE
@@ -97,7 +104,7 @@ open class DrawerScreen(
         onPostClose(activity)
     }
 
-    open fun restoreOpenState(activity: MainActivity) {
+    open fun restoreOpenState(activity: ComponentActivity) {
         val container = activity.findViewById<View>(containerId) ?: return
         container.visibility = View.VISIBLE
         container.translationX = 0f
@@ -107,41 +114,41 @@ open class DrawerScreen(
     }
 
     protected open fun onPreClose() {}
-    protected open fun onPostOpen(activity: MainActivity) {}
-    protected open fun onPostClose(activity: MainActivity) {}
+    protected open fun onPostOpen(activity: ComponentActivity) {}
+    protected open fun onPostClose(activity: ComponentActivity) {}
 
-    private fun animateActionButtonOnOpen(activity: MainActivity) {
-        if (actionButtonId != null) {
-            val btn = activity.findViewById<View>(actionButtonId) ?: activity.dashboardViews.btnSettings
-            btn?.animate()
-                ?.rotation(90f)
-                ?.setDuration(280L)
-                ?.setInterpolator(FastOutSlowInInterpolator())
-                ?.start()
+    private fun resolveActionButton(activity: ComponentActivity): View? {
+        if (actionButtonId == null) return null
+        val byId = activity.findViewById<View>(actionButtonId)
+        if (byId != null) return byId
+        // If the host implements SettingsHost, fall back to its declared button
+        return (activity as? SettingsHost)?.settingsActionButton
+    }
+
+    private fun animateActionButtonOnOpen(activity: ComponentActivity) {
+        resolveActionButton(activity)?.animate()
+            ?.rotation(90f)
+            ?.setDuration(280L)
+            ?.setInterpolator(Motion.interpolator)
+            ?.start()
+    }
+
+    private fun animateActionButtonOnClose(activity: ComponentActivity, animate: Boolean) {
+        val btn = resolveActionButton(activity) ?: return
+        if (animate) {
+            btn.animate()
+                .rotation(0f)
+                .setDuration(280L)
+                .setInterpolator(Motion.interpolator)
+                .start()
+        } else {
+            btn.animate().cancel()
+            btn.rotation = 0f
         }
     }
 
-    private fun animateActionButtonOnClose(activity: MainActivity, animate: Boolean) {
-        if (actionButtonId != null) {
-            val btn = activity.findViewById<View>(actionButtonId) ?: activity.dashboardViews.btnSettings
-            if (animate) {
-                btn?.animate()
-                    ?.rotation(0f)
-                    ?.setDuration(280L)
-                    ?.setInterpolator(FastOutSlowInInterpolator())
-                    ?.start()
-            } else {
-                btn?.animate()?.cancel()
-                btn?.rotation = 0f
-            }
-        }
-    }
-
-    private fun animateActionButtonOnRestore(activity: MainActivity) {
-        if (actionButtonId != null) {
-            val btn = activity.findViewById<View>(actionButtonId) ?: activity.dashboardViews.btnSettings
-            btn?.rotation = 90f
-        }
+    private fun animateActionButtonOnRestore(activity: ComponentActivity) {
+        resolveActionButton(activity)?.rotation = 90f
     }
 
     open fun unbind() {

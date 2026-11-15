@@ -1,16 +1,14 @@
 package com.witherboymcw.superbattery.screens.hotspot
 
-import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
-import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
 import android.widget.RadioButton
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -19,11 +17,11 @@ import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.SwipeBackFrameLayout
 import com.witherboymcw.superbattery.awareness.FoldableAwareness
 import com.witherboymcw.superbattery.awareness.NotchAwareness
-import com.witherboymcw.superbattery.templates.DrawerScreen
+import com.witherboymcw.superbattery.ui.DrawerScreen
+import com.witherboymcw.superbattery.ui.Motion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 internal class HotspotViewController : DrawerScreen(
     containerId = R.id.hotspot_container,
@@ -33,155 +31,154 @@ internal class HotspotViewController : DrawerScreen(
     private var activeDetailTextWatcher: TextWatcher? = null
     private var clientsJob: kotlinx.coroutines.Job? = null
 
-    override fun onPostOpen(activity: MainActivity) {
-        NotchAwareness.updateHotspotHeaderLayout(activity)
+    override fun onPostOpen(activity: ComponentActivity) {
+        (activity as? MainActivity)?.let { NotchAwareness.updateHotspotHeaderLayout(it) }
     }
 
-    fun bind(activity: MainActivity, savedInstanceState: Bundle? = null) {
+    fun bind(activity: ComponentActivity, savedInstanceState: Bundle? = null) {
         this.activityRef = activity
         activity.onBackPressedDispatcher.addCallback(activity, backCallback)
 
-        com.witherboymcw.superbattery.OledThemeAllInOne.applyThemeToAllCards(activity.findViewById(com.witherboymcw.superbattery.R.id.hotspot_container), activity)
-
-        with(activity) {
-            val swipeContainer = findViewById<android.view.ViewGroup>(R.id.hotspot_container) as? SwipeBackFrameLayout ?: return
-            swipeContainer.isClickable = true
-            swipeContainer.isFocusable = true
-            swipeContainer.swipeDirection = SwipeBackFrameLayout.SWIPE_DIRECTION_LEFT
-
-            // Back button tap
-            findViewById<View>(R.id.hotspot_back_button)?.setOnClickListener {
-                closeScreen(this)
-            }
-
-            // Swipe left callback to close hotspot container
-            swipeContainer.swipeListener = object : SwipeBackFrameLayout.SwipeListener {
-                override fun onSwipeProgress(translationX: Float) {
-                    swipeContainer.translationX = translationX
-                }
-
-                override fun onSwipeEnd(shouldClose: Boolean) {
-                    if (shouldClose) {
-                        closeScreen(this@with)
-                    } else {
-                        swipeContainer.animate()
-                            .translationX(0f)
-                            .setDuration(200L)
-                            .setInterpolator(FastOutSlowInInterpolator())
-                            .withLayer()
-                            .start()
-                    }
-                }
-            }
-
-            val isMiniSquare = FoldableAwareness.isMiniSquareMode(activity)
-            val isLandscape = !isMiniSquare && resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            val recyclerView = findViewById<RecyclerView>(R.id.hotspot_recycler_view)
-
-            val adapter = HotspotClientAdapter(
-                isLandscape = isLandscape,
-                onClientClick = { client ->
-                    selectedDeviceMac = client.mac
-                    if (isLandscape) {
-                        bindLandscapeDetailCard(activity, client)
-                    }
-                },
-                onStatusChanged = { client, isDenied ->
-                    HotspotManager.updateClientStatus(activity, client.mac, isDenied)
-                },
-                onAliasChanged = { client, newAlias ->
-                    HotspotManager.updateClientAlias(activity, client.mac, newAlias)
-                }
-            )
-
-            recyclerView?.layoutManager = LinearLayoutManager(activity)
-            recyclerView?.adapter = adapter
-
-            clientsJob?.cancel()
-            clientsJob = activity.lifecycleScope.launch {
-                val appContext = activity.applicationContext
-                withContext(Dispatchers.IO) {
-                    HotspotManager.loadPersistedClients(appContext)
-                }
-                HotspotManager.clientsState.collect { clients ->
-                    val sortedList = clients.sortedWith(
-                        compareByDescending<HotspotClient> { it.isCurrentlyOnline }
-                            .thenByDescending { it.lastConnectedTimeMs }
-                    )
-                    adapter.submitList(sortedList)
-
-                    if (isLandscape && sortedList.isNotEmpty()) {
-                        val currentSelected = sortedList.firstOrNull { it.mac.equals(selectedDeviceMac, ignoreCase = true) }
-                            ?: sortedList.first()
-                        selectedDeviceMac = currentSelected.mac
-                        bindLandscapeDetailCard(activity, currentSelected)
-                    }
-                }
-            }
-
-            val savedScrollY = savedInstanceState?.getInt(KEY_HOTSPOT_SCROLL_Y, -1) ?: -1
-            if (savedScrollY >= 0) {
-                val scrollView = findViewById<ScrollView>(R.id.hotspot_scroll_view)
-                    ?: findViewById<ScrollView>(R.id.hotspot_scroll_left)
-                scrollView?.post { scrollView.scrollTo(0, savedScrollY) }
-            }
-
-            NotchAwareness.updateHotspotHeaderLayout(activity)
+        val hotspotContainer = activity.findViewById<View>(R.id.hotspot_container)
+        if (hotspotContainer != null) {
+            com.witherboymcw.superbattery.OledThemeAllInOne.applyThemeToAllCards(hotspotContainer, activity)
         }
+
+        val swipeContainer = hotspotContainer as? SwipeBackFrameLayout ?: return
+        swipeContainer.isClickable = true
+        swipeContainer.isFocusable = true
+        swipeContainer.swipeDirection = SwipeBackFrameLayout.SWIPE_DIRECTION_LEFT
+
+        // Back button tap
+        activity.findViewById<View>(R.id.hotspot_back_button)?.setOnClickListener {
+            closeScreen(activity)
+        }
+
+        // Swipe left callback to close hotspot container
+        swipeContainer.swipeListener = object : SwipeBackFrameLayout.SwipeListener {
+            override fun onSwipeProgress(translationX: Float) {
+                swipeContainer.translationX = translationX
+            }
+
+            override fun onSwipeEnd(shouldClose: Boolean) {
+                if (shouldClose) {
+                    closeScreen(activity)
+                } else {
+                    swipeContainer.animate()
+                        .translationX(0f)
+                        .setDuration(200L)
+                        .setInterpolator(Motion.interpolator)
+                        .withLayer()
+                        .start()
+                }
+            }
+        }
+
+        val isMiniSquare = FoldableAwareness.isMiniSquareMode(activity)
+        val isLandscape = !isMiniSquare && activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val recyclerView = activity.findViewById<RecyclerView>(R.id.hotspot_recycler_view)
+
+        val adapter = HotspotClientAdapter(
+            isLandscape = isLandscape,
+            onClientClick = { client ->
+                selectedDeviceMac = client.mac
+                if (isLandscape) {
+                    bindLandscapeDetailCard(activity, client)
+                }
+            },
+            onStatusChanged = { client, isDenied ->
+                HotspotManager.updateClientStatus(activity, client.mac, isDenied)
+            },
+            onAliasChanged = { client, newAlias ->
+                HotspotManager.updateClientAlias(activity, client.mac, newAlias)
+            }
+        )
+
+        recyclerView?.layoutManager = LinearLayoutManager(activity)
+        recyclerView?.adapter = adapter
+
+        clientsJob?.cancel()
+        clientsJob = activity.lifecycleScope.launch {
+            val appContext = activity.applicationContext
+            withContext(Dispatchers.IO) {
+                HotspotManager.loadPersistedClients(appContext)
+            }
+            HotspotManager.clientsState.collect { clients ->
+                val sortedList = clients.sortedWith(
+                    compareByDescending<HotspotClient> { it.isCurrentlyOnline }
+                        .thenByDescending { it.lastConnectedTimeMs }
+                )
+                adapter.submitList(sortedList)
+
+                if (isLandscape && sortedList.isNotEmpty()) {
+                    val currentSelected = sortedList.firstOrNull { it.mac.equals(selectedDeviceMac, ignoreCase = true) }
+                        ?: sortedList.first()
+                    selectedDeviceMac = currentSelected.mac
+                    bindLandscapeDetailCard(activity, currentSelected)
+                }
+            }
+        }
+
+        val savedScrollY = savedInstanceState?.getInt(KEY_HOTSPOT_SCROLL_Y, -1) ?: -1
+        if (savedScrollY >= 0) {
+            val scrollView = activity.findViewById<ScrollView>(R.id.hotspot_scroll_view)
+                ?: activity.findViewById<ScrollView>(R.id.hotspot_scroll_left)
+            scrollView?.post { scrollView.scrollTo(0, savedScrollY) }
+        }
+
+        (activity as? MainActivity)?.let { NotchAwareness.updateHotspotHeaderLayout(it) }
     }
 
-    private fun bindLandscapeDetailCard(activity: MainActivity, client: HotspotClient) {
-        with(activity) {
-            val detailCardTitle = findViewById<TextView>(R.id.hotspot_detail_title)
-            val detailCardMac = findViewById<TextView>(R.id.hotspot_detail_mac)
-            val detailRadioAllowed = findViewById<RadioButton>(R.id.hotspot_detail_radio_allowed)
-            val detailRadioDenied = findViewById<RadioButton>(R.id.hotspot_detail_radio_denied)
+    private fun bindLandscapeDetailCard(activity: ComponentActivity, client: HotspotClient) {
+        val detailCardTitle = activity.findViewById<TextView>(R.id.hotspot_detail_title)
+        val detailCardMac = activity.findViewById<TextView>(R.id.hotspot_detail_mac)
+        val detailRadioAllowed = activity.findViewById<RadioButton>(R.id.hotspot_detail_radio_allowed)
+        val detailRadioDenied = activity.findViewById<RadioButton>(R.id.hotspot_detail_radio_denied)
 
-            val detailIp = findViewById<TextView>(R.id.hotspot_detail_ip)
-            val detailData = findViewById<TextView>(R.id.hotspot_detail_data)
-            val detailTime = findViewById<TextView>(R.id.hotspot_detail_time)
+        val detailIp = activity.findViewById<TextView>(R.id.hotspot_detail_ip)
+        val detailData = activity.findViewById<TextView>(R.id.hotspot_detail_data)
+        val detailTime = activity.findViewById<TextView>(R.id.hotspot_detail_time)
 
-            val detailEtAlias = findViewById<EditText>(R.id.hotspot_detail_et_alias)
-            val detailBtnRemoveAlias = findViewById<View>(R.id.hotspot_detail_btn_remove_alias)
+        val detailEtAlias = activity.findViewById<EditText>(R.id.hotspot_detail_et_alias)
+        val detailBtnRemoveAlias = activity.findViewById<View>(R.id.hotspot_detail_btn_remove_alias)
 
-            detailCardTitle?.text = client.deviceName
-            detailCardMac?.text = client.mac
-            detailIp?.text = getString(R.string.hotspot_ip_address, client.ipAddress)
-            detailData?.text = getString(R.string.hotspot_data_used, com.witherboymcw.superbattery.utils.Formatters.formatByteSize(client.totalDataBytes))
-            detailTime?.text = getString(R.string.hotspot_connected_time, com.witherboymcw.superbattery.utils.Formatters.formatConnectedTime(activity, client.lastConnectedTimeMs, client.isCurrentlyOnline))
+        detailCardTitle?.text = client.deviceName
+        detailCardMac?.text = client.mac
+        detailIp?.text = activity.getString(R.string.hotspot_ip_address, client.ipAddress)
+        detailData?.text = activity.getString(R.string.hotspot_data_used, com.witherboymcw.superbattery.utils.Formatters.formatByteSize(client.totalDataBytes))
+        detailTime?.text = activity.getString(R.string.hotspot_connected_time, com.witherboymcw.superbattery.utils.Formatters.formatConnectedTime(activity, client.lastConnectedTimeMs, client.isCurrentlyOnline))
 
+        if (client.isDenied) {
+            detailRadioDenied?.isChecked = true
+            detailRadioAllowed?.isChecked = false
+        } else {
+            detailRadioAllowed?.isChecked = true
+            detailRadioDenied?.isChecked = false
+        }
+
+        detailRadioAllowed?.setOnClickListener {
             if (client.isDenied) {
-                detailRadioDenied?.isChecked = true
-                detailRadioAllowed?.isChecked = false
-            } else {
-                detailRadioAllowed?.isChecked = true
-                detailRadioDenied?.isChecked = false
+                HotspotManager.updateClientStatus(activity, client.mac, false)
             }
+        }
 
-            detailRadioAllowed?.setOnClickListener {
-                if (client.isDenied) {
-                    HotspotManager.updateClientStatus(activity, client.mac, false)
-                }
+        detailRadioDenied?.setOnClickListener {
+            if (!client.isDenied) {
+                HotspotManager.updateClientStatus(activity, client.mac, true)
             }
+        }
 
-            detailRadioDenied?.setOnClickListener {
-                if (!client.isDenied) {
-                    HotspotManager.updateClientStatus(activity, client.mac, true)
-                }
-            }
+        // Remove previous TextWatcher before attaching a new one
+        activeDetailTextWatcher?.let { detailEtAlias?.removeTextChangedListener(it) }
 
-            // Remove previous TextWatcher before attaching a new one
-            activeDetailTextWatcher?.let { detailEtAlias?.removeTextChangedListener(it) }
-
-            if (detailEtAlias != null && detailBtnRemoveAlias != null) {
-                activeDetailTextWatcher = com.witherboymcw.superbattery.utils.Formatters.bindAliasTextWatcher(
-                    etAlias = detailEtAlias,
-                    btnRemoveAlias = detailBtnRemoveAlias,
-                    deviceName = client.deviceName,
-                    currentAlias = client.customAlias,
-                    onAliasChanged = { newAlias -> HotspotManager.updateClientAlias(activity, client.mac, newAlias) }
-                )
-            }
+        if (detailEtAlias != null && detailBtnRemoveAlias != null) {
+            activeDetailTextWatcher = com.witherboymcw.superbattery.utils.Formatters.bindAliasTextWatcher(
+                etAlias = detailEtAlias,
+                btnRemoveAlias = detailBtnRemoveAlias,
+                deviceName = client.deviceName,
+                currentAlias = client.customAlias,
+                onAliasChanged = { newAlias -> HotspotManager.updateClientAlias(activity, client.mac, newAlias) }
+            )
         }
     }
 

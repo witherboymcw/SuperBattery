@@ -76,6 +76,6 @@ class BatteryDetailsWidget : AppWidgetProvider() {
         }
 
         internal fun temperatureColor(tempCelsius: Float): Int =
-            com.witherboymcw.superbattery.templates.MetricColors.getTemperatureColor(tempCelsius)
+            com.witherboymcw.superbattery.core.MetricColors.getTemperatureColor(tempCelsius)
     }
 }

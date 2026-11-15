@@ -11,7 +11,7 @@ import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.awareness.ChinAwareness
 import com.witherboymcw.superbattery.awareness.FoldableAwareness
-import com.witherboymcw.superbattery.templates.SimpleSeekbarCard
+import com.witherboymcw.superbattery.ui.SimpleSeekbarCard
 
 class ThickChin(private val activity: MainActivity) {
 

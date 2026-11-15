@@ -11,8 +11,8 @@ import android.view.ViewTreeObserver
 import android.widget.ScrollView
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.SwipeBackFrameLayout
-import com.witherboymcw.superbattery.templates.dp
-import com.witherboymcw.superbattery.templates.getDisplayRotationCompat
+import com.witherboymcw.superbattery.core.dp
+import com.witherboymcw.superbattery.core.getDisplayRotationCompat
 import kotlin.math.abs
 
 /**

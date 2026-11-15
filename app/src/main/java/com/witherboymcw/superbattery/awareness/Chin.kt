@@ -7,7 +7,7 @@ import android.view.View
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.settings.AppPreferences
-import com.witherboymcw.superbattery.templates.getDisplayRotationCompat
+import com.witherboymcw.superbattery.core.getDisplayRotationCompat
 import kotlin.math.roundToInt
 
 /**

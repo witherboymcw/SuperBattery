@@ -1,7 +1,7 @@
 package com.witherboymcw.superbattery.screens.dashboard
 
-import com.witherboymcw.superbattery.BatteryInfo
-import com.witherboymcw.superbattery.NetworkSpeed
+import com.witherboymcw.superbattery.monitors.BatteryInfo
+import com.witherboymcw.superbattery.monitors.NetworkSpeed
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.RamUnit
 import com.witherboymcw.superbattery.TempUnit

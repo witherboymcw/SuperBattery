@@ -13,8 +13,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
-import com.witherboymcw.superbattery.templates.dp
-import com.witherboymcw.superbattery.templates.getDisplayRotationCompat
+import com.witherboymcw.superbattery.core.dp
+import com.witherboymcw.superbattery.core.getDisplayRotationCompat
 
 typealias CutoutInfo = NotchGeometry.CutoutInfo
 

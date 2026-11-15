@@ -1,11 +1,14 @@
 package com.witherboymcw.superbattery.screens.dashboard
 
+import android.app.Activity
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.widget.LinearLayout
 import com.witherboymcw.superbattery.awareness.CornerAwareness
-import com.witherboymcw.superbattery.templates.DrawerGestureHelper
+import com.witherboymcw.superbattery.awareness.FoldableAwareness
+import com.witherboymcw.superbattery.ui.DrawerGestureHelper
+import com.witherboymcw.superbattery.ui.Motion
 
 class DashboardLayout @JvmOverloads constructor(
     context: Context,
@@ -98,7 +101,7 @@ class DashboardLayout @JvmOverloads constructor(
         }
         gestureHelper.addMovement(ev)
 
-        val screenWidth = width.toFloat().takeIf { it > 0 } ?: 1080f
+        val screenWidth = width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
         var handled = false
 
         when (ev.action) {
@@ -146,7 +149,9 @@ class DashboardLayout @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (currentDirection != SwipeDirection.NONE) {
                     val dragDx = (ev.rawX - dragStartX) * swipeSensitivity
-                    val threshold = gestureHelper.getSwipeThreshold(context)
+                    val activity = context as? Activity
+                    val isMiniSquare = activity != null && FoldableAwareness.isMiniSquareMode(activity)
+                    val threshold = gestureHelper.getSwipeThreshold(context, isMiniSquare)
 
                     val xVelocity = gestureHelper.computeXVelocity(1000)
 

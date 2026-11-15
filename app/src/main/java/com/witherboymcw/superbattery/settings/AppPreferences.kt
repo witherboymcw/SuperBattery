@@ -2,6 +2,9 @@ package com.witherboymcw.superbattery.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.witherboymcw.superbattery.RamUnit
+import com.witherboymcw.superbattery.TempUnit
+import com.witherboymcw.superbattery.VoltageUnit
 
 /**
  * Single Source of Truth for all application settings and configuration preferences.
@@ -98,28 +101,58 @@ object AppPreferences {
     }
 
     // --- Units ---
-    fun getTempUnit(context: Context): String {
+    fun getTempUnit(context: Context): TempUnit {
+        val code = getPreferences(context).getString(KEY_TEMP_UNIT, DEFAULT_TEMP_UNIT) ?: DEFAULT_TEMP_UNIT
+        return TempUnit.fromCode(code)
+    }
+
+    fun setTempUnit(context: Context, unit: TempUnit) {
+        getPreferences(context).edit().putString(KEY_TEMP_UNIT, unit.code).apply()
+    }
+
+    /** Raw string accessor used by legacy settings option-card binding (stores code strings). */
+    fun getTempUnitCode(context: Context): String {
         return getPreferences(context).getString(KEY_TEMP_UNIT, DEFAULT_TEMP_UNIT) ?: DEFAULT_TEMP_UNIT
     }
 
-    fun setTempUnit(context: Context, unit: String) {
-        getPreferences(context).edit().putString(KEY_TEMP_UNIT, unit).apply()
+    fun setTempUnitCode(context: Context, code: String) {
+        getPreferences(context).edit().putString(KEY_TEMP_UNIT, code).apply()
     }
 
-    fun getVoltageUnit(context: Context): String {
+    fun getVoltageUnit(context: Context): VoltageUnit {
+        val code = getPreferences(context).getString(KEY_VOLTAGE_UNIT, DEFAULT_VOLTAGE_UNIT) ?: DEFAULT_VOLTAGE_UNIT
+        return VoltageUnit.fromCode(code)
+    }
+
+    fun setVoltageUnit(context: Context, unit: VoltageUnit) {
+        getPreferences(context).edit().putString(KEY_VOLTAGE_UNIT, unit.code).apply()
+    }
+
+    /** Raw string accessor used by legacy settings option-card binding (stores code strings). */
+    fun getVoltageUnitCode(context: Context): String {
         return getPreferences(context).getString(KEY_VOLTAGE_UNIT, DEFAULT_VOLTAGE_UNIT) ?: DEFAULT_VOLTAGE_UNIT
     }
 
-    fun setVoltageUnit(context: Context, unit: String) {
-        getPreferences(context).edit().putString(KEY_VOLTAGE_UNIT, unit).apply()
+    fun setVoltageUnitCode(context: Context, code: String) {
+        getPreferences(context).edit().putString(KEY_VOLTAGE_UNIT, code).apply()
     }
 
-    fun getRamUnit(context: Context): String {
+    fun getRamUnit(context: Context): RamUnit {
+        val code = getPreferences(context).getString(KEY_RAM_UNIT, DEFAULT_RAM_UNIT) ?: DEFAULT_RAM_UNIT
+        return RamUnit.fromCode(code)
+    }
+
+    fun setRamUnit(context: Context, unit: RamUnit) {
+        getPreferences(context).edit().putString(KEY_RAM_UNIT, unit.code).apply()
+    }
+
+    /** Raw string accessor used by legacy settings option-card binding (stores code strings). */
+    fun getRamUnitCode(context: Context): String {
         return getPreferences(context).getString(KEY_RAM_UNIT, DEFAULT_RAM_UNIT) ?: DEFAULT_RAM_UNIT
     }
 
-    fun setRamUnit(context: Context, unit: String) {
-        getPreferences(context).edit().putString(KEY_RAM_UNIT, unit).apply()
+    fun setRamUnitCode(context: Context, code: String) {
+        getPreferences(context).edit().putString(KEY_RAM_UNIT, code).apply()
     }
 
     // --- Hardware Preferences ---

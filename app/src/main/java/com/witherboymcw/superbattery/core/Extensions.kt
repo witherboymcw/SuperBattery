@@ -1,4 +1,4 @@
-package com.witherboymcw.superbattery.templates
+package com.witherboymcw.superbattery.core
 
 import android.content.Context
 import android.os.Build

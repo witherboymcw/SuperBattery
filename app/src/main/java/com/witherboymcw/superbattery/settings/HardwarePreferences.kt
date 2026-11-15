@@ -7,8 +7,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
-import com.witherboymcw.superbattery.templates.CheckboxItemSpec
-import com.witherboymcw.superbattery.templates.SimpleCheckboxCard
+import com.witherboymcw.superbattery.ui.CheckboxItemSpec
+import com.witherboymcw.superbattery.ui.SimpleCheckboxCard
 
 class HardwarePreferences(private val activity: MainActivity) {
 

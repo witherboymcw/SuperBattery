@@ -15,8 +15,8 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
-import com.witherboymcw.superbattery.templates.CheckboxItemSpec
-import com.witherboymcw.superbattery.templates.SimpleCheckboxCard
+import com.witherboymcw.superbattery.ui.CheckboxItemSpec
+import com.witherboymcw.superbattery.ui.SimpleCheckboxCard
 
 class Permissions(private val activity: MainActivity) {
 

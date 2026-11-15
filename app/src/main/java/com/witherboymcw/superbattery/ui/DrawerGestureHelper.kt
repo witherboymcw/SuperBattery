@@ -1,9 +1,7 @@
-package com.witherboymcw.superbattery.templates
+package com.witherboymcw.superbattery.ui
 
-import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
-import com.witherboymcw.superbattery.awareness.FoldableAwareness
 import android.view.MotionEvent
 import android.view.VelocityTracker
 import android.view.View
@@ -59,9 +57,7 @@ class DrawerGestureHelper(context: Context) {
         return xVelocity > (minFlingVelocity * 0.15f)
     }
 
-    fun getSwipeThreshold(context: Context): Float {
-        val activity = context as? Activity
-        val isMiniSquare = activity != null && FoldableAwareness.isMiniSquareMode(activity)
+    fun getSwipeThreshold(context: Context, isMiniSquare: Boolean = false): Float {
         val isLandscape = !isMiniSquare && context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         return if (isLandscape) 0.12f else 0.22f
     }

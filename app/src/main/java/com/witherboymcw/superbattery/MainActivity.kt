@@ -37,10 +37,11 @@ import com.witherboymcw.superbattery.awareness.FoldableAwareness
 import com.witherboymcw.superbattery.awareness.NotchAwareness
 import com.witherboymcw.superbattery.awareness.getBatteryPowerInfo
 import com.witherboymcw.superbattery.screens.dashboard.DashboardUiState
-import com.witherboymcw.superbattery.templates.LocaleManager
-import com.witherboymcw.superbattery.templates.MetricColors
-import com.witherboymcw.superbattery.templates.MetricGraphBinder
-import com.witherboymcw.superbattery.templates.getDisplayRotationCompat
+import com.witherboymcw.superbattery.core.LocaleManager
+import com.witherboymcw.superbattery.core.MetricColors
+import com.witherboymcw.superbattery.core.getDisplayRotationCompat
+import com.witherboymcw.superbattery.ui.MetricGraphBinder
+import com.witherboymcw.superbattery.ui.SettingsHost
 import com.witherboymcw.superbattery.widgets.BatteryDetailsWidget
 import com.witherboymcw.superbattery.widgets.BatteryWidget
 import androidx.core.os.LocaleListCompat
@@ -72,7 +73,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), SettingsHost {
+    // SettingsHost implementation
+    override fun <T : View> findView(id: Int): T? = findViewById(id)
+    override val settingsActionButton: View? get() = dashboardViews.btnSettings
+
     private val settingsViewController = SettingsViewController()
     private val hotspotViewController = HotspotViewController()
     private val dashboardViewModel by lazy { ViewModelProvider(this)[DashboardViewModel::class.java] }

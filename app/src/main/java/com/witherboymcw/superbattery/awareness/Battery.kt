@@ -170,7 +170,7 @@ object BatteryMath {
         }
     }
 
-    fun getBatteryPercentage(context: Context, batteryInfo: com.witherboymcw.superbattery.BatteryInfo, voltageMv: Int): Int {
+    fun getBatteryPercentage(context: Context, batteryInfo: com.witherboymcw.superbattery.monitors.BatteryInfo, voltageMv: Int): Int {
         return getBatteryPercentage(SettingsHelper.isUseSystemBatteryCounter(context), batteryInfo.level, batteryInfo.scale, voltageMv)
     }
 
@@ -238,5 +238,5 @@ object BatteryMath {
         return 0
     }
 
-    fun percentageColor(percent: Int): Int = com.witherboymcw.superbattery.templates.MetricColors.getBatteryColor(percent)
+    fun percentageColor(percent: Int): Int = com.witherboymcw.superbattery.core.MetricColors.getBatteryColor(percent)
 }

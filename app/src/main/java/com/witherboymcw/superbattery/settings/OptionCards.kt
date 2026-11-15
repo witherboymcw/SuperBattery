@@ -5,8 +5,8 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.OledThemeAllInOne
 import com.witherboymcw.superbattery.R
-import com.witherboymcw.superbattery.templates.LocaleManager
-import com.witherboymcw.superbattery.templates.SupportedLanguage
+import com.witherboymcw.superbattery.core.LocaleManager
+import com.witherboymcw.superbattery.core.SupportedLanguage
 
 val optionCards: List<OptionCardSpec<*>> = listOf(
     OptionCardSpec(
@@ -24,7 +24,7 @@ val optionCards: List<OptionCardSpec<*>> = listOf(
         read = { context -> LocaleManager.normalizeLanguageTag(AppPreferences.getAppLanguage(context)) },
         write = { context, value ->
             if (context is MainActivity) {
-                com.witherboymcw.superbattery.templates.LocaleManager.setAppLanguage(context, value as String)
+                LocaleManager.setAppLanguage(context, value as String)
             }
         }
     ),
@@ -75,9 +75,9 @@ val optionCards: List<OptionCardSpec<*>> = listOf(
             OptionSpec(R.id.voltage_unit_v, "v", R.string.voltage_unit_v),
             OptionSpec(R.id.voltage_unit_mv, "mv", R.string.voltage_unit_mv)
         ),
-        read = { context -> AppPreferences.getVoltageUnit(context) },
+        read = { context -> AppPreferences.getVoltageUnitCode(context) },
         write = { context, value ->
-            AppPreferences.setVoltageUnit(context, value as String)
+            AppPreferences.setVoltageUnitCode(context, value as String)
             if (context is MainActivity) {
                 context.updateDashboard()
                 context.refreshWidgets()
@@ -92,9 +92,9 @@ val optionCards: List<OptionCardSpec<*>> = listOf(
             OptionSpec(R.id.ram_unit_mb, "mb", R.string.ram_unit_mb),
             OptionSpec(R.id.ram_unit_gb, "gb", R.string.ram_unit_gb)
         ),
-        read = { context -> AppPreferences.getRamUnit(context) },
+        read = { context -> AppPreferences.getRamUnitCode(context) },
         write = { context, value ->
-            AppPreferences.setRamUnit(context, value as String)
+            AppPreferences.setRamUnitCode(context, value as String)
             if (context is MainActivity) {
                 context.updateDashboard()
                 context.refreshWidgets()
@@ -110,9 +110,9 @@ val optionCards: List<OptionCardSpec<*>> = listOf(
             OptionSpec(R.id.temp_unit_fahrenheit, "fahrenheit", R.string.temp_unit_fahrenheit),
             OptionSpec(R.id.temp_unit_kelvin, "kelvin", R.string.temp_unit_kelvin)
         ),
-        read = { context -> AppPreferences.getTempUnit(context) },
+        read = { context -> AppPreferences.getTempUnitCode(context) },
         write = { context, value ->
-            AppPreferences.setTempUnit(context, value as String)
+            AppPreferences.setTempUnitCode(context, value as String)
             if (context is MainActivity) {
                 context.updateDashboard()
                 context.refreshWidgets()
