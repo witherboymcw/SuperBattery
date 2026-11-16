@@ -1,8 +1,10 @@
-🌐 **Tiếng Việt** | [English (US)](README.md)
+🌐 **Tiếng Việt** | [English (US)](README.md) | [简体中文](README.zhcn.md)
 
 # SuperBattery ⚡
 
 là ứng dụng Android chuyên dụng hỗ trợ theo dõi mức pin và điện áp dành riêng cho các thiết bị Android đã can thiệp phần cứng: **độ cell pin Li-ion 3.7V (đầy ở 4.2V)** và sử dụng **mạch sạc ngoài mắc song song BMS pin** thay thế cho chuẩn pin Li-Po 3.85V/4.4V mặc định của hệ thống.
+
+![](hero-img.avif)
 
 ---
 
@@ -63,8 +65,9 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
    * Redmi Note 10S 4G
    * TECNO Camon 40 4G
    * Redmi Note 12 Pro Plus 5G
-5. Các thiết bị có màn hình tỉ lệ ngắn hơn 9x19,5, các thiết bị đang xoay ngang màn hình, và các thiết bị đang bật nút điều hướng hệ thống **chắc chắn** sẽ phải cuộn trang trên màn hình app chính.
-
+   * Redmi Note 14 Pro 5G
+   * OPPO Find X8 5G
+   * Samsung Galaxy Tab S7 FE 4G
 ---
 
 ## ⚙️ Lưu ý kĩ thuật & Tương thích phần cứng (Technical Notes)
@@ -77,8 +80,7 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
   * Ngưỡng xả cạn dừng ở **3550 mV** nhằm bảo vệ cell pin và tránh hiện tượng sụt áp làm sập nguồn đột ngột khi modem 4G phát sóng công suất cao.
 * **Cơ chế đếm thiết bị Hotspot:**
   * Widget nhận diện số máy kết nối bằng cách **đọc thông báo hệ thống**, vì vậy nó cần được cấp quyền này.
-  * Thiết bị **bắt buộc** phải chạy MIUI 14 và cài đặt ngôn ngữ hệ thống là Tiếng Anh - Anh/Mĩ (English - UK/US) để đọc chính xác các chuỗi thông báo (`"Tethering or hotspot active"`, `"connected devices"`).
-  * Chưa thử nghiệm trên bất kì giao diện nào khác.
+  * Chưa thử nghiệm trên bất kì giao diện nào khác, như Samsung OneUI.
 * **Ngưỡng nhiệt độ:**
   * Hệ thống sẽ kích hoạt cảnh báo nguy cấp khi nhiệt độ pin chạm ngưỡng **≥ 45°C**.
 * **Âm lịch:**
@@ -89,6 +91,7 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
 ## 📜 Bản quyền & Ghi nhận (Credits & License)
 * **Mã nguồn ứng dụng:** Phát hành theo giấy phép [MIT License](LICENSE).
 * **Thuật toán Âm lịch:** Module `VietnameseLunarCalendar.kt` sử dụng thuật toán tính Âm lịch Việt Nam của **Hồ Ngọc Đức**.
+* Nếu bạn thấy dự án hữu ích, có thể [ủng hộ tác giả](donate_me.md) bằng 1 tách cà phê ~(nếu là của Himeko thì dẹp) hoặc Ngọc Ánh Sao~ nhé ❤️
 
 ---
 

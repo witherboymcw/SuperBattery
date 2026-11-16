@@ -8,39 +8,45 @@ import android.graphics.Path
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
+import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 import kotlin.math.max
 
 class HistoryGraphView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
-    data class Sample(val timestampMs: Long, val value: Float)
+    data class Sample(var timestampMs: Long = 0L, var value: Float = 0f)
 
     private val points = ArrayList<Sample>()
+    private val transformedValues = FloatArray(MAX_CAPACITY)
+    private val sampleColors = IntArray(MAX_CAPACITY)
+
+    private var density = resources.displayMetrics.density
+
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 1.5f * resources.displayMetrics.density
+        strokeWidth = 1.5f * density
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
-        color = 0xff00c853.toInt()
+        color = com.witherboymcw.superbattery.core.MetricColors.COLOR_GREEN
     }
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = Color.rgb(0, 230, 118)
+        color = com.witherboymcw.superbattery.core.MetricColors.COLOR_GREEN
     }
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = resources.displayMetrics.density
+        strokeWidth = density
         color = 0x33888888
     }
     private val majorGridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = resources.displayMetrics.density
+        strokeWidth = density
         color = 0x55888888
     }
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = resources.displayMetrics.density
+        strokeWidth = density
         color = 0x66888888
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -56,15 +62,16 @@ class HistoryGraphView @JvmOverloads constructor(
     private val fontMetrics = Paint.FontMetrics()
     private val yLabelTexts = Array(5) { "" }
     private var cachedLabelWidth = 0f
-    private val timeLabelCache = Array(61) { "${it}s" }
+    private val timeLabelCache = Array(61) { "${it}${context.getString(R.string.unit_seconds_suffix)}" }
+    private val timeLabelWidthCache = FloatArray(61) { textPaint.measureText(timeLabelCache[it]) }
     private val waitingForSamplesText = context.getString(R.string.waiting_for_samples)
+    private val waitingForSamplesTextWidth = textPaint.measureText(waitingForSamplesText)
 
     private var lowerBound = 0f
     private var upperBound = 100f
     private var axisSuffix = ""
-    private var valueTransform: ((Float) -> Float)? = null
-    private var colorForValue: ((Float) -> Int)? = null
     private var nowMs = SystemClock.elapsedRealtime()
+    private var hasCustomColors = false
 
     fun setPlotBackgroundColor(color: Int) {
         if (plotBgPaint.color != color) {
@@ -79,12 +86,13 @@ class HistoryGraphView @JvmOverloads constructor(
         maxValue: Float,
         suffix: String = "",
         currentTimeMs: Long = SystemClock.elapsedRealtime(),
+        decimalPlaces: Int = 0,
         valueTransform: ((Float) -> Float)? = null,
         valueColor: ((Float) -> Int)? = null
     ) {
         points.clear()
-        if (samples.size > 240) {
-            val skipCount = samples.size - 240
+        if (samples.size > MAX_CAPACITY) {
+            val skipCount = samples.size - MAX_CAPACITY
             var count = 0
             for (s in samples) {
                 if (count++ >= skipCount) points.add(s)
@@ -97,15 +105,29 @@ class HistoryGraphView @JvmOverloads constructor(
         upperBound = max(minValue + 1f, maxValue)
         axisSuffix = suffix
         nowMs = currentTimeMs
-        this.valueTransform = valueTransform
-        colorForValue = valueColor
+        hasCustomColors = valueColor != null
+
+        // Pre-compute transformed values and colors outside of onDraw
+        val numPoints = points.size
+        var idx = 0
+        while (idx < numPoints) {
+            val s = points[idx]
+            val transformed = valueTransform?.invoke(s.value) ?: s.value
+            transformedValues[idx] = transformed
+            if (valueColor != null) {
+                sampleColors[idx] = valueColor.invoke(transformed)
+            }
+            idx++
+        }
 
         val range = upperBound - lowerBound
-        yLabelTexts[0] = "${upperBound.toInt()}$axisSuffix"
-        yLabelTexts[1] = "${(upperBound - range * 0.25f).toInt()}$axisSuffix"
-        yLabelTexts[2] = "${(upperBound - range * 0.5f).toInt()}$axisSuffix"
-        yLabelTexts[3] = "${(upperBound - range * 0.75f).toInt()}$axisSuffix"
-        yLabelTexts[4] = "${lowerBound.toInt()}$axisSuffix"
+        val formatStr = if (decimalPlaces > 0) "%.${decimalPlaces}f" else "%.0f"
+        val locale = SettingsHelper.getAppLocale(context)
+        yLabelTexts[0] = String.format(locale, formatStr, upperBound) + axisSuffix
+        yLabelTexts[1] = String.format(locale, formatStr, upperBound - range * 0.25f) + axisSuffix
+        yLabelTexts[2] = String.format(locale, formatStr, upperBound - range * 0.5f) + axisSuffix
+        yLabelTexts[3] = String.format(locale, formatStr, upperBound - range * 0.75f) + axisSuffix
+        yLabelTexts[4] = String.format(locale, formatStr, lowerBound) + axisSuffix
 
         var maxW = 0f
         for (i in 0..4) {
@@ -117,48 +139,99 @@ class HistoryGraphView @JvmOverloads constructor(
         invalidate()
     }
 
+    var onAxisOffsetsChanged: ((leftOffset: Float, rightOffset: Float, plotWidth: Float) -> Unit)? = null
+    private var lastReportedLeft = -1f
+    private var lastReportedRightOffset = -1f
+    private var pendingLeft = 0f
+    private var pendingRightOffset = 0f
+    private var pendingPlotWidth = 0f
+    private val axisOffsetRunnable = Runnable {
+        onAxisOffsetsChanged?.invoke(pendingLeft, pendingRightOffset, pendingPlotWidth)
+    }
+
+    var suppressMinYLabel: Boolean = false
+    var hideYAxisLabels: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        density = resources.displayMetrics.density
+        linePaint.strokeWidth = 1.5f * density
+        gridPaint.strokeWidth = density
+        majorGridPaint.strokeWidth = density
+        tickPaint.strokeWidth = density
+        textPaint.textSize = 11f * resources.displayMetrics.scaledDensity
+        invalidate()
+    }
+
+    override fun onDetachedFromWindow() {
+        removeCallbacks(axisOffsetRunnable)
+        super.onDetachedFromWindow()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         textPaint.getFontMetrics(fontMetrics)
-        val density = resources.displayMetrics.density
-        val labelWidth = cachedLabelWidth
-        val left = paddingLeft + labelWidth + 10f * density
+        val labelWidth = if (hideYAxisLabels) 0f else cachedLabelWidth
+        val left = paddingLeft + (if (hideYAxisLabels) 4f * density else labelWidth + 10f * density)
         val right = width - paddingRight - 4f
         val labelHeight = fontMetrics.descent - fontMetrics.ascent
         val strokeInset = linePaint.strokeWidth / 2f + 2f * density
-        val top = paddingTop + labelHeight + strokeInset + 4f * density
-        val bottom = height - paddingBottom - labelHeight * 2f - strokeInset - 4f * density
+        val top = paddingTop + labelHeight / 2f + strokeInset
+        val bottom = height - paddingBottom - labelHeight * 0.75f - strokeInset - 4f * density
         if (right <= left || bottom <= top) return
 
+        val rightOffset = width - right
+        val plotWidth = right - left
+        if (left != lastReportedLeft || rightOffset != lastReportedRightOffset) {
+            lastReportedLeft = left
+            lastReportedRightOffset = rightOffset
+            if (onAxisOffsetsChanged != null) {
+                pendingLeft = left
+                pendingRightOffset = rightOffset
+                pendingPlotWidth = plotWidth
+                removeCallbacks(axisOffsetRunnable)
+                post(axisOffsetRunnable)
+            }
+        }
+
+        val secondsPerWindow = TIME_WINDOW_MS / 1_000L
+        val windowStart = nowMs - TIME_WINDOW_MS
+        val plotHeight = bottom - top
+
+        drawGrid(canvas, left, top, right, bottom, density, secondsPerWindow, plotWidth)
+        drawAxisLabels(canvas, left, top, right, bottom, density, secondsPerWindow, plotWidth)
+        drawLine(canvas, left, top, right, bottom, windowStart, plotWidth, plotHeight)
+    }
+
+    private fun drawGrid(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        density: Float,
+        secondsPerWindow: Long,
+        plotWidth: Float
+    ) {
         if (plotBgPaint.color != Color.TRANSPARENT) {
             canvas.drawRect(left, top, right, bottom, plotBgPaint)
         }
 
-        val labelX = paddingLeft.toFloat()
-        val secondsPerWindow = TIME_WINDOW_MS / 1_000L
-        val windowStart = nowMs - TIME_WINDOW_MS
-
-        // Y-axis grid lines and labels
+        // Y-axis grid lines
         for (i in 0..4) {
             val fraction = i / 4f
             val y = top + (bottom - top) * fraction
             canvas.drawLine(left, y, right, y, gridPaint)
-            if (i in 1..3) {
-                val baseline = y - (fontMetrics.ascent + fontMetrics.descent) / 2f
-                canvas.drawText(yLabelTexts[i], labelX, baseline, textPaint)
-            }
         }
-        val maxLabelBaseline = paddingTop - fontMetrics.ascent
-        val minLabelBaseline = bottom - (fontMetrics.ascent + fontMetrics.descent) / 2f
-        canvas.drawText(yLabelTexts[0], labelX, maxLabelBaseline, textPaint)
-        canvas.drawText(yLabelTexts[4], labelX, minLabelBaseline, textPaint)
 
-        // X-axis ruler ticks and labels (every 20s)
-        val timeLabelBaseline = height - paddingBottom - fontMetrics.descent
-        val plotWidth = right - left
-        val plotHeight = bottom - top
-
+        // X-axis ruler ticks and grid lines
         var secondsAgo = 0L
         while (secondsAgo <= secondsPerWindow) {
             val x = right - (secondsAgo.toFloat() / secondsPerWindow) * plotWidth
@@ -166,24 +239,79 @@ class HistoryGraphView @JvmOverloads constructor(
             if (isMajor) {
                 canvas.drawLine(x, top, x, bottom, majorGridPaint)
                 canvas.drawLine(x, bottom, x, bottom + 7f * density, tickPaint)
-                val label = timeLabelCache[secondsAgo.toInt()]
-                val labelW = textPaint.measureText(label)
-                val textLabelX = (x - labelW / 2f).coerceIn(left, right - labelW)
-                canvas.drawText(label, textLabelX, timeLabelBaseline, textPaint)
             } else {
                 canvas.drawLine(x, bottom, x, bottom + 3f * density, tickPaint)
             }
             secondsAgo++
         }
+    }
 
-        // Visible points index window (Zero allocation)
+    private fun drawAxisLabels(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        density: Float,
+        secondsPerWindow: Long,
+        plotWidth: Float
+    ) {
+        val labelX = left - 6f * density
+
+        // Y-axis labels
+        if (!hideYAxisLabels) {
+            textPaint.textAlign = Paint.Align.RIGHT
+            for (i in 1..3) {
+                val fraction = i / 4f
+                val y = top + (bottom - top) * fraction
+                val baseline = y - (fontMetrics.ascent + fontMetrics.descent) / 2f
+                canvas.drawText(yLabelTexts[i], labelX, baseline, textPaint)
+            }
+            val maxLabelBaseline = top - (fontMetrics.ascent + fontMetrics.descent) / 2f
+            val minLabelBaseline = bottom - (fontMetrics.ascent + fontMetrics.descent) / 2f
+            canvas.drawText(yLabelTexts[0], labelX, maxLabelBaseline, textPaint)
+            if (!suppressMinYLabel) {
+                canvas.drawText(yLabelTexts[4], labelX, minLabelBaseline, textPaint)
+            }
+            textPaint.textAlign = Paint.Align.LEFT
+        }
+
+        // X-axis time labels
+        val timeLabelBaseline = height - paddingBottom - fontMetrics.descent
+        var secondsAgo = 0L
+        while (secondsAgo <= secondsPerWindow) {
+            val isMajor = secondsAgo % 20L == 0L
+            if (isMajor && secondsAgo != 0L) {
+                val x = right - (secondsAgo.toFloat() / secondsPerWindow) * plotWidth
+                val secIdx = secondsAgo.toInt()
+                if (secIdx in timeLabelCache.indices) {
+                    val label = timeLabelCache[secIdx]
+                    val labelW = timeLabelWidthCache[secIdx]
+                    val textLabelX = (x - labelW / 2f).coerceIn(left, right - labelW)
+                    canvas.drawText(label, textLabelX, timeLabelBaseline, textPaint)
+                }
+            }
+            secondsAgo++
+        }
+    }
+
+    private fun drawLine(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        windowStart: Long,
+        plotWidth: Float,
+        plotHeight: Float
+    ) {
         var startIndex = -1
         var endIndex = -1
         val numPoints = points.size
         var pIdx = 0
         while (pIdx < numPoints) {
             val ts = points[pIdx].timestampMs
-            if (ts in windowStart..nowMs) {
+            if (ts >= windowStart && ts <= nowMs) {
                 if (startIndex == -1) startIndex = pIdx
                 endIndex = pIdx
             }
@@ -192,32 +320,29 @@ class HistoryGraphView @JvmOverloads constructor(
         val visibleCount = if (startIndex != -1) (endIndex - startIndex + 1) else 0
 
         if (visibleCount == 0) {
-            val textWidth = textPaint.measureText(waitingForSamplesText)
-            val textX = left + (plotWidth - textWidth) / 2f
+            val textX = left + (plotWidth - waitingForSamplesTextWidth) / 2f
             val textY = top + plotHeight / 2f - (fontMetrics.ascent + fontMetrics.descent) / 2f
             canvas.drawText(waitingForSamplesText, textX, textY, textPaint)
             return
         }
 
         val boundDiff = upperBound - lowerBound
-        val valueColor = colorForValue
-        val transform = valueTransform
 
         if (visibleCount == 1) {
             val sample = points[startIndex]
-            val transformedValue = transform?.invoke(sample.value) ?: sample.value
+            val transformedValue = transformedValues[startIndex]
             val x = left + ((sample.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
             val norm = ((transformedValue - lowerBound) / boundDiff).coerceIn(0f, 1f)
             val y = bottom - norm * plotHeight
-            pointPaint.color = valueColor?.invoke(transformedValue) ?: linePaint.color
+            pointPaint.color = if (hasCustomColors) sampleColors[startIndex] else linePaint.color
             canvas.drawCircle(x, y, linePaint.strokeWidth, pointPaint)
         } else {
-            if (valueColor == null) {
+            if (!hasCustomColors) {
                 renderPath.reset()
                 var i = startIndex
                 while (i <= endIndex) {
                     val sample = points[i]
-                    val transformedValue = transform?.invoke(sample.value) ?: sample.value
+                    val transformedValue = transformedValues[i]
                     val x = left + ((sample.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
                     val norm = ((transformedValue - lowerBound) / boundDiff).coerceIn(0f, 1f)
                     val y = bottom - norm * plotHeight
@@ -234,14 +359,14 @@ class HistoryGraphView @JvmOverloads constructor(
                 while (i <= endIndex) {
                     val prevS = points[i - 1]
                     val currS = points[i]
-                    val prevTransformed = transform?.invoke(prevS.value) ?: prevS.value
-                    val currTransformed = transform?.invoke(currS.value) ?: currS.value
+                    val prevTransformed = transformedValues[i - 1]
+                    val currTransformed = transformedValues[i]
                     val prevX = left + ((prevS.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
                     val prevY = bottom - (((prevTransformed - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
                     val currX = left + ((currS.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
                     val currY = bottom - (((currTransformed - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
 
-                    linePaint.color = valueColor.invoke(currTransformed)
+                    linePaint.color = sampleColors[i]
                     canvas.drawLine(prevX, prevY, currX, currY, linePaint)
                     i++
                 }
@@ -249,15 +374,16 @@ class HistoryGraphView @JvmOverloads constructor(
 
             // Single dot on newest sample
             val lastSample = points[endIndex]
-            val lastTransformed = transform?.invoke(lastSample.value) ?: lastSample.value
+            val lastTransformed = transformedValues[endIndex]
             val lastX = left + ((lastSample.timestampMs - windowStart).toFloat() / TIME_WINDOW_MS) * plotWidth
             val lastY = bottom - (((lastTransformed - lowerBound) / boundDiff).coerceIn(0f, 1f)) * plotHeight
-            pointPaint.color = valueColor?.invoke(lastTransformed) ?: linePaint.color
+            pointPaint.color = if (hasCustomColors) sampleColors[endIndex] else linePaint.color
             canvas.drawCircle(lastX, lastY, linePaint.strokeWidth * 1.5f, pointPaint)
         }
     }
 
     companion object {
         private const val TIME_WINDOW_MS = 60_000L
+        private const val MAX_CAPACITY = 240
     }
 }

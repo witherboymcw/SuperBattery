@@ -4,4 +4,9 @@
         <attr name="appWidgetInnerRadius" format="dimension" />
         <attr name="appWidgetRadius" format="dimension" />
     </declare-styleable>
+
+    <declare-styleable name="BatteryRingView">
+        <attr name="ringStartAngle" format="float" />
+        <attr name="ringMaxSweep" format="float" />
+    </declare-styleable>
 </resources>

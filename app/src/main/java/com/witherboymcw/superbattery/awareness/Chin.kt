@@ -1,0 +1,223 @@
+package com.witherboymcw.superbattery.awareness
+
+import android.content.Context
+import android.content.res.Configuration
+import android.view.Surface
+import android.view.View
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import com.witherboymcw.superbattery.MainActivity
+import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.settings.AppPreferences
+import com.witherboymcw.superbattery.core.getDisplayRotationCompat
+import kotlin.math.roundToInt
+
+/**
+ * Encapsulated chin padding calculation engine and storage helper for Super Battery.
+ * Provides pure padding calculations, stateless SharedPreferences access, and foldable checks.
+ */
+data class ChinPaddingValues(
+    val left: Int,
+    val top: Int,
+    val right: Int,
+    val bottom: Int
+)
+
+data class ChinPaddingResult(
+    val dashboardPadding: ChinPaddingValues,
+    val singleScrollViewPadding: ChinPaddingValues,
+    val splitLeftScrollViewPadding: ChinPaddingValues,
+    val splitRightScrollViewPadding: ChinPaddingValues
+)
+
+object ChinAwareness {
+
+    const val KEY_THICK_CHIN_DROPDOWN_OPEN = "key_thick_chin_dropdown_open"
+
+    const val MIN_CHIN_LEVEL = 0
+    const val MAX_CHIN_LEVEL = 256
+
+    /**
+     * Reads the saved thick chin level from AppPreferences.
+     */
+    fun getThickChinLevel(context: Context): Int {
+        return AppPreferences.getThickChinLevel(context).coerceIn(MIN_CHIN_LEVEL, MAX_CHIN_LEVEL)
+    }
+
+    /**
+     * Saves the thick chin level to AppPreferences if changed.
+     */
+    fun saveThickChinLevel(context: Context, level: Int) {
+        val coercedLevel = level.coerceIn(MIN_CHIN_LEVEL, MAX_CHIN_LEVEL)
+        val saved = AppPreferences.getThickChinLevel(context)
+        if (saved != coercedLevel) {
+            AppPreferences.setThickChinLevel(context, coercedLevel)
+        }
+    }
+
+    /**
+     * Pure function to calculate dynamic thick chin padding based on rotation, density, level, theme, and foldability.
+     */
+    fun calculateChinPadding(
+        density: Float,
+        rotation: Int,
+        level: Int,
+        isNight: Boolean,
+        savedTheme: String = "system",
+        isFoldable: Boolean = false,
+        isMiniSquare: Boolean = false,
+        touchesTop: Boolean = true,
+    ): ChinPaddingResult {
+        val isLight = savedTheme == "light" || (savedTheme == "system" && !isNight)
+        val rawLevel = level.coerceIn(MIN_CHIN_LEVEL, MAX_CHIN_LEVEL)
+        val effectiveLevel = if (isLight || isFoldable) 0 else rawLevel
+        val reductionDp = effectiveLevel * (1f / 16f)
+
+        val default20Px = (20f * density).roundToInt()
+        val default16Px = (16f * density).roundToInt()
+        val default8Px = (8f * density).roundToInt()
+        val default12Px = (12f * density).roundToInt()
+        val default24Px = (24f * density).roundToInt()
+
+        val reduced12Px = ((12f - reductionDp).coerceAtLeast(0f) * density).roundToInt()
+        val reduced16Px = ((16f - reductionDp).coerceAtLeast(0f) * density).roundToInt()
+        val reduced24Px = ((24f - reductionDp).coerceAtLeast(8f) * density).roundToInt()
+
+        val dashboardLeftPx = if (isMiniSquare) default12Px else (if (rotation == Surface.ROTATION_270) reduced16Px else default16Px)
+        val dashboardTopPx = if (isMiniSquare) {
+            if (touchesTop) default20Px else default8Px
+        } else (if (rotation == Surface.ROTATION_180) reduced16Px else default16Px)
+        val dashboardRightPx = if (isMiniSquare) default12Px else (if (rotation == Surface.ROTATION_90) reduced16Px else default16Px)
+        val dashboardBottomPx = if (isMiniSquare) default12Px else (if (rotation == Surface.ROTATION_0) reduced16Px else default16Px)
+
+        val dashboardPadding = ChinPaddingValues(
+            left = dashboardLeftPx,
+            top = dashboardTopPx,
+            right = dashboardRightPx,
+            bottom = dashboardBottomPx
+        )
+
+        val singleScrollViewPadding = ChinPaddingValues(
+            left = if (rotation == Surface.ROTATION_270) reduced16Px else default16Px,
+            top = if (rotation == Surface.ROTATION_180) reduced16Px else default16Px,
+            right = if (rotation == Surface.ROTATION_90) reduced16Px else default16Px,
+            bottom = if (rotation == Surface.ROTATION_0) reduced24Px else default24Px
+        )
+
+        val splitLeftScrollViewPadding = ChinPaddingValues(
+            left = if (rotation == Surface.ROTATION_270) reduced16Px else default16Px,
+            top = if (rotation == Surface.ROTATION_180) reduced12Px else default12Px,
+            right = default8Px,
+            bottom = if (rotation == Surface.ROTATION_0) reduced24Px else default24Px
+        )
+
+        val splitRightScrollViewPadding = ChinPaddingValues(
+            left = default8Px,
+            top = if (rotation == Surface.ROTATION_180) reduced12Px else default12Px,
+            right = if (rotation == Surface.ROTATION_90) reduced16Px else default16Px,
+            bottom = if (rotation == Surface.ROTATION_0) reduced24Px else default24Px
+        )
+
+        return ChinPaddingResult(
+            dashboardPadding = dashboardPadding,
+            singleScrollViewPadding = singleScrollViewPadding,
+            splitLeftScrollViewPadding = splitLeftScrollViewPadding,
+            splitRightScrollViewPadding = splitRightScrollViewPadding
+        )
+    }
+
+    /**
+     * Applies dynamic thick chin padding to Home, Settings, and Hotspot screens of the activity.
+     */
+    fun applyThickChinPadding(activity: MainActivity, overrideLevel: Int? = activity.thickChinOverrideLevel) {
+        val savedTheme = AppPreferences.getAppTheme(activity)
+        val isNight = (activity.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val isFoldable = FoldableAwareness.isFoldableDevice(activity)
+        val isMiniSquare = FoldableAwareness.isMiniSquareMode(activity)
+        val density = activity.resources.displayMetrics.density
+
+        val rawLevel = overrideLevel ?: activity.thickChinOverrideLevel ?: getThickChinLevel(activity)
+
+        val rotation = activity.getDisplayRotationCompat()
+        val touches = if (isMiniSquare) CornerAwareness.checkWindowScreenTouches(activity) else CornerAwareness.WindowTouches()
+
+        val rootInsets = ViewCompat.getRootWindowInsets(activity.window.decorView)
+        val isStatusBarVisible = rootInsets?.isVisible(WindowInsetsCompat.Type.statusBars()) ?: true
+        val shouldClockMorph = isMiniSquare && touches.touchesTopEdge && touches.touchesLeftEdge && isStatusBarVisible
+
+        if (shouldClockMorph) {
+            activity.dashboardViews.tvHeaderClock?.visibility = View.GONE
+            activity.dashboardViews.tvHeaderSeconds?.visibility = View.VISIBLE
+        } else {
+            activity.dashboardViews.tvHeaderClock?.visibility = View.VISIBLE
+            activity.dashboardViews.tvHeaderSeconds?.visibility = View.GONE
+        }
+
+        val paddingResult = calculateChinPadding(
+            density = density,
+            rotation = rotation,
+            level = rawLevel,
+            isNight = isNight,
+            savedTheme = savedTheme,
+            isFoldable = isFoldable,
+            isMiniSquare = isMiniSquare,
+            touchesTop = touches.touchesTop
+        )
+
+        // 1. Home Dashboard
+        activity.findViewById<View>(R.id.dashboard)?.let { dashboard ->
+            val p = paddingResult.dashboardPadding
+            dashboard.setPaddingRelative(p.left, p.top, p.right, p.bottom)
+        }
+
+        if (isMiniSquare) {
+            val metricCardsRow = activity.findViewById<View>(R.id.container_metric_cards)
+                ?: (activity.findViewById<View>(R.id.card_battery)?.parent as? View)
+            val lp = metricCardsRow?.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+            if (lp != null) {
+                val marginTopDp = if (touches.touchesTopEdge) -4f else 8f
+                val targetMarginPx = (marginTopDp * density).roundToInt()
+                if (lp.topMargin != targetMarginPx) {
+                    lp.topMargin = targetMarginPx
+                    metricCardsRow.layoutParams = lp
+                }
+            }
+        }
+
+        // 2. Settings Screen
+        val singleScrollView = activity.findViewById<View>(R.id.settings_scroll_view)
+        if (singleScrollView != null) {
+            val p = paddingResult.singleScrollViewPadding
+            singleScrollView.setPaddingRelative(p.left, p.top, p.right, p.bottom)
+        } else {
+            val scrollLeft = activity.findViewById<View>(R.id.settings_scroll_left)
+            val scrollRight = activity.findViewById<View>(R.id.settings_scroll_right)
+            val pLeft = paddingResult.splitLeftScrollViewPadding
+            val pRight = paddingResult.splitRightScrollViewPadding
+            scrollLeft?.setPaddingRelative(pLeft.left, pLeft.top, pLeft.right, pLeft.bottom)
+            scrollRight?.setPaddingRelative(pRight.left, pRight.top, pRight.right, pRight.bottom)
+        }
+
+        // 3. Hotspot Screen
+        val hotspotRecyclerView = activity.findViewById<View>(R.id.hotspot_recycler_view)
+        val scrollRight = activity.findViewById<View>(R.id.hotspot_scroll_right)
+        if (scrollRight != null) {
+            val pLeft = paddingResult.splitLeftScrollViewPadding
+            val pRight = paddingResult.splitRightScrollViewPadding
+            hotspotRecyclerView?.setPaddingRelative(pLeft.left, pLeft.top, pLeft.right, pLeft.bottom)
+            scrollRight.setPaddingRelative(pRight.left, pRight.top, pRight.right, pRight.bottom)
+        } else {
+            val p = paddingResult.singleScrollViewPadding
+            hotspotRecyclerView?.setPaddingRelative(p.left, p.top, p.right, p.bottom)
+        }
+    }
+
+    /**
+     * Hides the thick chin setting card if the device is a foldable device.
+     */
+    fun checkFoldableChinVisibility(activity: MainActivity) {
+        if (FoldableAwareness.isFoldableDevice(activity)) {
+            activity.findViewById<View>(R.id.card_thick_chin)?.visibility = View.GONE
+        }
+    }
+}

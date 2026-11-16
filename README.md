@@ -1,8 +1,10 @@
-🌐 [Tiếng Việt](README.vi.md) | **English (US)**
+🌐 [Tiếng Việt](README.vi.md) | **English (US)** | [简体中文](README.zhcn.md)
 
 # SuperBattery ⚡
 
 is a specialized Android utility application designed to monitor battery level and voltage on hardware-modified Android devices: equipped with a **3.7V nominal Li-ion cell (4.2V fully charged)** and an **external charging board wired in parallel with the battery BMS**, bypassing the system's default 3.85V/4.4V Li-Po battery management circuit.
+
+![](hero-img.avif)
 
 ---
 
@@ -19,7 +21,7 @@ _"A dedicated 4G hotspot companion needs more than just a raw battery readout. W
 * **Active hotspot client counter** embedded directly on the widget.
 * **Vietnamese Lunar Calendar display** built into the widget layout.
 
-_"With a high-capacity custom cell attached, why not use it as an emergency backup power source?"_
+_"With a high-capacity custom cell attached, why not also use it as an emergency backup power source?"_
 * **Reverse charging capability** to supply power to external devices via the power bank circuit.
 
 ---
@@ -62,8 +64,9 @@ _"With a high-capacity custom cell attached, why not use it as an emergency back
    * Redmi Note 10S 4G
    * TECNO Camon 40 4G
    * Redmi Note 12 Pro Plus 5G
-5. Screens with aspect ratios wider/shorter than 9:19.5, devices oriented in landscape mode, and those with navigation buttons on, **will require vertical scrolling** on the main dashboard screen.
-
+   * Redmi Note 14 Pro 5G
+   * OPPO Find X8 5G
+   * Samsung Galaxy Tab S7 FE 4G
 ---
 
 ## ⚙️ Technical Notes & Hardware Quirks
@@ -76,8 +79,7 @@ This application is strictly calibrated around specific hardware dynamics. Note 
   * The lower cut-off is anchored at **3550 mV** to protect the Li-ion cell from deep discharge and prevent transient voltage dips under 4G RF power bursts from abruptly resetting the device.
 * **Hotspot Client Counter Mechanism:**
   * The widget determines active connected client counts by **reading system notification strings**.
-  * **System Requirement:** The device **must run MIUI 14 with the system language set to English (US/UK)** to parse matching system string tokens (`"Tethering or hotspot active"`, `"connected devices"`).
-  * Other OEM skins (including Xiaomi HyperOS or AOSP) are currently untested.
+  * Other OEM skins (including Samsung OneUI or AOSP) are currently untested.
 * **Thermal Threshold:**
   * Triggers an urgent system warning notification if the battery temperature hits **≥ 45°C (113°F)**.
 * **Lunar Calendar Engine:**
@@ -88,6 +90,7 @@ This application is strictly calibrated around specific hardware dynamics. Note 
 ## 📜 Credits & License
 * **Application Source Code:** Released under the [MIT License](LICENSE).
 * **Lunar Algorithm:** The `VietnameseLunarCalendar.kt` module implements **Ho Ngoc Duc**'s Vietnamese lunar conversion algorithm.
+* If you find this project useful, feel free to [support the author](donate_me.md) with a coffee ~(not Himeko's brew) or some Stellar Jades~ ❤️
 
 ---
 

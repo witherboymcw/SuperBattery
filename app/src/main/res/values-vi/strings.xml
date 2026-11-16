@@ -16,65 +16,123 @@
     <string name="low_voltage_channel">Điện áp pin thấp</string>
     <string name="low_voltage_title">Pin yếu</string>
     <string name="low_voltage_message">Hãy cắm sạc ngay (%1$d mV)</string>
-    <string name="critical_battery_channel">Cảnh báo pin</string>
+    <string name="critical_battery_channel">Cảnh báo pin nóng</string>
     <string name="critical_percent_title">Pin sắp cạn</string>
     <string name="critical_percent_message">Mức pin hiện tại là %1$d%%</string>
     <string name="critical_temperature_title">Pin đang rất nóng</string>
     <string name="critical_temperature_message">Nhiệt độ pin là %1$s</string>
     <string name="notification_access_title">Quyền đếm thiết bị Wi-Fi</string>
-    <string name="notification_access_disabled">Cho phép Super Battery đọc thông báo điểm phát sóng để hiển thị số thiết bị kết nối.</string>
-    <string name="notification_access_enabled">Đã bật quyền đọc thông báo. Bộ đếm sẽ cập nhật từ thông báo hệ thống.</string>
+    <string name="notification_access_disabled">Cho phép thông báo để hiển thị số thiết bị kết nối.</string>
+    <string name="notification_access_enabled">Đã bật quyền đọc thông báo. Bộ đếm sẽ bắt đầu cập nhật.</string>
     <string name="grant_notification_access">Cấp quyền đọc thông báo</string>
     <string name="manage_notification_access">🔑 Đọc thông báo</string>
     <string name="notification_access_settings_unavailable">Không thể mở cài đặt truy cập thông báo trên thiết bị này.</string>
     <string name="notification_listener_label">Số thiết bị kết nối Internet</string>
     <string name="dashboard_title">Bảng điều khiển</string>
     <string name="metric_battery">Pin</string>
-    <string name="network_stats">Thống kê mạng (từ khi khởi động)</string>
+    <string name="network_stats">Mạng</string>
+    <string name="network_upload">Tải lên</string>
+    <string name="network_download">Tải xuống</string>
 
 
 
 
     <string name="network_unavailable">Không khả dụng</string>
-    <string name="voltage_title">Điện áp pin</string>
-    <string name="ram_title">RAM đã sử dụng</string>
+    <string name="voltage_title">Điện áp</string>
+    <string name="charging_true">Đang sạc</string>
+    <string name="ram_title">RAM</string>
 
 
     <string name="temperature_title">Nhiệt độ pin</string>
+    <string name="temp_status_nominal">Bình thường</string>
+    <string name="temp_status_hot">Nóng</string>
+    <string name="temp_status_critical">Báo động</string>
 
     <string name="waiting_for_samples">Đang thu thập dữ liệu…</string>
     <string name="settings">Cài đặt</string>
-    <string name="language_subtitle">Chọn ngôn ngữ hiển thị của ứng dụng</string>
-    <string name="allow_notifications">🔔 Gửi thông báo</string>
-    <string name="allow_notifications_subtitle">Được cập nhật trạng thái hệ thống và cảnh báo</string>
-    <string name="manage_notification_access_subtitle">Cần thiết để đếm số lượng thiết bị kết nối Wi-Fi</string>
+    <string name="language_subtitle">Chọn ngôn ngữ hiển thị</string>
     <string name="update_frequency">⏱️ Tần suất cập nhật</string>
-    <string name="update_frequency_subtitle">Chỉnh tần suất làm mới dữ liệu hệ thống</string>
+    <string name="update_frequency_subtitle">Tần suất cập nhật dữ liệu</string>
     <string name="update_every_half_second">Mỗi 0,5 giây</string>
     <string name="update_every_second">Mỗi 1 giây</string>
     <string name="update_every_two_seconds">Mỗi 2 giây</string>
-    <string name="use_system_battery_counter">🔋 Sử dụng bộ đếm pin hệ thống</string>
+    <string name="use_system_battery_counter">Sử dụng bộ đếm pin hệ thống</string>
     <string name="use_system_battery_counter_subtitle">Dùng % pin từ HĐH thay vì tính từ điện áp thực tế</string>
+    <string name="hardware_preferences">⚙️ Cấu hình sâu</string>
+    <string name="hardware_preferences_subtitle">Chỉ thay đổi nếu bạn hiểu về thiết bị của mình</string>
+    <string name="dual_serial_cell_battery">Pin nối tiếp 2 cell (Dual cell)</string>
     <string name="voltage_unit_header">⚡ Đơn vị điện áp</string>
-    <string name="voltage_unit_subtitle">Hiển thị điện áp pin theo Millivolt hoặc Volt</string>
+    <string name="voltage_unit_subtitle">Theo Millivolt hoặc Volt</string>
 
     <string name="voltage_unit_mv">mV (Millivolts)</string>
     <string name="ram_unit_header">💾 Đơn vị RAM</string>
-    <string name="ram_unit_subtitle">Hiển thị dung lượng RAM theo MB hoặc GB</string>
+    <string name="ram_unit_subtitle">Theo MB hoặc GB</string>
     <string name="ram_unit_mb">MB (Megabyte)</string>
     <string name="ram_unit_gb">GB (Gigabyte)</string>
     <string name="temp_unit_header">🌡️ Đơn vị nhiệt độ</string>
-    <string name="temp_unit_subtitle">Chọn đơn vị hiển thị độ C, độ F hoặc Kelvin</string>
+    <string name="temp_unit_subtitle">Theo độ C, độ F hoặc Kelvin</string>
 
     <string name="language">🌐 Ngôn ngữ</string>
     <string name="at_system">Theo hệ thống</string>
-    <string name="language_english">Tiếng Anh (English)</string>
-    <string name="language_vietnamese">Tiếng Việt</string>
-    <string name="language_brainrot">Tiếng Anh Brainrot</string>
+
+    <string name="language_english_us">Anh (Mĩ - US)</string>
+    <string name="language_english_uk">Anh (Anh - UK)</string>
+    <string name="language_vietnamese">Việt Nam</string>
+    <string name="language_simplified_chinese">Trung (Giản thể - 简体)</string>
+    <string name="language_brainrot">Anh (Brainrot)</string>
+    <string name="super_permissions_header">🛡️ Cấp quyền ứng dụng</string>
+    <string name="super_permissions_subtitle">Quản lý quyền hệ thống và cờ sử dụng ứng dụng</string>
+    <string name="perm_post_notifications">Gửi thông báo</string>
+    <string name="perm_notification_access">Đọc thông báo</string>
+    <string name="perm_phone_state">Đọc trạng thái điện thoại</string>
+    <string name="perm_overlay">Hiện trên ứng dụng khác</string>
     <string name="theme">Giao diện</string>
     <string name="theme_header">🎨 Giao diện</string>
     <string name="theme_subtitle">Chỉnh giao diện và chế độ màu sắc ứng dụng</string>
     <string name="theme_light">Sáng</string>
     <string name="theme_dark">Tối</string>
 
+    <string name="thick_chin_header">📱 Khắc phục cằm dày</string>
+    <string name="thick_chin_subtitle">Giảm bớt padding đáy cho màn hình có viền cằm dày</string>
+    <string name="thick_chin_default">Mặc định (16 dp)</string>
+    <string name="thick_chin_min_label">Mức 0 (16 dp)</string>
+    <string name="thick_chin_max_label">Mức 256 (0 dp)</string>
+    <string name="thick_chin_summary">Mức %1$d/256 (Bớt: %2$s | Đáy: %3$s)</string>
+    <string name="thick_chin_summary_edge">Mức %1$d/256 (Bớt: %2$s | Đáy: 0 dp - dính cạnh)</string>
+    <string name="thick_chin_edge">-%1$s (Dính cạnh)</string>
+    <string name="assume_oled_header">🖥️ Ép kiểu OLED</string>
+    <string name="assume_oled_subtitle">Tự động phát hiện màn hình OLED</string>
+    <string name="assume_oled_opt_none">Mặc định (Tự động)</string>
+    <string name="assume_oled_opt_oled">Ép bật OLED</string>
+    <string name="assume_oled_opt_not_oled">Tắt OLED (Ép LCD)</string>
+
+    <string name="notch_header">🪩 Tuỳ chỉnh Tai thỏ</string>
+    <string name="notch_subtitle">Che hoặc tạo tai thỏ ảo</string>
+    <string name="notch_mode_system">Mặc định theo hệ thống</string>
+    <string name="notch_mode_force">Thêm tai thỏ thủ công</string>
+    <string name="notch_mode_ignore">Bỏ qua tai thỏ</string>
+    <string name="notch_position">Vị trí tai thỏ</string>
+    <string name="notch_pos_center">Căn giữa</string>
+    <string name="notch_pos_not_center">Lệch tâm</string>
+    <string name="notch_size_title">Kích thước tai thỏ</string>
+    <string name="notch_pill_title">Độ rộng viên thuốc</string>
+    <string name="btn_set_notch_position">Chỉnh vị trí tai thỏ</string>
+    <string name="notch_instruction_text">Kéo hình tròn đến vị trí tai thỏ mong muốn, sau đó chạm ra ngoài để lưu.</string>
+
+    <string name="hotspot_title">Thiết bị Mạng</string>
+    <string name="status_connected">Đã kết nối</string>
+    <string name="status_allowed">Được phép</string>
+    <string name="status_denied">Bị chặn</string>
+    <string name="status_offline">Ngoại tuyến</string>
+    <string name="hotspot_device_details">Chi tiết thiết bị</string>
+    <string name="hotspot_status_header">Trạng thái truy cập</string>
+    <string name="hotspot_alias_header">Biệt danh</string>
+    <string name="hotspot_alias_hint">Nhập biệt danh…</string>
+    <string name="btn_rename">✏️ Đổi tên</string>
+    <string name="btn_remove_alias">🗑️ Xoá biệt danh</string>
+    <string name="dialog_rename_title">Đổi tên thiết bị</string>
+    <string name="dialog_rename_message">Nhập biệt danh cho %1$s:</string>
+    <string name="btn_save">Lưu</string>
+    <string name="btn_cancel">Hủy</string>
+    <string name="hotspot_root_required">Yêu cầu quyền Root để thực thi lệnh iptables</string>
 </resources>
