@@ -292,7 +292,7 @@ class NotchGeometryTest {
         // cX near 35% boundary (0.35 * 1080 = 378f), cutoutLeft = 306f
         val cutoutInfo = NotchGeometry.CutoutInfo(NotchGeometry.CutoutPosition.CENTER, rectLeft = 306f, rectRight = 450f)
 
-        val leftControlsWidth = 300f
+        val leftControlsWidth = 270f
         val settingsButtonWidth = 50f
         val titleWidth = 200f
 

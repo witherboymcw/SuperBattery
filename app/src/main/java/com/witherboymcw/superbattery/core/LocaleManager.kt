@@ -16,11 +16,11 @@ enum class SupportedLanguage(
     val languageCode: String,
     val batteryRingMaxSweep: Float
 ) {
-    SYSTEM(AppPreferences.DEFAULT_LANGUAGE, "system", 300f),
+    SYSTEM(AppPreferences.DEFAULT_LANGUAGE, "system", 270f),
     VIETNAMESE("vi", "vi", 360f),
     CHINESE_SIMPLIFIED("zh-CN", "zh", 360f),
-    ENGLISH_US("en-US", "en", 300f),
-    ENGLISH_UK("en-GB", "en", 300f),
+    ENGLISH_US("en-US", "en", 270f),
+    ENGLISH_UK("en-GB", "en", 270f),
     BRAINROT("art", "art", 360f);
 
     companion object {

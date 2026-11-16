@@ -32,7 +32,7 @@ class BatteryRingView @JvmOverloads constructor(
             }
         }
 
-    var maxSweep: Float = 300f
+    var maxSweep: Float = 270f
         set(value) {
             if (field != value) {
                 field = value
