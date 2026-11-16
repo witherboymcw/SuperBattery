@@ -35,8 +35,113 @@ object CornerAwareness {
         return null
     }
 
+    data class WindowTouches(
+        val touchesTopEdge: Boolean = true,
+        val touchesLeftEdge: Boolean = true,
+        val touchesBottomLeft: Boolean = true,
+        val touchesBottomRight: Boolean = true,
+    ) {
+        val touchesTop: Boolean get() = touchesTopEdge
+        val touchesLeft: Boolean get() = touchesLeftEdge
+    }
+
     /**
-     * Pure geometry logic: checks if current window coordinates touch physical display corners for Mini Square Mode.
+     * Pure geometry logic: checks physical screen edge touches for Mini Square Mode.
+     * In Android's rotated window metrics coordinate system, currentTop <= maxTop + tolerance
+     * determines whether the top edge of the app window touches the screen top boundary.
+     */
+    fun checkWindowScreenTouches(
+        currentLeft: Int,
+        currentTop: Int,
+        currentRight: Int,
+        currentBottom: Int,
+        maxLeft: Int,
+        maxTop: Int,
+        maxRight: Int,
+        maxBottom: Int,
+    ): WindowTouches {
+        val tolerance = 2
+
+        val touchesTopEdge = currentTop <= (maxTop + tolerance)
+        val touchesLeftEdge = currentLeft <= (maxLeft + tolerance)
+
+        val touchesBottom = currentBottom >= (maxBottom - tolerance)
+        val touchesLeft = currentLeft <= (maxLeft + tolerance)
+        val touchesRight = currentRight >= (maxRight - tolerance)
+
+        val touchesBottomLeft = touchesBottom && touchesLeft
+        val touchesBottomRight = touchesBottom && touchesRight
+
+        return WindowTouches(
+            touchesTopEdge = touchesTopEdge,
+            touchesLeftEdge = touchesLeftEdge,
+            touchesBottomLeft = touchesBottomLeft,
+            touchesBottomRight = touchesBottomRight,
+        )
+    }
+
+    /**
+     * Checks if current window bounds touch physical display edges/corners for Mini Square Mode.
+     */
+    fun checkWindowScreenTouches(currentBounds: Rect, maxBounds: Rect): WindowTouches {
+        return checkWindowScreenTouches(
+            currentLeft = currentBounds.left,
+            currentTop = currentBounds.top,
+            currentRight = currentBounds.right,
+            currentBottom = currentBounds.bottom,
+            maxLeft = maxBounds.left,
+            maxTop = maxBounds.top,
+            maxRight = maxBounds.right,
+            maxBottom = maxBounds.bottom,
+        )
+    }
+
+    /**
+     * Checks if Activity's current window touches physical display edges/corners for Mini Square Mode.
+     * Combines WindowMetricsCalculator bounds check with view-level inspection for the title bar view.
+     */
+    fun checkWindowScreenTouches(activity: Activity): WindowTouches {
+        return try {
+            val calculator = WindowMetricsCalculator.getOrCreate()
+            val currentBounds = calculator.computeCurrentWindowMetrics(activity).bounds
+            val maxBounds = calculator.computeMaximumWindowMetrics(activity).bounds
+
+            val windowTouches = checkWindowScreenTouches(currentBounds, maxBounds)
+
+            val headerView = activity.findViewById<View>(R.id.home_header_container)
+                ?: activity.findViewById<View>(R.id.dashboard_title)
+            if (headerView != null && headerView.isAttachedToWindow && headerView.width > 0) {
+                val loc = IntArray(2)
+                headerView.getLocationOnScreen(loc)
+                val headerLeft = loc[0]
+                val headerTop = loc[1]
+                val headerRight = headerLeft + headerView.width
+                val headerBottom = headerTop + headerView.height
+
+                val tolerance = 2
+                val viewRotation = (headerView.rotation % 360f + 360f) % 360f
+
+                val touchesTopEdgeLine = when {
+                    viewRotation in 45f..135f -> headerLeft <= (maxBounds.left + tolerance)
+                    viewRotation in 135f..225f -> headerBottom >= (maxBounds.bottom - tolerance)
+                    viewRotation in 225f..315f -> headerRight >= (maxBounds.right - tolerance)
+                    else -> headerTop <= (maxBounds.top + tolerance)
+                }
+
+                if (touchesTopEdgeLine) {
+                    return windowTouches.copy(touchesTopEdge = true)
+                }
+            }
+
+            windowTouches
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to calculate screen touches", e)
+            WindowTouches(touchesTopEdge = true, touchesBottomLeft = true, touchesBottomRight = true)
+        }
+    }
+
+    /**
+     * Legacy helper: checks if current window coordinates touch physical display corners for Mini Square Mode.
      * Returns Pair(touchesBottomLeft, touchesBottomRight).
      */
     @Suppress("UNUSED_PARAMETER")
@@ -50,14 +155,11 @@ object CornerAwareness {
         maxRight: Int,
         maxBottom: Int,
     ): Pair<Boolean, Boolean> {
-        val touchesBottom = currentBottom >= (maxBottom - 2)
-        val touchesLeft = currentLeft <= (maxLeft + 2)
-        val touchesRight = currentRight >= (maxRight - 2)
-
-        val touchesBottomLeft = touchesBottom && touchesLeft
-        val touchesBottomRight = touchesBottom && touchesRight
-
-        return Pair(touchesBottomLeft, touchesBottomRight)
+        val touches = checkWindowScreenTouches(
+            currentLeft, currentTop, currentRight, currentBottom,
+            maxLeft, maxTop, maxRight, maxBottom
+        )
+        return Pair(touches.touchesBottomLeft, touches.touchesBottomRight)
     }
 
     /**
@@ -65,31 +167,16 @@ object CornerAwareness {
      * Returns Pair(touchesBottomLeft, touchesBottomRight).
      */
     fun checkWindowScreenCornerTouches(currentBounds: Rect, maxBounds: Rect): Pair<Boolean, Boolean> {
-        return checkWindowScreenCornerTouches(
-            currentLeft = currentBounds.left,
-            currentTop = currentBounds.top,
-            currentRight = currentBounds.right,
-            currentBottom = currentBounds.bottom,
-            maxLeft = maxBounds.left,
-            maxTop = maxBounds.top,
-            maxRight = maxBounds.right,
-            maxBottom = maxBounds.bottom,
-        )
+        val touches = checkWindowScreenTouches(currentBounds, maxBounds)
+        return Pair(touches.touchesBottomLeft, touches.touchesBottomRight)
     }
 
     /**
      * Checks if Activity's current window touches physical display corners for Mini Square Mode.
      */
     fun checkWindowScreenCornerTouches(activity: Activity): Pair<Boolean, Boolean> {
-        return try {
-            val calculator = WindowMetricsCalculator.getOrCreate()
-            val currentBounds = calculator.computeCurrentWindowMetrics(activity).bounds
-            val maxBounds = calculator.computeMaximumWindowMetrics(activity).bounds
-            checkWindowScreenCornerTouches(currentBounds, maxBounds)
-        } catch (e: Exception) {
-            android.util.Log.w(TAG, "Failed to calculate screen corner touches", e)
-            Pair(true, true)
-        }
+        val touches = checkWindowScreenTouches(activity)
+        return Pair(touches.touchesBottomLeft, touches.touchesBottomRight)
     }
 
     /**

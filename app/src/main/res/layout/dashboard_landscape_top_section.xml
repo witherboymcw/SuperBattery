@@ -23,11 +23,11 @@
 
             <ImageButton
                 android:id="@+id/btn_ringer_mode_toggle"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_header_icon_ripple"
                 android:contentDescription="Ringer Mode"
-                android:padding="8dp"
+                android:padding="12dp"
                 android:src="@drawable/ic_ringer_sound"
                 app:tint="?attr/colorControlNormal" />
 
@@ -42,6 +42,19 @@
                 android:textColor="?android:attr/textColorPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_header_seconds"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="2dp"
+                android:fontFeatureSettings="tnum"
+                android:gravity="center_vertical"
+                android:text="00"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
         </LinearLayout>
 
         <TextView
@@ -61,7 +74,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="end|center_vertical"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/bg_header_icon_ripple"
             android:contentDescription="@string/settings"
             android:padding="12dp"
             android:src="@drawable/ic_settings"
@@ -70,6 +83,7 @@
 
     <!-- Hàng chỉ số nhanh (Metric Cards: Pin + Mạng) -->
     <LinearLayout
+        android:id="@+id/container_metric_cards"
         android:layout_width="match_parent"
         android:layout_height="90dp"
         android:layout_marginTop="8dp"

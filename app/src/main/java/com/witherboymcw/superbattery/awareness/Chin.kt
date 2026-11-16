@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.res.Configuration
 import android.view.Surface
 import android.view.View
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.R
 import com.witherboymcw.superbattery.settings.AppPreferences
@@ -63,13 +65,15 @@ object ChinAwareness {
         isNight: Boolean,
         savedTheme: String = "system",
         isFoldable: Boolean = false,
-        isMiniSquare: Boolean = false
+        isMiniSquare: Boolean = false,
+        touchesTop: Boolean = true,
     ): ChinPaddingResult {
         val isLight = savedTheme == "light" || (savedTheme == "system" && !isNight)
         val rawLevel = level.coerceIn(MIN_CHIN_LEVEL, MAX_CHIN_LEVEL)
         val effectiveLevel = if (isLight || isFoldable) 0 else rawLevel
         val reductionDp = effectiveLevel * (1f / 16f)
 
+        val default20Px = (20f * density).roundToInt()
         val default16Px = (16f * density).roundToInt()
         val default8Px = (8f * density).roundToInt()
         val default12Px = (12f * density).roundToInt()
@@ -80,7 +84,9 @@ object ChinAwareness {
         val reduced24Px = ((24f - reductionDp).coerceAtLeast(8f) * density).roundToInt()
 
         val dashboardLeftPx = if (isMiniSquare) default12Px else (if (rotation == Surface.ROTATION_270) reduced16Px else default16Px)
-        val dashboardTopPx = if (isMiniSquare) default8Px else (if (rotation == Surface.ROTATION_180) reduced16Px else default16Px)
+        val dashboardTopPx = if (isMiniSquare) {
+            if (touchesTop) default20Px else default8Px
+        } else (if (rotation == Surface.ROTATION_180) reduced16Px else default16Px)
         val dashboardRightPx = if (isMiniSquare) default12Px else (if (rotation == Surface.ROTATION_90) reduced16Px else default16Px)
         val dashboardBottomPx = if (isMiniSquare) default12Px else (if (rotation == Surface.ROTATION_0) reduced16Px else default16Px)
 
@@ -133,6 +139,19 @@ object ChinAwareness {
         val rawLevel = overrideLevel ?: activity.thickChinOverrideLevel ?: getThickChinLevel(activity)
 
         val rotation = activity.getDisplayRotationCompat()
+        val touches = if (isMiniSquare) CornerAwareness.checkWindowScreenTouches(activity) else CornerAwareness.WindowTouches()
+
+        val rootInsets = ViewCompat.getRootWindowInsets(activity.window.decorView)
+        val isStatusBarVisible = rootInsets?.isVisible(WindowInsetsCompat.Type.statusBars()) ?: true
+        val shouldClockMorph = isMiniSquare && touches.touchesTopEdge && touches.touchesLeftEdge && isStatusBarVisible
+
+        if (shouldClockMorph) {
+            activity.dashboardViews.tvHeaderClock?.visibility = View.GONE
+            activity.dashboardViews.tvHeaderSeconds?.visibility = View.VISIBLE
+        } else {
+            activity.dashboardViews.tvHeaderClock?.visibility = View.VISIBLE
+            activity.dashboardViews.tvHeaderSeconds?.visibility = View.GONE
+        }
 
         val paddingResult = calculateChinPadding(
             density = density,
@@ -141,13 +160,28 @@ object ChinAwareness {
             isNight = isNight,
             savedTheme = savedTheme,
             isFoldable = isFoldable,
-            isMiniSquare = isMiniSquare
+            isMiniSquare = isMiniSquare,
+            touchesTop = touches.touchesTop
         )
 
         // 1. Home Dashboard
         activity.findViewById<View>(R.id.dashboard)?.let { dashboard ->
             val p = paddingResult.dashboardPadding
             dashboard.setPaddingRelative(p.left, p.top, p.right, p.bottom)
+        }
+
+        if (isMiniSquare) {
+            val metricCardsRow = activity.findViewById<View>(R.id.container_metric_cards)
+                ?: (activity.findViewById<View>(R.id.card_battery)?.parent as? View)
+            val lp = metricCardsRow?.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+            if (lp != null) {
+                val marginTopDp = if (touches.touchesTopEdge) -4f else 8f
+                val targetMarginPx = (marginTopDp * density).roundToInt()
+                if (lp.topMargin != targetMarginPx) {
+                    lp.topMargin = targetMarginPx
+                    metricCardsRow.layoutParams = lp
+                }
+            }
         }
 
         // 2. Settings Screen

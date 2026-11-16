@@ -100,6 +100,7 @@ class MainActivity : AppCompatActivity(), SettingsHost {
     private lateinit var systemMonitorManager: SystemMonitorManager
 
     private val clockFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+    private val secondsFormat = SimpleDateFormat("ss", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         LocaleManager.ensureInitialLanguage(this)
@@ -158,7 +159,9 @@ class MainActivity : AppCompatActivity(), SettingsHost {
                 }
                 launch {
                     while (true) {
-                        dashboardViews.tvHeaderClock?.text = clockFormat.format(Date())
+                        val now = Date()
+                        dashboardViews.tvHeaderClock?.text = clockFormat.format(now)
+                        dashboardViews.tvHeaderSeconds?.text = secondsFormat.format(now)
                         delay(1_000L)
                     }
                 }

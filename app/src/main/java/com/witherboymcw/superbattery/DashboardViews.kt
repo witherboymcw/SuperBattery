@@ -30,6 +30,7 @@ class DashboardViews(val activity: Activity) {
     val batteryRing: BatteryRingView? = cardBattery?.findViewById(R.id.battery_ring)
     val btnSettings: View? = activity.findViewById(R.id.settings_button)
     val tvHeaderClock: TextView? = activity.findViewById(R.id.tv_header_clock)
+    val tvHeaderSeconds: TextView? = activity.findViewById(R.id.tv_header_seconds)
     val btnRingerModeToggle: ImageButton? = activity.findViewById(R.id.btn_ringer_mode_toggle)
     val ivNetworkWifi: ImageView? = activity.findViewById(R.id.iv_network_wifi)
     val ivNetworkBluetooth: ImageView? = activity.findViewById(R.id.iv_network_bluetooth)

@@ -14,40 +14,87 @@ class CornerAwarenessTest {
     }
 
     @Test
+    fun testMiniSquareTopEdgeTouchRotatedWindowMetrics() {
+        // Max bounds in portrait orientation (0, 0, 1080, 2400)
+        val maxL = 0
+        val maxT = 0
+        val maxR = 1080
+        val maxB = 2400
+
+        // 1. Top half window in portrait: currentTop = 0 -> touches top edge of screen
+        val topHalfPortrait = CornerAwareness.checkWindowScreenTouches(
+            currentLeft = 0, currentTop = 0, currentRight = 1080, currentBottom = 1200,
+            maxLeft = maxL, maxTop = maxT, maxRight = maxR, maxBottom = maxB
+        )
+        assertTrue(topHalfPortrait.touchesTopEdge)
+
+        // 2. Bottom half window in portrait: currentTop = 1200 > 0 -> does NOT touch top edge of screen
+        val bottomHalfPortrait = CornerAwareness.checkWindowScreenTouches(
+            currentLeft = 0, currentTop = 1200, currentRight = 1080, currentBottom = 2400,
+            maxLeft = maxL, maxTop = maxT, maxRight = maxR, maxBottom = maxB
+        )
+        assertFalse(bottomHalfPortrait.touchesTopEdge)
+
+        // Max bounds in landscape orientation (0, 0, 2400, 1080) - WindowMetrics rotates coordinate space
+        val landMaxL = 0
+        val landMaxT = 0
+        val landMaxR = 2400
+        val landMaxB = 1080
+
+        // 3. Left half window in landscape: currentTop = 0 -> touches physical top edge of display
+        val leftHalfLandscape = CornerAwareness.checkWindowScreenTouches(
+            currentLeft = 0, currentTop = 0, currentRight = 1200, currentBottom = 1080,
+            maxLeft = landMaxL, maxTop = landMaxT, maxRight = landMaxR, maxBottom = landMaxB
+        )
+        assertTrue(leftHalfLandscape.touchesTopEdge)
+
+        // 4. Right half window in landscape: currentTop = 0 -> also touches physical top edge of display
+        val rightHalfLandscape = CornerAwareness.checkWindowScreenTouches(
+            currentLeft = 1200, currentTop = 0, currentRight = 2400, currentBottom = 1080,
+            maxLeft = landMaxL, maxTop = landMaxT, maxRight = landMaxR, maxBottom = landMaxB
+        )
+        assertTrue(rightHalfLandscape.touchesTopEdge)
+    }
+
+    @Test
     fun testMiniSquareCornerTouchesGeometry() {
         // Max bounds portrait (0, 0, 1080, 2400)
         // 1. Nửa dưới màn hình dọc (Bottom half portrait split-screen: 0, 1200, 1080, 2400)
-        val (bLeft1, bRight1) = CornerAwareness.checkWindowScreenCornerTouches(
+        val touches1 = CornerAwareness.checkWindowScreenTouches(
             currentLeft = 0, currentTop = 1200, currentRight = 1080, currentBottom = 2400,
             maxLeft = 0, maxTop = 0, maxRight = 1080, maxBottom = 2400
         )
-        assertTrue(bLeft1)
-        assertTrue(bRight1)
+        assertTrue(touches1.touchesBottomLeft)
+        assertTrue(touches1.touchesBottomRight)
+        assertFalse(touches1.touchesTop)
 
         // 2. Nửa trên màn hình dọc (Top half portrait split-screen: 0, 0, 1080, 1200)
-        val (bLeft2, bRight2) = CornerAwareness.checkWindowScreenCornerTouches(
+        val touches2 = CornerAwareness.checkWindowScreenTouches(
             currentLeft = 0, currentTop = 0, currentRight = 1080, currentBottom = 1200,
             maxLeft = 0, maxTop = 0, maxRight = 1080, maxBottom = 2400
         )
-        assertFalse(bLeft2)
-        assertFalse(bRight2)
+        assertFalse(touches2.touchesBottomLeft)
+        assertFalse(touches2.touchesBottomRight)
+        assertTrue(touches2.touchesTop)
 
         // Max bounds landscape (0, 0, 2400, 1080)
         // 3. Nửa trái màn hình ngang (Left half landscape split-screen: 0, 0, 1200, 1080)
-        val (bLeft3, bRight3) = CornerAwareness.checkWindowScreenCornerTouches(
+        val touches3 = CornerAwareness.checkWindowScreenTouches(
             currentLeft = 0, currentTop = 0, currentRight = 1200, currentBottom = 1080,
             maxLeft = 0, maxTop = 0, maxRight = 2400, maxBottom = 1080
         )
-        assertTrue(bLeft3)
-        assertFalse(bRight3)
+        assertTrue(touches3.touchesBottomLeft)
+        assertFalse(touches3.touchesBottomRight)
+        assertTrue(touches3.touchesTop)
 
         // 4. Nửa phải màn hình ngang (Right half landscape split-screen: 1200, 0, 2400, 1080)
-        val (bLeft4, bRight4) = CornerAwareness.checkWindowScreenCornerTouches(
+        val touches4 = CornerAwareness.checkWindowScreenTouches(
             currentLeft = 1200, currentTop = 0, currentRight = 2400, currentBottom = 1080,
             maxLeft = 0, maxTop = 0, maxRight = 2400, maxBottom = 1080
         )
-        assertFalse(bLeft4)
-        assertTrue(bRight4)
+        assertFalse(touches4.touchesBottomLeft)
+        assertTrue(touches4.touchesBottomRight)
+        assertTrue(touches4.touchesTop)
     }
 
     @Test
