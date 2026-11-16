@@ -4,6 +4,8 @@
 
 is a specialized Android utility application designed to monitor battery level and voltage on hardware-modified Android devices: equipped with a **3.7V nominal Li-ion cell (4.2V fully charged)** and an **external charging board wired in parallel with the battery BMS**, bypassing the system's default 3.85V/4.4V Li-Po battery management circuit.
 
+![](hero-img.avif)
+
 ---
 
 ## 📌 Motivation & Origin
@@ -88,7 +90,7 @@ This application is strictly calibrated around specific hardware dynamics. Note 
 ## 📜 Credits & License
 * **Application Source Code:** Released under the [MIT License](LICENSE).
 * **Lunar Algorithm:** The `VietnameseLunarCalendar.kt` module implements **Ho Ngoc Duc**'s Vietnamese lunar conversion algorithm.
-* *(If you find this project helpful, you can [Support the author](donate_me.txt))*
+* If you find this project useful, feel free to [support the author](donate_me.md) with a coffee ~(not Himeko's brew) or some Stellar Jades~ ❤️
 
 ---
 

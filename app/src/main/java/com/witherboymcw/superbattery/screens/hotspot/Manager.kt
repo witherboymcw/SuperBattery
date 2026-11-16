@@ -15,13 +15,15 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.util.concurrent.TimeUnit
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 object HotspotManager {
     private const val TAG = "HotspotManager"
     private const val PREFS_HOTSPOT = "hotspot_manager_prefs"
     private const val KEY_PERSISTED_CLIENTS = "persisted_hotspot_clients"
     val MAC_REGEX = Regex("^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val persistenceDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val scope = CoroutineScope(persistenceDispatcher + SupervisorJob())
     private val clientMap = LinkedHashMap<String, HotspotClient>()
     private val _clientsState = MutableStateFlow<List<HotspotClient>>(emptyList())
     val clientsState: StateFlow<List<HotspotClient>> = _clientsState.asStateFlow()
@@ -29,43 +31,33 @@ object HotspotManager {
     @Synchronized
     fun loadPersistedClients(context: Context): List<HotspotClient> {
         val appContext = context.applicationContext
-        if (clientMap.isNotEmpty()) {
-            val list = clientMap.values.toList()
-            _clientsState.value = list
-            return list
-        }
-
-        val prefs = appContext.getSharedPreferences(PREFS_HOTSPOT, Context.MODE_PRIVATE)
-        val jsonString = prefs.getString(KEY_PERSISTED_CLIENTS, null)
-
-        if (!jsonString.isNullOrBlank()) {
-            try {
-                val array = JSONArray(jsonString)
-                clientMap.clear()
-                for (i in 0 until array.length()) {
-                    val jsonObj = array.getJSONObject(i)
-                    val client = HotspotClient.fromJson(jsonObj)
-                    if (client.mac.isNotBlank()) {
-                        clientMap[client.mac.lowercase()] = client
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to load saved hotspot clients; resetting client list", e)
-                clientMap.clear()
-            }
-        }
+        val isRootEnabled = com.witherboymcw.superbattery.settings.AppPreferences.isRootHotspotMonitorEnabled(appContext)
+        val demoMacs = getInitialDemoClients().map { it.mac.lowercase() }.toSet()
 
         if (clientMap.isEmpty()) {
-            val defaults = getInitialDemoClients()
-            defaults.forEach { client ->
-                clientMap[client.mac.lowercase()] = client
+            val prefs = appContext.getSharedPreferences(PREFS_HOTSPOT, Context.MODE_PRIVATE)
+            val jsonString = prefs.getString(KEY_PERSISTED_CLIENTS, null)
+            if (!jsonString.isNullOrBlank()) {
+                try {
+                    val array = JSONArray(jsonString)
+                    for (i in 0 until array.length()) {
+                        val jsonObj = array.getJSONObject(i)
+                        val client = HotspotClient.fromJson(jsonObj)
+                        val macLower = client.mac.lowercase()
+                        if (macLower.isNotBlank() && !demoMacs.contains(macLower)) {
+                            clientMap[macLower] = client
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to load saved hotspot clients; resetting client list", e)
+                    clientMap.clear()
+                }
             }
-            savePersistedClients(appContext)
         }
 
         val list = clientMap.values.toList()
-        _clientsState.value = list
-        return list
+        _clientsState.value = if (isRootEnabled) list else getInitialDemoClients()
+        return _clientsState.value
     }
 
     @Synchronized
@@ -77,7 +69,9 @@ object HotspotManager {
         }
         val prefs = appContext.getSharedPreferences(PREFS_HOTSPOT, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_PERSISTED_CLIENTS, array.toString()).apply()
-        _clientsState.value = clientMap.values.toList()
+        
+        val isRootEnabled = com.witherboymcw.superbattery.settings.AppPreferences.isRootHotspotMonitorEnabled(appContext)
+        _clientsState.value = if (isRootEnabled) clientMap.values.toList() else getInitialDemoClients()
     }
 
     fun updateClientStatus(context: Context, mac: String, isDenied: Boolean) {
@@ -102,7 +96,7 @@ object HotspotManager {
 
                 val cmds = if (isDenied) {
                     val cmdIptables = "iptables -I FORWARD -m mac --mac-source ${existingClient.mac} -j DROP"
-                    val cmdDeauth = "hostapd_cli -i wlan0 deauthenticate ${existingClient.mac}"
+                    val cmdDeauth = "hostapd_cli deauthenticate ${existingClient.mac} 2>/dev/null || hostapd_cli -i wlan0 deauthenticate ${existingClient.mac} 2>/dev/null"
                     listOf(cmdIptables, cmdDeauth)
                 } else {
                     val cmdIptables = "iptables -D FORWARD -m mac --mac-source ${existingClient.mac} -j DROP"
@@ -149,6 +143,122 @@ object HotspotManager {
         savePersistedClients(appContext)
     }
 
+    @Synchronized
+    fun syncClients(context: Context, discoveredClients: Map<String, Pair<String, String>>) {
+        val appContext = context.applicationContext
+        loadPersistedClients(appContext)
+
+        var hasChanges = false
+        val now = System.currentTimeMillis()
+
+        discoveredClients.forEach { (macLower, info) ->
+            val existing = clientMap[macLower]
+            val ip = info.first
+            val hostname = info.second
+
+            if (existing == null) {
+                val newClient = HotspotClient(
+                    mac = macLower,
+                    deviceName = if (hostname != "Unknown" && hostname != "Unknown Device") hostname else "Unknown Device",
+                    customAlias = null,
+                    ipAddress = ip,
+                    isDenied = false,
+                    totalDataBytes = 0L,
+                    lastConnectedTimeMs = now,
+                    isCurrentlyOnline = true
+                )
+                clientMap[macLower] = newClient
+                hasChanges = true
+            } else {
+                var updated = existing
+                if (!existing.isCurrentlyOnline) {
+                    updated = updated.copy(isCurrentlyOnline = true, lastConnectedTimeMs = now)
+                    hasChanges = true
+                }
+                if (ip != "—" && ip != existing.ipAddress) {
+                    updated = updated.copy(ipAddress = ip)
+                    hasChanges = true
+                }
+                if (hostname != "Unknown" && hostname != "Unknown Device" && hostname != existing.deviceName) {
+                    updated = updated.copy(deviceName = hostname)
+                    hasChanges = true
+                }
+                if (updated !== existing) {
+                    clientMap[macLower] = updated
+                }
+            }
+        }
+
+        clientMap.values.forEach { client ->
+            if (client.isCurrentlyOnline && !discoveredClients.containsKey(client.mac.lowercase())) {
+                clientMap[client.mac.lowercase()] = client.copy(isCurrentlyOnline = false)
+                hasChanges = true
+            }
+        }
+
+        if (hasChanges) {
+            savePersistedClientsAsync(appContext)
+        }
+    }
+
+    private fun savePersistedClientsAsync(context: Context) {
+        val appContext = context.applicationContext
+        val currentClients = synchronized(this) { clientMap.values.toList() }
+        val isRootEnabled = com.witherboymcw.superbattery.settings.AppPreferences.isRootHotspotMonitorEnabled(appContext)
+        _clientsState.value = if (isRootEnabled) currentClients else getInitialDemoClients()
+
+        scope.launch(Dispatchers.IO) {
+            val array = JSONArray()
+            currentClients.forEach { client ->
+                array.put(client.toJson())
+            }
+            val prefs = appContext.getSharedPreferences(PREFS_HOTSPOT, Context.MODE_PRIVATE)
+            prefs.edit().putString(KEY_PERSISTED_CLIENTS, array.toString()).apply()
+        }
+    }
+
+    @Synchronized
+    fun onClientConnected(context: Context, mac: String, ip: String? = null, hostname: String? = null) {
+        val appContext = context.applicationContext
+        loadPersistedClients(appContext)
+        val key = mac.lowercase()
+        val existing = clientMap[key]
+        val updated = existing?.copy(
+            isCurrentlyOnline = true,
+            ipAddress = ip ?: existing.ipAddress,
+            deviceName = hostname ?: existing.deviceName,
+            lastConnectedTimeMs = System.currentTimeMillis()
+        ) ?: HotspotClient(
+            mac = key,
+            deviceName = hostname ?: "Unknown Device",
+            customAlias = null,
+            ipAddress = ip ?: "—",
+            isDenied = false,
+            totalDataBytes = 0L,
+            lastConnectedTimeMs = System.currentTimeMillis(),
+            isCurrentlyOnline = true
+        )
+        clientMap[key] = updated
+        savePersistedClients(appContext)
+    }
+
+    @Synchronized
+    fun onClientDisconnected(context: Context, mac: String) {
+        val appContext = context.applicationContext
+        loadPersistedClients(appContext)
+        val key = mac.lowercase()
+        val existing = clientMap[key]
+        if (existing != null) {
+            clientMap[key] = existing.copy(isCurrentlyOnline = false)
+            savePersistedClients(appContext)
+        }
+    }
+
+    @Synchronized
+    fun getActiveClientCount(): Int {
+        return clientMap.values.count { it.isCurrentlyOnline }
+    }
+
     private suspend fun executeRootCommands(commands: List<String>): Boolean = withContext(Dispatchers.IO) {
         var process: Process? = null
         try {
@@ -164,22 +274,16 @@ object HotspotManager {
                 writer.flush()
             }
 
-            // Close input and error streams BEFORE process.waitFor to prevent OS buffer deadlock
-            try { process.inputStream.close() } catch (_: Exception) {}
-            try { process.errorStream.close() } catch (_: Exception) {}
-
             val completed = process.waitFor(5, TimeUnit.SECONDS)
-
-            if (completed && process.exitValue() == 0) {
-                true
-            } else {
-                process.destroyForcibly()
-                false
-            }
+            completed && process.exitValue() == 0
         } catch (e: Exception) {
             Log.e(TAG, "Error executing root commands", e)
-            try { process?.destroyForcibly() } catch (_: Exception) {}
             false
+        } finally {
+            try { process?.inputStream?.close() } catch (_: Exception) {}
+            try { process?.errorStream?.close() } catch (_: Exception) {}
+            try { process?.outputStream?.close() } catch (_: Exception) {}
+            try { process?.destroyForcibly() } catch (_: Exception) {}
         }
     }
 

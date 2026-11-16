@@ -52,34 +52,34 @@
     <string name="settings">Cài đặt</string>
     <string name="language_subtitle">Chọn ngôn ngữ hiển thị</string>
     <string name="update_frequency">⏱️ Tần suất cập nhật</string>
-    <string name="update_frequency_subtitle">Chỉnh tần suất làm mới dữ liệu hệ thống</string>
+    <string name="update_frequency_subtitle">Tần suất cập nhật dữ liệu</string>
     <string name="update_every_half_second">Mỗi 0,5 giây</string>
     <string name="update_every_second">Mỗi 1 giây</string>
     <string name="update_every_two_seconds">Mỗi 2 giây</string>
     <string name="use_system_battery_counter">Sử dụng bộ đếm pin hệ thống</string>
     <string name="use_system_battery_counter_subtitle">Dùng % pin từ HĐH thay vì tính từ điện áp thực tế</string>
-    <string name="hardware_preferences">⚙️ Cấu hình phần cứng</string>
-    <string name="hardware_preferences_subtitle">Chỉ thay đổi nếu bạn biết mình đang làm gì</string>
+    <string name="hardware_preferences">⚙️ Cấu hình sâu</string>
+    <string name="hardware_preferences_subtitle">Chỉ thay đổi nếu bạn hiểu về thiết bị của mình</string>
     <string name="dual_serial_cell_battery">Pin nối tiếp 2 cell (Dual cell)</string>
     <string name="voltage_unit_header">⚡ Đơn vị điện áp</string>
-    <string name="voltage_unit_subtitle">Hiển thị điện áp pin theo Millivolt hoặc Volt</string>
+    <string name="voltage_unit_subtitle">Theo Millivolt hoặc Volt</string>
 
     <string name="voltage_unit_mv">mV (Millivolts)</string>
     <string name="ram_unit_header">💾 Đơn vị RAM</string>
-    <string name="ram_unit_subtitle">Hiển thị dung lượng RAM theo MB hoặc GB</string>
+    <string name="ram_unit_subtitle">Theo MB hoặc GB</string>
     <string name="ram_unit_mb">MB (Megabyte)</string>
     <string name="ram_unit_gb">GB (Gigabyte)</string>
     <string name="temp_unit_header">🌡️ Đơn vị nhiệt độ</string>
-    <string name="temp_unit_subtitle">Chọn đơn vị hiển thị độ C, độ F hoặc Kelvin</string>
+    <string name="temp_unit_subtitle">Theo độ C, độ F hoặc Kelvin</string>
 
     <string name="language">🌐 Ngôn ngữ</string>
     <string name="at_system">Theo hệ thống</string>
 
-    <string name="language_english_us">Tiếng Anh (Mỹ)</string>
-    <string name="language_english_uk">Tiếng Anh (Anh)</string>
-    <string name="language_vietnamese">Tiếng Việt</string>
-    <string name="language_simplified_chinese">Tiếng Trung (Giản thể)</string>
-    <string name="language_brainrot">Tiếng Anh Brainrot</string>
+    <string name="language_english_us">Anh (Mĩ - US)</string>
+    <string name="language_english_uk">Anh (Anh - UK)</string>
+    <string name="language_vietnamese">Việt Nam</string>
+    <string name="language_simplified_chinese">Trung (Giản thể - 简体)</string>
+    <string name="language_brainrot">Anh (Brainrot)</string>
     <string name="super_permissions_header">🛡️ Cấp quyền ứng dụng</string>
     <string name="super_permissions_subtitle">Quản lý quyền hệ thống và cờ sử dụng ứng dụng</string>
     <string name="perm_post_notifications">Gửi thông báo</string>
@@ -119,7 +119,7 @@
     <string name="btn_set_notch_position">Chỉnh vị trí tai thỏ</string>
     <string name="notch_instruction_text">Kéo hình tròn đến vị trí tai thỏ mong muốn, sau đó chạm ra ngoài để lưu.</string>
 
-    <string name="hotspot_title">Thiết bị Hotspot</string>
+    <string name="hotspot_title">Thiết bị Mạng</string>
     <string name="status_connected">Đã kết nối</string>
     <string name="status_allowed">Được phép</string>
     <string name="status_denied">Bị chặn</string>

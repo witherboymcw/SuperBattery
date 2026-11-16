@@ -24,9 +24,11 @@ class HardwarePreferences(private val activity: MainActivity) {
 
         val cbUseSysBatt = activity.findViewById<CheckBox>(R.id.cb_use_system_battery)
         val cbDualCell = activity.findViewById<CheckBox>(R.id.cb_dual_cell_battery)
+        val cbRootHotspot = activity.findViewById<CheckBox>(R.id.cb_root_hotspot_monitor)
 
         val isUseSysBatt = AppPreferences.isUseSystemBatteryCounter(activity)
         val isDualCell = AppPreferences.isDualCellBattery(activity)
+        val isRootHotspot = AppPreferences.isRootHotspotMonitorEnabled(activity)
 
         val items = listOf(
             CheckboxItemSpec(
@@ -42,6 +44,15 @@ class HardwarePreferences(private val activity: MainActivity) {
                 initialChecked = isDualCell,
                 onCheckedChange = { isChecked ->
                     AppPreferences.setDualCellBattery(activity, isChecked)
+                    onHardwarePrefChanged()
+                }
+            ),
+            CheckboxItemSpec(
+                checkBox = cbRootHotspot,
+                initialChecked = isRootHotspot,
+                onCheckedChange = { isChecked ->
+                    AppPreferences.setRootHotspotMonitorEnabled(activity, isChecked)
+                    com.witherboymcw.superbattery.monitors.HotspotRootMonitor.evaluateSettings()
                     onHardwarePrefChanged()
                 }
             )

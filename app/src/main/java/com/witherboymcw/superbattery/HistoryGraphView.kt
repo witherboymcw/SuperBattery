@@ -21,12 +21,14 @@ class HistoryGraphView @JvmOverloads constructor(
     private val transformedValues = FloatArray(MAX_CAPACITY)
     private val sampleColors = IntArray(MAX_CAPACITY)
 
+    private var density = resources.displayMetrics.density
+
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 1.5f * resources.displayMetrics.density
+        strokeWidth = 1.5f * density
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
-        color = 0xff00c853.toInt()
+        color = com.witherboymcw.superbattery.core.MetricColors.COLOR_GREEN
     }
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -34,17 +36,17 @@ class HistoryGraphView @JvmOverloads constructor(
     }
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = resources.displayMetrics.density
+        strokeWidth = density
         color = 0x33888888
     }
     private val majorGridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = resources.displayMetrics.density
+        strokeWidth = density
         color = 0x55888888
     }
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = resources.displayMetrics.density
+        strokeWidth = density
         color = 0x66888888
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -156,6 +158,17 @@ class HistoryGraphView @JvmOverloads constructor(
             }
         }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        density = resources.displayMetrics.density
+        linePaint.strokeWidth = 1.5f * density
+        gridPaint.strokeWidth = density
+        majorGridPaint.strokeWidth = density
+        tickPaint.strokeWidth = density
+        textPaint.textSize = 11f * resources.displayMetrics.scaledDensity
+        invalidate()
+    }
+
     override fun onDetachedFromWindow() {
         removeCallbacks(axisOffsetRunnable)
         super.onDetachedFromWindow()
@@ -165,7 +178,6 @@ class HistoryGraphView @JvmOverloads constructor(
         super.onDraw(canvas)
 
         textPaint.getFontMetrics(fontMetrics)
-        val density = resources.displayMetrics.density
         val labelWidth = if (hideYAxisLabels) 0f else cachedLabelWidth
         val left = paddingLeft + (if (hideYAxisLabels) 4f * density else labelWidth + 10f * density)
         val right = width - paddingRight - 4f

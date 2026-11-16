@@ -111,16 +111,18 @@ class ConnectivityMonitorSource {
     @RequiresApi(Build.VERSION_CODES.S)
     fun registerTelephonyCallback(context: Context, onSimStateChanged: () -> Unit) {
         try {
+            unregisterTelephonyCallback(context)
             val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager ?: return
             val callback = object : TelephonyCallback(), TelephonyCallback.ServiceStateListener {
                 override fun onServiceStateChanged(serviceState: ServiceState) {
                     onSimStateChanged()
                 }
             }
-            telephonyCallback = callback
             tm.registerTelephonyCallback(context.mainExecutor, callback)
+            telephonyCallback = callback
         } catch (e: Exception) {
             Log.w(TAG, "Failed to register telephony callback", e)
+            telephonyCallback = null
         }
     }
 
@@ -130,9 +132,10 @@ class ConnectivityMonitorSource {
             val callback = telephonyCallback as? TelephonyCallback ?: return
             val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager ?: return
             tm.unregisterTelephonyCallback(callback)
-            telephonyCallback = null
         } catch (e: Exception) {
             Log.w(TAG, "Failed to unregister telephony callback", e)
+        } finally {
+            telephonyCallback = null
         }
     }
 }

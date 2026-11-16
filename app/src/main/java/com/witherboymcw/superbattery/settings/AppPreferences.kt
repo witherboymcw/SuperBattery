@@ -27,6 +27,7 @@ object AppPreferences {
 
     const val KEY_USE_SYSTEM_BATTERY_COUNTER = "use_system_battery_counter"
     const val KEY_IS_DUAL_CELL_BATTERY = "is_dual_cell_battery"
+    const val KEY_ROOT_HOTSPOT_MONITOR = "root_hotspot_monitor"
 
     const val KEY_THICK_CHIN_LEVEL = "thick_chin_level"
 
@@ -170,6 +171,14 @@ object AppPreferences {
 
     fun setDualCellBattery(context: Context, isDualCell: Boolean) {
         getPreferences(context).edit().putBoolean(KEY_IS_DUAL_CELL_BATTERY, isDualCell).apply()
+    }
+
+    fun isRootHotspotMonitorEnabled(context: Context): Boolean {
+        return getPreferences(context).getBoolean(KEY_ROOT_HOTSPOT_MONITOR, false)
+    }
+
+    fun setRootHotspotMonitorEnabled(context: Context, isEnabled: Boolean) {
+        getPreferences(context).edit().putBoolean(KEY_ROOT_HOTSPOT_MONITOR, isEnabled).apply()
     }
 
     // --- Thick Chin Level ---

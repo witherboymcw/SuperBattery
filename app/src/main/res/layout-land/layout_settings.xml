@@ -1286,6 +1286,16 @@
                                     android:text="@string/dual_serial_cell_battery"
                                     android:textColor="?android:attr/textColorPrimary"
                                     android:textSize="14sp" />
+
+                            <CheckBox
+                                    android:id="@+id/cb_root_hotspot_monitor"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="44dp"
+                                    android:paddingStart="8dp"
+                                    android:paddingEnd="8dp"
+                                    android:text="@string/root_count_clients_without_notification"
+                                    android:textColor="?android:attr/textColorPrimary"
+                                    android:textSize="14sp" />
                             </LinearLayout>
 
                             <!-- 10. Thick Chin Options -->

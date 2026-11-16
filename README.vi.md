@@ -4,6 +4,8 @@
 
 là ứng dụng Android chuyên dụng hỗ trợ theo dõi mức pin và điện áp dành riêng cho các thiết bị Android đã can thiệp phần cứng: **độ cell pin Li-ion 3.7V (đầy ở 4.2V)** và sử dụng **mạch sạc ngoài mắc song song BMS pin** thay thế cho chuẩn pin Li-Po 3.85V/4.4V mặc định của hệ thống.
 
+![](hero-img.avif)
+
 ---
 
 ## 📌 Tác giả muốn gì?
@@ -89,7 +91,7 @@ _"Nếu đã độ pin lớn, tại sao không dùng nó làm bộ sạc dự ph
 ## 📜 Bản quyền & Ghi nhận (Credits & License)
 * **Mã nguồn ứng dụng:** Phát hành theo giấy phép [MIT License](LICENSE).
 * **Thuật toán Âm lịch:** Module `VietnameseLunarCalendar.kt` sử dụng thuật toán tính Âm lịch Việt Nam của **Hồ Ngọc Đức**.
-* *(Nếu bạn thấy dự án hữu ích, có thể [Ủng hộ tác giả](donate_me.txt))*
+* Nếu bạn thấy dự án hữu ích, có thể [ủng hộ tác giả](donate_me.md) bằng 1 tách cà phê ~(nếu là của Himeko thì dẹp) hoặc Ngọc Ánh Sao~ nhé ❤️
 
 ---
 

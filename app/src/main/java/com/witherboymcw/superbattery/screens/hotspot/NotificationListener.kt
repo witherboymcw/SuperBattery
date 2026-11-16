@@ -20,6 +20,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.witherboymcw.superbattery.widgets.BatteryWidget
+import kotlinx.coroutines.*
 import org.json.JSONArray
 import java.lang.ref.WeakReference
 
@@ -81,6 +82,7 @@ object HotspotRuleLoader {
 
 class HotspotNotificationListener : NotificationListenerService() {
 
+    private val listenerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var stateReceiverRegistered = false
     private var dateFormatObserverRegistered = false
 
@@ -113,6 +115,7 @@ class HotspotNotificationListener : NotificationListenerService() {
 
     override fun onDestroy() {
         cleanup()
+        listenerScope.cancel()
         super.onDestroy()
     }
 
@@ -142,43 +145,53 @@ class HotspotNotificationListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         val notification = sbn ?: return
-        val newStatus = hotspotStatusFromNotification(notification)
-        if (newStatus == null) {
-            Log.d(TAG, "Notification not recognized as hotspot status")
-            return
-        }
-        Log.d(TAG, "Recognized hotspot status: $newStatus")
-        if (setCurrentStatus(this, newStatus)) {
-            Log.d(TAG, "Status changed -> requesting widget refresh")
-            refreshWidgets()
+        listenerScope.launch {
+            val newStatus = hotspotStatusFromNotification(notification)
+            if (newStatus == null) {
+                Log.d(TAG, "Notification not recognized as hotspot status")
+                return@launch
+            }
+            Log.d(TAG, "Recognized hotspot status: $newStatus")
+            if (setCurrentStatus(this@HotspotNotificationListener, newStatus)) {
+                Log.d(TAG, "Status changed -> requesting widget refresh")
+                refreshWidgets()
+            }
         }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         val removedNotification = sbn ?: return
-        if (hotspotStatusFromNotification(removedNotification) != null) {
-            checkHotspotNotification(excludingKey = removedNotification.key)
+        listenerScope.launch {
+            if (hotspotStatusFromNotification(removedNotification) != null) {
+                checkHotspotNotification(excludingKey = removedNotification.key)
+            }
         }
     }
 
     private fun checkHotspotNotification(excludingKey: String? = null) {
-        val activeNotifs = try { activeNotifications } catch (e: Exception) { Log.w(TAG, "Failed to read active notifications", e); return }
-        if (activeNotifs == null) return
-        val statuses = activeNotifs.asSequence()
-            .filterNotNull()
-            .filterNot { it.key == excludingKey }
-            .mapNotNull(::hotspotStatusFromNotification)
-            .toList()
+        listenerScope.launch {
+            val activeNotifs = try { activeNotifications } catch (e: Exception) { Log.w(TAG, "Failed to read active notifications", e); return@launch }
+            if (activeNotifs == null) return@launch
+            val statuses = activeNotifs.asSequence()
+                .filterNotNull()
+                .filterNot { it.key == excludingKey }
+                .mapNotNull(::hotspotStatusFromNotification)
+                .toList()
 
-        val newStatus = statuses.maxByOrNull { status ->
-            when (status) {
-                is HotspotState.ON_CONNECTED -> 2
-                is HotspotState.ON_EMPTY -> 1
-                is HotspotState.OFF -> 0
+            if (statuses.isEmpty() && com.witherboymcw.superbattery.settings.AppPreferences.isRootHotspotMonitorEnabled(this@HotspotNotificationListener)) {
+                return@launch
             }
-        } ?: HotspotState.OFF
 
-        if (setCurrentStatus(this, newStatus)) refreshWidgets()
+            val newStatus = statuses.maxByOrNull { status ->
+                when (status) {
+                    is HotspotState.ON_CONNECTED -> 2
+                    is HotspotState.ON_EMPTY -> 1
+                    is HotspotState.OFF -> 0
+                }
+            } ?: HotspotState.OFF
+
+            if (setCurrentStatus(this@HotspotNotificationListener, newStatus)) refreshWidgets()
+        }
     }
 
     private fun refreshStatusFromWidgetTap() {

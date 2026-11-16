@@ -4,12 +4,12 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import com.witherboymcw.superbattery.SystemMonitorManager
+import com.witherboymcw.superbattery.monitors.HotspotRootMonitor
 import com.witherboymcw.superbattery.widgets.BatteryWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class BatteryMonitorService : Service() {
@@ -21,6 +21,7 @@ class BatteryMonitorService : Service() {
         super.onCreate()
         systemMonitorManager = SystemMonitorManager(this)
         systemMonitorManager.startMonitoring()
+        HotspotRootMonitor.startMonitoring(this)
         serviceScope.launch {
             systemMonitorManager.batteryInfoState.collect { info ->
                 if (info.voltageMv in 1..3400 && !info.isCharging) {
@@ -38,6 +39,7 @@ class BatteryMonitorService : Service() {
     }
 
     override fun onDestroy() {
+        HotspotRootMonitor.stopMonitoring()
         systemMonitorManager.stopMonitoring()
         serviceScope.cancel()
         super.onDestroy()

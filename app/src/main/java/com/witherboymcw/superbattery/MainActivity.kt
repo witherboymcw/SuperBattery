@@ -343,6 +343,7 @@ class MainActivity : AppCompatActivity(), SettingsHost {
 
         setContentView(targetLayout)
         currentLayoutResId = targetLayout
+        dashboardViews.refresh()
 
         if (isSettingsOpen) {
             findViewById<View>(R.id.settings_container)?.visibility = View.VISIBLE
@@ -543,7 +544,13 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         BatteryWidget.updateAllWidgets(this, android.appwidget.AppWidgetManager.getInstance(this))
     }
 
+    private var lastDashboardUpdateTime = 0L
+
     internal fun updateDashboard() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastDashboardUpdateTime < 100L) return
+        lastDashboardUpdateTime = now
+
         dashboardRenderer.updateBatteryRingGeometry()
         systemMonitorManager.updateNetworkSpeed()
 
