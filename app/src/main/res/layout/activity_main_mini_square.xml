@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <com.witherboymcw.superbattery.screens.dashboard.DashboardLayout
+        android:id="@+id/dashboard"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="12dp">
+
+        <!-- Header + Hàng chỉ số nhanh (Pin + Mạng) dùng chung -->
+        <include layout="@layout/dashboard_landscape_top_section" />
+
+        <!-- Main Area Below Top Row: Left Column (3 Summary Cards) + Right Column (Large Graph Card) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <!-- Cột trái (104dp): Bố trí 3 thẻ tóm tắt (Điện áp, RAM, Nhiệt độ) xếp dọc -->
+            <LinearLayout
+                android:layout_width="104dp"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <!-- Thẻ 1: Điện áp -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_voltage_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="?attr/colorSurface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="?attr/colorOutline"
+                    app:strokeWidth="0dp">
+
+                    <com.witherboymcw.superbattery.screens.dashboard.MiniSquareCardHeaderLayout
+                        android:id="@+id/summary_header_voltage"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="6dp">
+
+                        <TextView
+                            android:id="@+id/tv_voltage_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:textAlignment="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="@string/voltage_title"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/voltage_current"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:textAlignment="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="@string/placeholder_dash"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_voltage_power"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:textAlignment="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="@string/placeholder_dash"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </com.witherboymcw.superbattery.screens.dashboard.MiniSquareCardHeaderLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Thẻ 2: RAM -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_ram_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="?attr/colorSurface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="?attr/colorOutline"
+                    app:strokeWidth="0dp">
+
+                    <com.witherboymcw.superbattery.screens.dashboard.MiniSquareCardHeaderLayout
+                        android:id="@+id/summary_header_ram"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="6dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:textAlignment="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="@string/ram_title"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/ram_current"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:textAlignment="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="@string/placeholder_dash"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_ram_usage_detail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:textAlignment="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="@string/placeholder_dash"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </com.witherboymcw.superbattery.screens.dashboard.MiniSquareCardHeaderLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Thẻ 3: Nhiệt độ (ở đáy cột trái -> nhận touchesBottomLeft) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_temp_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="?attr/colorSurface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="?attr/colorOutline"
+                    app:strokeWidth="0dp">
+
+                    <com.witherboymcw.superbattery.screens.dashboard.MiniSquareCardHeaderLayout
+                        android:id="@+id/summary_header_temperature"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="6dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:textAlignment="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="@string/temperature_title"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/temperature_current"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:textAlignment="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="@string/placeholder_dash"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_temperature_status"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:textAlignment="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="@string/placeholder_dash"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </com.witherboymcw.superbattery.screens.dashboard.MiniSquareCardHeaderLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Cột phải: Large Graph Card (ở đáy cột phải -> nhận touchesBottomRight) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_mini_square_graph"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                app:cardBackgroundColor="?attr/colorSurface"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="0dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="12dp">
+
+                    <com.witherboymcw.superbattery.HistoryGraphView
+                        android:id="@+id/voltage_graph"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="visible" />
+
+                    <com.witherboymcw.superbattery.HistoryGraphView
+                        android:id="@+id/ram_graph"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone" />
+
+                    <com.witherboymcw.superbattery.HistoryGraphView
+                        android:id="@+id/temperature_graph"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone" />
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </com.witherboymcw.superbattery.screens.dashboard.DashboardLayout>
+
+    <!-- Overlay Include Layouts for Settings and Hotspot (Dùng 1 cột dọc cuộn từ màn hình dọc) -->
+    <include layout="@layout/layout_settings_single_column" />
+    <include layout="@layout/layout_hotspot_single_column" />
+</FrameLayout>

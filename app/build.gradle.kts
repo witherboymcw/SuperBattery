@@ -11,14 +11,15 @@ android {
 
     defaultConfig {
         applicationId = "com.witherboymcw.superbattery"
-        minSdk = 29
+        minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "26.11.05"
+        versionCode = 6
+        versionName = "26.11.16"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    testOptions { unitTests.isReturnDefaultValues = true }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -42,11 +43,15 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.window)
     testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
