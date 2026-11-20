@@ -97,16 +97,23 @@ internal class SettingsViewController : DrawerScreen(
                 if (shouldClose) {
                     closeScreen(activity)
                 } else {
+                    swipeContainer.animate()?.cancel()
+                    val widthVal = swipeContainer.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
+                    val remainingDistance = Math.abs(swipeContainer.translationX)
+                    val ratio = (remainingDistance / widthVal).coerceIn(0f, 1f)
+                    val duration = (ratio * 250L).toLong().coerceIn(100L, 250L)
+
                     swipeContainer.animate()
                         .translationX(0f)
-                        .setDuration(200L)
+                        .setDuration(duration)
                         .setInterpolator(Motion.interpolator)
                         .withLayer()
                         .start()
                     val settingsBtn = (activity as? SettingsHost)?.settingsActionButton ?: mainActivity?.dashboardViews?.btnSettings
+                    settingsBtn?.animate()?.cancel()
                     settingsBtn?.animate()
                         ?.rotation(90f)
-                        ?.setDuration(200L)
+                        ?.setDuration(duration)
                         ?.setInterpolator(Motion.interpolator)
                         ?.start()
                 }

@@ -142,13 +142,23 @@ class HotspotClientAdapter(
 
             clientHolder.radioAllowed.setOnClickListener {
                 if (client.isDenied) {
+                    clientHolder.radioAllowed.isChecked = true
+                    clientHolder.radioDenied.isChecked = false
                     onStatusChanged(client, false)
+                } else {
+                    clientHolder.radioAllowed.isChecked = true
+                    clientHolder.radioDenied.isChecked = false
                 }
             }
 
             clientHolder.radioDenied.setOnClickListener {
                 if (!client.isDenied) {
+                    clientHolder.radioDenied.isChecked = true
+                    clientHolder.radioAllowed.isChecked = false
                     onStatusChanged(client, true)
+                } else {
+                    clientHolder.radioDenied.isChecked = true
+                    clientHolder.radioAllowed.isChecked = false
                 }
             }
 

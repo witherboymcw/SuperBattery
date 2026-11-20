@@ -19,12 +19,13 @@ class DashboardLayout @JvmOverloads constructor(
     enum class SwipeDirection {
         NONE,
         LEFT_TO_SETTINGS,
-        RIGHT_TO_HOTSPOT
+        RIGHT_TO_HOTSPOT,
+        TOP_TO_STANDBY
     }
 
     interface DualSwipeListener {
         fun onSwipeStart(direction: SwipeDirection)
-        fun onSwipeProgress(direction: SwipeDirection, dx: Float, targetX: Float)
+        fun onSwipeProgress(direction: SwipeDirection, delta: Float, targetVal: Float)
         fun onSwipeEnd(direction: SwipeDirection, shouldOpen: Boolean)
     }
 
@@ -42,6 +43,7 @@ class DashboardLayout @JvmOverloads constructor(
     private var startX = 0f
     private var startY = 0f
     private var dragStartX = 0f
+    private var dragStartY = 0f
     private var currentDirection = SwipeDirection.NONE
     private val gestureHelper = DrawerGestureHelper(context)
 
@@ -59,24 +61,34 @@ class DashboardLayout @JvmOverloads constructor(
                 startX = ev.rawX
                 startY = ev.rawY
                 dragStartX = ev.rawX
+                dragStartY = ev.rawY
                 currentDirection = SwipeDirection.NONE
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = ev.rawX - startX
                 val dy = ev.rawY - startY
                 val effectiveDx = dx * swipeSensitivity
-                if (currentDirection == SwipeDirection.NONE && gestureHelper.isHorizontalSwipe(dx, dy, swipeSensitivity)) {
+                val effectiveDy = dy * swipeSensitivity
+
+                if (currentDirection == SwipeDirection.NONE) {
                     if (!gestureHelper.isTouchInInteractiveChild(this, ev.rawX, ev.rawY)) {
-                        if (effectiveDx < 0) {
-                            currentDirection = SwipeDirection.LEFT_TO_SETTINGS
-                        } else {
-                            currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
-                        }
-                        dragStartX = ev.rawX
-                        parent?.requestDisallowInterceptTouchEvent(true)
-                        dualSwipeListener?.onSwipeStart(currentDirection)
-                        if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
-                            swipeListener?.onSwipeStart()
+                        if (gestureHelper.isHorizontalSwipe(dx, dy, swipeSensitivity)) {
+                            if (effectiveDx < 0) {
+                                currentDirection = SwipeDirection.LEFT_TO_SETTINGS
+                            } else {
+                                currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
+                            }
+                            dragStartX = ev.rawX
+                            parent?.requestDisallowInterceptTouchEvent(true)
+                            dualSwipeListener?.onSwipeStart(currentDirection)
+                            if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
+                                swipeListener?.onSwipeStart()
+                            }
+                        } else if (dy > 0 && gestureHelper.isVerticalSwipe(dx, dy, swipeSensitivity)) {
+                            currentDirection = SwipeDirection.TOP_TO_STANDBY
+                            dragStartY = ev.rawY
+                            parent?.requestDisallowInterceptTouchEvent(true)
+                            dualSwipeListener?.onSwipeStart(currentDirection)
                         }
                     }
                 }
@@ -102,6 +114,7 @@ class DashboardLayout @JvmOverloads constructor(
         gestureHelper.addMovement(ev)
 
         val screenWidth = width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
+        val screenHeight = height.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
         var handled = false
 
         when (ev.action) {
@@ -109,6 +122,7 @@ class DashboardLayout @JvmOverloads constructor(
                 startX = ev.rawX
                 startY = ev.rawY
                 dragStartX = ev.rawX
+                dragStartY = ev.rawY
                 currentDirection = SwipeDirection.NONE
                 handled = true
             }
@@ -116,55 +130,76 @@ class DashboardLayout @JvmOverloads constructor(
                 val dx = ev.rawX - startX
                 val dy = ev.rawY - startY
                 val effectiveDx = dx * swipeSensitivity
+                val effectiveDy = dy * swipeSensitivity
 
-                if (currentDirection == SwipeDirection.NONE && gestureHelper.isHorizontalSwipe(dx, dy, swipeSensitivity)) {
+                if (currentDirection == SwipeDirection.NONE) {
                     if (!gestureHelper.isTouchInInteractiveChild(this, ev.rawX, ev.rawY)) {
-                        if (effectiveDx < 0) {
-                            currentDirection = SwipeDirection.LEFT_TO_SETTINGS
-                        } else {
-                            currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
-                        }
-                        dragStartX = ev.rawX
-                        parent?.requestDisallowInterceptTouchEvent(true)
-                        dualSwipeListener?.onSwipeStart(currentDirection)
-                        if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
-                            swipeListener?.onSwipeStart()
+                        if (gestureHelper.isHorizontalSwipe(dx, dy, swipeSensitivity)) {
+                            if (effectiveDx < 0) {
+                                currentDirection = SwipeDirection.LEFT_TO_SETTINGS
+                            } else {
+                                currentDirection = SwipeDirection.RIGHT_TO_HOTSPOT
+                            }
+                            dragStartX = ev.rawX
+                            parent?.requestDisallowInterceptTouchEvent(true)
+                            dualSwipeListener?.onSwipeStart(currentDirection)
+                            if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
+                                swipeListener?.onSwipeStart()
+                            }
+                        } else if (dy > 0 && gestureHelper.isVerticalSwipe(dx, dy, swipeSensitivity)) {
+                            currentDirection = SwipeDirection.TOP_TO_STANDBY
+                            dragStartY = ev.rawY
+                            parent?.requestDisallowInterceptTouchEvent(true)
+                            dualSwipeListener?.onSwipeStart(currentDirection)
                         }
                     }
                 }
 
-                val dragDx = (ev.rawX - dragStartX) * swipeSensitivity
-
                 if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
+                    val dragDx = (ev.rawX - dragStartX) * swipeSensitivity
                     val targetX = (screenWidth + dragDx).coerceIn(0f, screenWidth)
                     dualSwipeListener?.onSwipeProgress(currentDirection, dragDx, targetX)
                     swipeListener?.onSwipeProgress(dragDx, targetX)
                     handled = true
                 } else if (currentDirection == SwipeDirection.RIGHT_TO_HOTSPOT) {
+                    val dragDx = (ev.rawX - dragStartX) * swipeSensitivity
                     val targetX = (-screenWidth + dragDx).coerceIn(-screenWidth, 0f)
                     dualSwipeListener?.onSwipeProgress(currentDirection, dragDx, targetX)
+                    handled = true
+                } else if (currentDirection == SwipeDirection.TOP_TO_STANDBY) {
+                    val dragDy = (ev.rawY - dragStartY) * swipeSensitivity
+                    val targetY = (-screenHeight + dragDy).coerceIn(-screenHeight, 0f)
+                    dualSwipeListener?.onSwipeProgress(currentDirection, dragDy, targetY)
                     handled = true
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (currentDirection != SwipeDirection.NONE) {
-                    val dragDx = (ev.rawX - dragStartX) * swipeSensitivity
                     val activity = context as? Activity
                     val isMiniSquare = activity != null && FoldableAwareness.isMiniSquareMode(activity)
                     val threshold = gestureHelper.getSwipeThreshold(context, isMiniSquare)
 
-                    val xVelocity = gestureHelper.computeXVelocity(1000)
-
                     if (currentDirection == SwipeDirection.LEFT_TO_SETTINGS) {
+                        val dragDx = (ev.rawX - dragStartX) * swipeSensitivity
+                        val xVelocity = gestureHelper.computeXVelocity(1000)
                         val currentX = (screenWidth + dragDx).coerceIn(0f, screenWidth)
                         val isFling = ev.action == MotionEvent.ACTION_UP && gestureHelper.isFlingLeft(xVelocity)
                         val shouldOpen = isFling || currentX < screenWidth * (1f - threshold)
                         dualSwipeListener?.onSwipeEnd(currentDirection, shouldOpen)
                         swipeListener?.onSwipeEnd(shouldOpen)
                     } else if (currentDirection == SwipeDirection.RIGHT_TO_HOTSPOT) {
+                        val dragDx = (ev.rawX - dragStartX) * swipeSensitivity
+                        val xVelocity = gestureHelper.computeXVelocity(1000)
                         val currentX = (-screenWidth + dragDx).coerceIn(-screenWidth, 0f)
                         val isFling = ev.action == MotionEvent.ACTION_UP && gestureHelper.isFlingRight(xVelocity)
                         val shouldOpen = isFling || currentX > -screenWidth * (1f - threshold)
+                        dualSwipeListener?.onSwipeEnd(currentDirection, shouldOpen)
+                    } else if (currentDirection == SwipeDirection.TOP_TO_STANDBY) {
+                        val dragDy = (ev.rawY - dragStartY) * swipeSensitivity
+                        val yVelocity = gestureHelper.computeYVelocity(1000)
+                        val currentY = (-screenHeight + dragDy).coerceIn(-screenHeight, 0f)
+                        val isFling = ev.action == MotionEvent.ACTION_UP && gestureHelper.isFlingDown(yVelocity)
+                        val shouldOpen = isFling || currentY > -screenHeight * (1f - threshold)
                         dualSwipeListener?.onSwipeEnd(currentDirection, shouldOpen)
                     }
 

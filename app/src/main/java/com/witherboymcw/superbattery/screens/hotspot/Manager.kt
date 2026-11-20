@@ -32,7 +32,6 @@ object HotspotManager {
     fun loadPersistedClients(context: Context): List<HotspotClient> {
         val appContext = context.applicationContext
         val isRootEnabled = com.witherboymcw.superbattery.settings.AppPreferences.isRootHotspotMonitorEnabled(appContext)
-        val demoMacs = getInitialDemoClients().map { it.mac.lowercase() }.toSet()
 
         if (clientMap.isEmpty()) {
             val prefs = appContext.getSharedPreferences(PREFS_HOTSPOT, Context.MODE_PRIVATE)
@@ -44,7 +43,7 @@ object HotspotManager {
                         val jsonObj = array.getJSONObject(i)
                         val client = HotspotClient.fromJson(jsonObj)
                         val macLower = client.mac.lowercase()
-                        if (macLower.isNotBlank() && !demoMacs.contains(macLower)) {
+                        if (macLower.isNotBlank()) {
                             clientMap[macLower] = client
                         }
                     }
@@ -55,9 +54,18 @@ object HotspotManager {
             }
         }
 
-        val list = clientMap.values.toList()
-        _clientsState.value = if (isRootEnabled) list else getInitialDemoClients()
+        _clientsState.value = getActiveClientsList(isRootEnabled)
         return _clientsState.value
+    }
+
+    private fun getActiveClientsList(isRootEnabled: Boolean): List<HotspotClient> {
+        if (isRootEnabled) {
+            return clientMap.values.toList()
+        }
+        val demoClients = getInitialDemoClients()
+        return demoClients.map { demo ->
+            clientMap[demo.mac.lowercase()] ?: demo
+        }
     }
 
     @Synchronized
@@ -69,9 +77,9 @@ object HotspotManager {
         }
         val prefs = appContext.getSharedPreferences(PREFS_HOTSPOT, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_PERSISTED_CLIENTS, array.toString()).apply()
-        
+
         val isRootEnabled = com.witherboymcw.superbattery.settings.AppPreferences.isRootHotspotMonitorEnabled(appContext)
-        _clientsState.value = if (isRootEnabled) clientMap.values.toList() else getInitialDemoClients()
+        _clientsState.value = getActiveClientsList(isRootEnabled)
     }
 
     fun updateClientStatus(context: Context, mac: String, isDenied: Boolean) {
@@ -84,10 +92,12 @@ object HotspotManager {
         scope.launch {
             val (client, commands) = synchronized(this@HotspotManager) {
                 val key = mac.lowercase()
-                val existingClient = clientMap[key] ?: run {
-                    loadPersistedClients(appContext)
-                    clientMap[key]
-                } ?: return@synchronized null to null
+                val existingClient = clientMap[key]
+                    ?: getInitialDemoClients().firstOrNull { it.mac.equals(mac, ignoreCase = true) }
+                    ?: run {
+                        loadPersistedClients(appContext)
+                        clientMap[key]
+                    } ?: return@synchronized null to null
 
                 if (!MAC_REGEX.matches(existingClient.mac)) {
                     Log.w(TAG, "Invalid client MAC address format: ${existingClient.mac}")
@@ -95,11 +105,12 @@ object HotspotManager {
                 }
 
                 val cmds = if (isDenied) {
+                    val cmdCleanup = "iptables -D FORWARD -m mac --mac-source ${existingClient.mac} -j DROP 2>/dev/null || true"
                     val cmdIptables = "iptables -I FORWARD -m mac --mac-source ${existingClient.mac} -j DROP"
-                    val cmdDeauth = "hostapd_cli deauthenticate ${existingClient.mac} 2>/dev/null || hostapd_cli -i wlan0 deauthenticate ${existingClient.mac} 2>/dev/null"
-                    listOf(cmdIptables, cmdDeauth)
+                    val cmdDeauth = "hostapd_cli deauthenticate ${existingClient.mac} 2>/dev/null || hostapd_cli -i wlan0 deauthenticate ${existingClient.mac} 2>/dev/null || true"
+                    listOf(cmdCleanup, cmdIptables, cmdDeauth)
                 } else {
-                    val cmdIptables = "iptables -D FORWARD -m mac --mac-source ${existingClient.mac} -j DROP"
+                    val cmdIptables = "iptables -D FORWARD -m mac --mac-source ${existingClient.mac} -j DROP 2>/dev/null || true"
                     listOf(cmdIptables)
                 }
 
@@ -133,10 +144,12 @@ object HotspotManager {
     fun updateClientAlias(context: Context, mac: String, customAlias: String?) {
         val appContext = context.applicationContext
         val key = mac.lowercase()
-        val client = clientMap[key] ?: run {
-            loadPersistedClients(appContext)
-            clientMap[key]
-        } ?: return
+        val client = clientMap[key]
+            ?: getInitialDemoClients().firstOrNull { it.mac.equals(mac, ignoreCase = true) }
+            ?: run {
+                loadPersistedClients(appContext)
+                clientMap[key]
+            } ?: return
 
         val trimmedAlias = customAlias?.trim()?.takeIf { it.isNotBlank() }
         clientMap[key] = client.copy(customAlias = trimmedAlias)
@@ -205,7 +218,7 @@ object HotspotManager {
         val appContext = context.applicationContext
         val currentClients = synchronized(this) { clientMap.values.toList() }
         val isRootEnabled = com.witherboymcw.superbattery.settings.AppPreferences.isRootHotspotMonitorEnabled(appContext)
-        _clientsState.value = if (isRootEnabled) currentClients else getInitialDemoClients()
+        _clientsState.value = if (isRootEnabled) currentClients else if (currentClients.isNotEmpty()) currentClients else getInitialDemoClients()
 
         scope.launch(Dispatchers.IO) {
             val array = JSONArray()

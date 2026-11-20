@@ -62,6 +62,7 @@ import com.witherboymcw.superbattery.screens.hotspot.HotspotNotificationListener
 import com.witherboymcw.superbattery.screens.hotspot.HotspotViewController
 import com.witherboymcw.superbattery.screens.settings.SettingsHelper
 import com.witherboymcw.superbattery.screens.settings.SettingsViewController
+import com.witherboymcw.superbattery.screens.standby.StandbyViewController
 import com.witherboymcw.superbattery.settings.HardwarePreferences
 import com.witherboymcw.superbattery.settings.Notch
 import com.witherboymcw.superbattery.settings.Permissions
@@ -80,6 +81,7 @@ class MainActivity : AppCompatActivity(), SettingsHost {
 
     private val settingsViewController = SettingsViewController()
     private val hotspotViewController = HotspotViewController()
+    private val standbyViewController = StandbyViewController()
     private val dashboardViewModel by lazy { ViewModelProvider(this)[DashboardViewModel::class.java] }
     private val refreshIntervalState = MutableStateFlow(DEFAULT_REFRESH_INTERVAL_MS)
     internal var refreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS
@@ -93,7 +95,6 @@ class MainActivity : AppCompatActivity(), SettingsHost {
 
     internal var thickChinOverrideLevel: Int? = null
     private val memoryInfo = ActivityManager.MemoryInfo()
-    private var lastNetworkCardTapTime = 0L
     private var currentLayoutResId: Int = 0
 
 
@@ -194,6 +195,7 @@ class MainActivity : AppCompatActivity(), SettingsHost {
             intent.removeExtra(BatteryWidget.EXTRA_CLOSE_SETTINGS)
             settingsViewController.closeScreen(this, animate = false)
             hotspotViewController.closeScreen(this, animate = false)
+            standbyViewController.closeScreen(this, animate = false)
         }
     }
 
@@ -223,6 +225,10 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         if (hotspotViewController.isOpen || (hotspotContainer != null && hotspotContainer.visibility == View.VISIBLE)) {
             outState.putBoolean(KEY_HOTSPOT_OPEN, true)
         }
+        val standbyContainer = findViewById<View>(R.id.standby_container)
+        if (standbyViewController.isOpen || (standbyContainer != null && standbyContainer.visibility == View.VISIBLE)) {
+            outState.putBoolean(KEY_STANDBY_OPEN, true)
+        }
         com.witherboymcw.superbattery.settings.SettingsSection.entries.forEach { section ->
             if (findViewById<View>(section.dropdownId)?.visibility == View.VISIBLE) {
                 outState.putBoolean(section.stateKey, true)
@@ -250,10 +256,12 @@ class MainActivity : AppCompatActivity(), SettingsHost {
 
     override fun onResume() {
         super.onResume()
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         hideSystemBars()
         loadRefreshInterval()
         updatePermissionStatuses()
         systemMonitorManager.startMonitoring()
+        standbyViewController.onResume(this)
 
         dashboardRenderer.updateRingerModeIcon(systemMonitorManager.getRingerMode())
         dashboardRenderer.updateBluetoothStatus(systemMonitorManager.isBluetoothEnabled())
@@ -289,21 +297,22 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         }
 
         dashboardViews.cardNetwork?.setOnClickListener {
-            val now = SystemClock.elapsedRealtime()
-            val diff = now - lastNetworkCardTapTime
-            if (diff in 50L..400L) {
-                lastNetworkCardTapTime = 0L
-                if (!hotspotViewController.isOpen) {
-                    hotspotViewController.openScreen(this)
-                }
-            } else {
-                lastNetworkCardTapTime = now
+            if (!hotspotViewController.isOpen) {
+                hotspotViewController.openScreen(this)
             }
         }
 
+        val clockTapListener = View.OnClickListener {
+            if (!standbyViewController.isOpen) {
+                standbyViewController.openScreen(this)
+            }
+        }
+        dashboardViews.tvHeaderClock?.setOnClickListener(clockTapListener)
+        dashboardViews.tvHeaderSeconds?.setOnClickListener(clockTapListener)
+
         findViewById<View>(R.id.dashboard)?.let { dashboard ->
             DrawerNavigationHelper.setupDashboardSwipeToOpen(
-                this, dashboard, settingsViewController, hotspotViewController
+                this, dashboard, settingsViewController, hotspotViewController, standbyViewController
             )
         }
     }
@@ -311,14 +320,8 @@ class MainActivity : AppCompatActivity(), SettingsHost {
     internal fun hideSystemBars() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        val isMiniSquare = FoldableAwareness.isMiniSquareMode(this)
-        if (isMiniSquare) {
-            windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
-            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
-        } else {
-            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-        }
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
     }
 
     private fun updateLayoutIfNeeded(savedInstanceState: Bundle? = null): Boolean {
@@ -335,10 +338,14 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         val isHotspotOpen = hotspotViewController.isOpen ||
                 (savedInstanceState?.getBoolean(KEY_HOTSPOT_OPEN) == true) ||
                 (findViewById<View>(R.id.hotspot_container)?.visibility == View.VISIBLE)
+        val isStandbyOpen = standbyViewController.isOpen ||
+                (savedInstanceState?.getBoolean(KEY_STANDBY_OPEN) == true) ||
+                (findViewById<View>(R.id.standby_container)?.visibility == View.VISIBLE)
 
         if (currentLayoutResId != 0) {
             settingsViewController.unbind()
             hotspotViewController.unbind()
+            standbyViewController.unbind()
         }
 
         setContentView(targetLayout)
@@ -351,6 +358,9 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         if (isHotspotOpen) {
             findViewById<View>(R.id.hotspot_container)?.visibility = View.VISIBLE
         }
+        if (isStandbyOpen) {
+            findViewById<View>(R.id.standby_container)?.visibility = View.VISIBLE
+        }
 
         initDashboardViews()
         applyThickChinPadding()
@@ -361,6 +371,7 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         initializeMetricCards()
         setupSettingsScreen(savedInstanceState)
         setupHotspotScreen(savedInstanceState)
+        setupStandbyScreen(savedInstanceState)
         bindLayout()
 
         if (isSettingsOpen) {
@@ -369,6 +380,10 @@ class MainActivity : AppCompatActivity(), SettingsHost {
 
         if (isHotspotOpen) {
             hotspotViewController.restoreOpenState(this)
+        }
+
+        if (isStandbyOpen) {
+            standbyViewController.restoreOpenState(this)
         }
 
         updateDashboard()
@@ -385,6 +400,10 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         if (hotspotViewController.isOpen || (hotspotContainer != null && hotspotContainer.visibility == View.VISIBLE)) {
             hotspotViewController.restoreOpenState(this)
         }
+        val standbyContainer = findViewById<View>(R.id.standby_container)
+        if (standbyViewController.isOpen || (standbyContainer != null && standbyContainer.visibility == View.VISIBLE)) {
+            standbyViewController.restoreOpenState(this)
+        }
 
         applyGraphBackgrounds(OledThemeAllInOne.getEffectiveThemeForGraph(this))
 
@@ -396,17 +415,21 @@ class MainActivity : AppCompatActivity(), SettingsHost {
     }
 
     override fun onPause() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         NotchAwareness.dismissNotchPositionOverlay()
         settingsViewController.flushThickChinCommit()
         systemMonitorManager.stopMonitoring()
+        standbyViewController.onPause()
         super.onPause()
     }
 
     override fun onDestroy() {
         settingsViewController.unbind()
         hotspotViewController.unbind()
+        standbyViewController.unbind()
         (findViewById<android.view.View>(R.id.settings_container) as? SwipeBackFrameLayout)?.swipeListener = null
         (findViewById<android.view.View>(R.id.hotspot_container) as? SwipeBackFrameLayout)?.swipeListener = null
+        (findViewById<android.view.View>(R.id.standby_container) as? SwipeBackFrameLayout)?.swipeListener = null
         com.witherboymcw.superbattery.awareness.NotchAwareness.dismissNotchPositionOverlay()
         super.onDestroy()
     }
@@ -417,6 +440,10 @@ class MainActivity : AppCompatActivity(), SettingsHost {
 
     private fun setupHotspotScreen(savedInstanceState: Bundle? = null) {
         hotspotViewController.bind(this, savedInstanceState)
+    }
+
+    private fun setupStandbyScreen(savedInstanceState: Bundle? = null) {
+        standbyViewController.bind(this, savedInstanceState)
     }
 
     internal fun updatePermissionStatuses() {
@@ -594,6 +621,7 @@ class MainActivity : AppCompatActivity(), SettingsHost {
         internal const val PHONE_STATE_PERMISSION_REQUEST = 1002
         private const val KEY_SETTINGS_OPEN = "key_settings_open"
         private const val KEY_HOTSPOT_OPEN = "key_hotspot_open"
+        private const val KEY_STANDBY_OPEN = "key_standby_open"
         private const val KEY_SETTINGS_SCROLL_Y = "key_settings_scroll_y"
         private const val KEY_SETTINGS_SCROLL_RIGHT_Y = "key_settings_scroll_right_y"
     }

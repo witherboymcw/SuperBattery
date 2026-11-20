@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.witherboymcw.superbattery.SwipeBackFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/standby_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:clickable="true"
+    android:focusable="true"
+    android:visibility="gone">
+
+    <com.witherboymcw.superbattery.screens.standby.StandbyMiniSquareHintView
+        android:id="@+id/standby_mini_square_hint"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_gravity="center"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:id="@+id/standby_content_holder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center">
+
+        <include layout="@layout/layout_standby_content" />
+
+    </FrameLayout>
+
+</com.witherboymcw.superbattery.SwipeBackFrameLayout>

@@ -71,9 +71,15 @@ internal class HotspotViewController : DrawerScreen(
                 if (shouldClose) {
                     closeScreen(activity)
                 } else {
+                    swipeContainer.animate()?.cancel()
+                    val widthVal = swipeContainer.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
+                    val remainingDistance = Math.abs(swipeContainer.translationX)
+                    val ratio = (remainingDistance / widthVal).coerceIn(0f, 1f)
+                    val duration = (ratio * 250L).toLong().coerceIn(100L, 250L)
+
                     swipeContainer.animate()
                         .translationX(0f)
-                        .setDuration(200L)
+                        .setDuration(duration)
                         .setInterpolator(Motion.interpolator)
                         .withLayer()
                         .start()
@@ -171,13 +177,23 @@ internal class HotspotViewController : DrawerScreen(
 
         detailRadioAllowed?.setOnClickListener {
             if (client.isDenied) {
+                detailRadioAllowed.isChecked = true
+                detailRadioDenied?.isChecked = false
                 HotspotManager.updateClientStatus(activity, client.mac, false)
+            } else {
+                detailRadioAllowed.isChecked = true
+                detailRadioDenied?.isChecked = false
             }
         }
 
         detailRadioDenied?.setOnClickListener {
             if (!client.isDenied) {
+                detailRadioDenied.isChecked = true
+                detailRadioAllowed?.isChecked = false
                 HotspotManager.updateClientStatus(activity, client.mac, true)
+            } else {
+                detailRadioDenied.isChecked = true
+                detailRadioAllowed?.isChecked = false
             }
         }
 

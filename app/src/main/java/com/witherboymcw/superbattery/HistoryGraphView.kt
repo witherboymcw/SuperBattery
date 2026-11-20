@@ -135,6 +135,7 @@ class HistoryGraphView @JvmOverloads constructor(
             if (w > maxW) maxW = w
         }
         cachedLabelWidth = maxW
+        updateAxisOffsets()
 
         invalidate()
     }
@@ -142,21 +143,43 @@ class HistoryGraphView @JvmOverloads constructor(
     var onAxisOffsetsChanged: ((leftOffset: Float, rightOffset: Float, plotWidth: Float) -> Unit)? = null
     private var lastReportedLeft = -1f
     private var lastReportedRightOffset = -1f
-    private var pendingLeft = 0f
-    private var pendingRightOffset = 0f
-    private var pendingPlotWidth = 0f
-    private val axisOffsetRunnable = Runnable {
-        onAxisOffsetsChanged?.invoke(pendingLeft, pendingRightOffset, pendingPlotWidth)
-    }
 
     var suppressMinYLabel: Boolean = false
     var hideYAxisLabels: Boolean = false
         set(value) {
             if (field != value) {
                 field = value
+                updateAxisOffsets()
                 invalidate()
             }
         }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        updateAxisOffsets()
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        updateAxisOffsets()
+    }
+
+    private fun updateAxisOffsets() {
+        val currentWidth = width
+        if (currentWidth <= 0) return
+        val labelWidth = if (hideYAxisLabels) 0f else cachedLabelWidth
+        val left = paddingLeft + (if (hideYAxisLabels) 4f * density else labelWidth + 10f * density)
+        val right = currentWidth - paddingRight - 4f
+        if (right <= left) return
+
+        val rightOffset = currentWidth - right
+        val plotWidth = right - left
+        if (left != lastReportedLeft || rightOffset != lastReportedRightOffset) {
+            lastReportedLeft = left
+            lastReportedRightOffset = rightOffset
+            onAxisOffsetsChanged?.invoke(left, rightOffset, plotWidth)
+        }
+    }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
@@ -167,11 +190,6 @@ class HistoryGraphView @JvmOverloads constructor(
         tickPaint.strokeWidth = density
         textPaint.textSize = 11f * resources.displayMetrics.scaledDensity
         invalidate()
-    }
-
-    override fun onDetachedFromWindow() {
-        removeCallbacks(axisOffsetRunnable)
-        super.onDetachedFromWindow()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -187,19 +205,7 @@ class HistoryGraphView @JvmOverloads constructor(
         val bottom = height - paddingBottom - labelHeight * 0.75f - strokeInset - 4f * density
         if (right <= left || bottom <= top) return
 
-        val rightOffset = width - right
         val plotWidth = right - left
-        if (left != lastReportedLeft || rightOffset != lastReportedRightOffset) {
-            lastReportedLeft = left
-            lastReportedRightOffset = rightOffset
-            if (onAxisOffsetsChanged != null) {
-                pendingLeft = left
-                pendingRightOffset = rightOffset
-                pendingPlotWidth = plotWidth
-                removeCallbacks(axisOffsetRunnable)
-                post(axisOffsetRunnable)
-            }
-        }
 
         val secondsPerWindow = TIME_WINDOW_MS / 1_000L
         val windowStart = nowMs - TIME_WINDOW_MS

@@ -21,7 +21,8 @@ open class DrawerScreen(
 ) {
     enum class SlideDirection {
         FROM_RIGHT,
-        FROM_LEFT
+        FROM_LEFT,
+        FROM_TOP
     }
 
     protected var activityRef: ComponentActivity? = null
@@ -31,26 +32,55 @@ open class DrawerScreen(
         get() = if (slideDirection == SlideDirection.FROM_RIGHT) 1f else -1f
 
     val backCallback = object : OnBackPressedCallback(false) {
-        private var initialWidth = 0f
+        private var initialSize = 0f
 
         override fun handleOnBackStarted(backEvent: BackEventCompat) {
             val container = activityRef?.findViewById<View>(containerId) ?: return
-            initialWidth = container.width.toFloat().takeIf { it > 0f } ?: Motion.FALLBACK_WIDTH
+            if (slideDirection == SlideDirection.FROM_TOP) {
+                initialSize = container.height.toFloat().takeIf { it > 0f }
+                    ?: activityRef?.resources?.displayMetrics?.heightPixels?.toFloat()
+                    ?: Motion.FALLBACK_WIDTH
+            } else {
+                initialSize = container.width.toFloat().takeIf { it > 0f } ?: Motion.FALLBACK_WIDTH
+            }
         }
 
         override fun handleOnBackProgressed(backEvent: BackEventCompat) {
             val container = activityRef?.findViewById<View>(containerId) ?: return
             val progress = backEvent.progress
-            container.translationX = signMultiplier * initialWidth * progress
+            if (slideDirection == SlideDirection.FROM_TOP) {
+                container.translationY = -initialSize * progress
+            } else {
+                container.translationX = signMultiplier * initialSize * progress
+            }
         }
 
         override fun handleOnBackCancelled() {
             val container = activityRef?.findViewById<View>(containerId) ?: return
-            container.animate()
-                .translationX(0f)
-                .setDuration(150L)
-                .setInterpolator(Motion.interpolator)
-                .start()
+            container.animate().cancel()
+            if (slideDirection == SlideDirection.FROM_TOP) {
+                val height = container.height.toFloat().takeIf { it > 0f }
+                    ?: activityRef?.resources?.displayMetrics?.heightPixels?.toFloat()
+                    ?: Motion.FALLBACK_WIDTH
+                val remainingDistance = Math.abs(container.translationY)
+                val remainingRatio = (remainingDistance / height).coerceIn(0f, 1f)
+                val duration = (remainingRatio * 250L).toLong().coerceIn(100L, 250L)
+                container.animate()
+                    .translationY(0f)
+                    .setDuration(duration)
+                    .setInterpolator(Motion.interpolator)
+                    .start()
+            } else {
+                val width = container.width.toFloat().takeIf { it > 0f } ?: Motion.FALLBACK_WIDTH
+                val remainingDistance = Math.abs(container.translationX)
+                val remainingRatio = (remainingDistance / width).coerceIn(0f, 1f)
+                val duration = (remainingRatio * 250L).toLong().coerceIn(100L, 250L)
+                container.animate()
+                    .translationX(0f)
+                    .setDuration(duration)
+                    .setInterpolator(Motion.interpolator)
+                    .start()
+            }
         }
 
         override fun handleOnBackPressed() {
@@ -59,46 +89,107 @@ open class DrawerScreen(
         }
     }
 
-    open fun openScreen(activity: ComponentActivity) {
+    open fun openScreen(activity: ComponentActivity, fromCurrent: Boolean = false) {
         val container = activity.findViewById<View>(containerId) ?: return
+        container.animate().cancel()
         isOpen = true
+        onPreOpen(activity)
         container.visibility = View.VISIBLE
-        val width = container.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
-        container.translationX = signMultiplier * width
-        container.animate()
-            .translationX(0f)
-            .setDuration(280L)
-            .setInterpolator(Motion.interpolator)
-            .withLayer()
-            .start()
+        if (slideDirection == SlideDirection.FROM_TOP) {
+            val height = container.height.toFloat().takeIf { it > 0 }
+                ?: activity.resources.displayMetrics.heightPixels.toFloat()
+            if (!fromCurrent) {
+                container.translationY = -height
+            }
+            val remainingDistance = Math.abs(container.translationY)
+            val remainingRatio = (remainingDistance / height).coerceIn(0f, 1f)
+            val duration = if (fromCurrent) {
+                (remainingRatio * 250L).toLong().coerceIn(100L, 250L)
+            } else {
+                280L
+            }
+            container.animate()
+                .translationY(0f)
+                .setDuration(duration)
+                .setInterpolator(Motion.interpolator)
+                .withLayer()
+                .withEndAction {
+                    onPostOpen(activity)
+                }
+                .start()
+            animateActionButtonOnOpen(activity, duration)
+        } else {
+            val width = container.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
+            if (!fromCurrent) {
+                container.translationX = signMultiplier * width
+            }
+            val remainingDistance = Math.abs(container.translationX)
+            val remainingRatio = (remainingDistance / width).coerceIn(0f, 1f)
+            val duration = if (fromCurrent) {
+                (remainingRatio * 250L).toLong().coerceIn(100L, 250L)
+            } else {
+                280L
+            }
+            container.animate()
+                .translationX(0f)
+                .setDuration(duration)
+                .setInterpolator(Motion.interpolator)
+                .withLayer()
+                .withEndAction {
+                    onPostOpen(activity)
+                }
+                .start()
+            animateActionButtonOnOpen(activity, duration)
+        }
 
-        animateActionButtonOnOpen(activity)
         backCallback.isEnabled = true
-        onPostOpen(activity)
     }
 
     open fun closeScreen(activity: ComponentActivity, animate: Boolean = true) {
         onPreClose()
         val container = activity.findViewById<View>(containerId) ?: return
+        container.animate().cancel()
         if (container.visibility != View.VISIBLE) return
         isOpen = false
         backCallback.isEnabled = false
         if (animate) {
-            val width = container.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
-            container.animate()
-                .translationX(signMultiplier * width)
-                .setDuration(280L)
-                .setInterpolator(Motion.interpolator)
-                .withLayer()
-                .withEndAction {
-                    container.visibility = View.GONE
-                }
-                .start()
-            animateActionButtonOnClose(activity, animate = true)
+            if (slideDirection == SlideDirection.FROM_TOP) {
+                val height = container.height.toFloat().takeIf { it > 0 }
+                    ?: activity.resources.displayMetrics.heightPixels.toFloat()
+                val remainingDistance = Math.abs(-height - container.translationY)
+                val remainingRatio = (remainingDistance / height).coerceIn(0f, 1f)
+                val duration = (remainingRatio * 250L).toLong().coerceIn(100L, 250L)
+                container.animate()
+                    .translationY(-height)
+                    .setDuration(duration)
+                    .setInterpolator(Motion.interpolator)
+                    .withLayer()
+                    .withEndAction {
+                        container.visibility = View.GONE
+                    }
+                    .start()
+                animateActionButtonOnClose(activity, animate = true, duration = duration)
+            } else {
+                val width = container.width.toFloat().takeIf { it > 0 } ?: Motion.FALLBACK_WIDTH
+                val targetX = signMultiplier * width
+                val remainingDistance = Math.abs(targetX - container.translationX)
+                val remainingRatio = (remainingDistance / width).coerceIn(0f, 1f)
+                val duration = (remainingRatio * 250L).toLong().coerceIn(100L, 250L)
+                container.animate()
+                    .translationX(targetX)
+                    .setDuration(duration)
+                    .setInterpolator(Motion.interpolator)
+                    .withLayer()
+                    .withEndAction {
+                        container.visibility = View.GONE
+                    }
+                    .start()
+                animateActionButtonOnClose(activity, animate = true, duration = duration)
+            }
         } else {
-            container.animate().cancel()
             container.visibility = View.GONE
             container.translationX = 0f
+            container.translationY = 0f
             animateActionButtonOnClose(activity, animate = false)
         }
         onPostClose(activity)
@@ -106,13 +197,18 @@ open class DrawerScreen(
 
     open fun restoreOpenState(activity: ComponentActivity) {
         val container = activity.findViewById<View>(containerId) ?: return
+        container.animate().cancel()
+        onPreOpen(activity)
         container.visibility = View.VISIBLE
         container.translationX = 0f
+        container.translationY = 0f
         backCallback.isEnabled = true
         isOpen = true
         animateActionButtonOnRestore(activity)
+        onPostOpen(activity)
     }
 
+    protected open fun onPreOpen(activity: ComponentActivity) {}
     protected open fun onPreClose() {}
     protected open fun onPostOpen(activity: ComponentActivity) {}
     protected open fun onPostClose(activity: ComponentActivity) {}
@@ -125,24 +221,26 @@ open class DrawerScreen(
         return (activity as? SettingsHost)?.settingsActionButton
     }
 
-    private fun animateActionButtonOnOpen(activity: ComponentActivity) {
-        resolveActionButton(activity)?.animate()
-            ?.rotation(90f)
-            ?.setDuration(280L)
-            ?.setInterpolator(Motion.interpolator)
-            ?.start()
+    private fun animateActionButtonOnOpen(activity: ComponentActivity, duration: Long = 280L) {
+        val btn = resolveActionButton(activity) ?: return
+        btn.animate().cancel()
+        btn.animate()
+            .rotation(90f)
+            .setDuration(duration)
+            .setInterpolator(Motion.interpolator)
+            .start()
     }
 
-    private fun animateActionButtonOnClose(activity: ComponentActivity, animate: Boolean) {
+    private fun animateActionButtonOnClose(activity: ComponentActivity, animate: Boolean, duration: Long = 280L) {
         val btn = resolveActionButton(activity) ?: return
+        btn.animate().cancel()
         if (animate) {
             btn.animate()
                 .rotation(0f)
-                .setDuration(280L)
+                .setDuration(duration)
                 .setInterpolator(Motion.interpolator)
                 .start()
         } else {
-            btn.animate().cancel()
             btn.rotation = 0f
         }
     }

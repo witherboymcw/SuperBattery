@@ -312,4 +312,5 @@
 
     <include layout="@layout/layout_settings" />
     <include layout="@layout/layout_hotspot" />
+    <include layout="@layout/layout_standby" />
 </FrameLayout>

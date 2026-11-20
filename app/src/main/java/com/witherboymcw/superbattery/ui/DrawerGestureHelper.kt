@@ -42,11 +42,23 @@ class DrawerGestureHelper(context: Context) {
         return velocityTracker?.xVelocity ?: 0f
     }
 
+    fun computeYVelocity(units: Int = 1000): Float {
+        velocityTracker?.computeCurrentVelocity(units)
+        return velocityTracker?.yVelocity ?: 0f
+    }
+
     fun isHorizontalSwipe(dx: Float, dy: Float, sensitivity: Float = 1f): Boolean {
         val rawDx = abs(dx)
         val rawDy = abs(dy)
         val effectiveDx = rawDx * sensitivity
         return effectiveDx > touchSlop && rawDx > rawDy * 0.8f
+    }
+
+    fun isVerticalSwipe(dx: Float, dy: Float, sensitivity: Float = 1f): Boolean {
+        val rawDx = abs(dx)
+        val rawDy = abs(dy)
+        val effectiveDy = rawDy * sensitivity
+        return effectiveDy > touchSlop && rawDy > rawDx * 0.8f
     }
 
     fun isFlingLeft(xVelocity: Float): Boolean {
@@ -55,6 +67,14 @@ class DrawerGestureHelper(context: Context) {
 
     fun isFlingRight(xVelocity: Float): Boolean {
         return xVelocity > (minFlingVelocity * 0.15f)
+    }
+
+    fun isFlingUp(yVelocity: Float): Boolean {
+        return yVelocity < -(minFlingVelocity * 0.15f)
+    }
+
+    fun isFlingDown(yVelocity: Float): Boolean {
+        return yVelocity > (minFlingVelocity * 0.15f)
     }
 
     fun getSwipeThreshold(context: Context, isMiniSquare: Boolean = false): Float {

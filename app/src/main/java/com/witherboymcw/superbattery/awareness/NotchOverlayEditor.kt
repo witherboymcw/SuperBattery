@@ -88,6 +88,8 @@ object NotchOverlayEditor {
         lateinit var radioManual: RadioButton
         lateinit var seekBarSize: SeekBar
 
+        private var isAttached = false
+
         init {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val bounds = wm.currentWindowMetrics.bounds
@@ -151,17 +153,25 @@ object NotchOverlayEditor {
             }
 
             try {
-                wm.addView(overlayView, params)
+                if (!isAttached) {
+                    wm.addView(overlayView, params)
+                    isAttached = true
+                }
             } catch (e: Exception) {
                 android.util.Log.w(TAG, "Failed to attach notch editor overlay", e)
+                isAttached = false
             }
         }
 
         fun dismiss() {
-            try {
-                wm.removeView(overlayView)
-            } catch (e: Exception) {
-                android.util.Log.w(TAG, "Failed to remove notch editor overlay", e)
+            if (isAttached && ::overlayView.isInitialized) {
+                try {
+                    wm.removeViewImmediate(overlayView)
+                } catch (e: Exception) {
+                    android.util.Log.w(TAG, "Failed to remove notch editor overlay", e)
+                } finally {
+                    isAttached = false
+                }
             }
         }
 

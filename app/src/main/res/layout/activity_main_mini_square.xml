@@ -273,4 +273,5 @@
     <!-- Overlay Include Layouts for Settings and Hotspot (Dùng 1 cột dọc cuộn từ màn hình dọc) -->
     <include layout="@layout/layout_settings_single_column" />
     <include layout="@layout/layout_hotspot_single_column" />
+    <include layout="@layout/layout_standby" />
 </FrameLayout>
