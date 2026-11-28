@@ -27,11 +27,12 @@ object HotspotParser {
         val parts = line.trim().split("\\s+".toRegex())
         if (parts.size >= 4 && parts.contains("lladdr")) {
             val ip = parts[0]
+            if (!ip.contains(".") || ip.contains(":")) return null
             val macIndex = parts.indexOf("lladdr") + 1
             if (macIndex < parts.size) {
                 val mac = parts[macIndex]
                 val state = parts.last().uppercase()
-                val validStates = setOf("REACHABLE", "DELAY", "STALE", "PROBE", "PERMANENT")
+                val validStates = setOf("REACHABLE", "DELAY", "PROBE", "PERMANENT")
                 if (validStates.contains(state) && mac.matches(Regex("^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$"))) {
                     return Pair(mac, ip)
                 }

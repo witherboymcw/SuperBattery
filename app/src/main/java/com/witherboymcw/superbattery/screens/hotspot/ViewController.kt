@@ -108,6 +108,7 @@ internal class HotspotViewController : DrawerScreen(
         )
 
         recyclerView?.layoutManager = LinearLayoutManager(activity)
+        recyclerView?.itemAnimator = null
         recyclerView?.adapter = adapter
         recyclerView?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
@@ -126,7 +127,11 @@ internal class HotspotViewController : DrawerScreen(
                     compareByDescending<HotspotClient> { it.isCurrentlyOnline }
                         .thenByDescending { it.lastConnectedTimeMs }
                 )
-                adapter.submitList(sortedList)
+                adapter.submitList(sortedList) {
+                    recyclerView?.post {
+                        (hotspotContainer as? NotchAwareFrameLayout)?.updateChildOffsets()
+                    }
+                }
 
                 if (isLandscape && sortedList.isNotEmpty()) {
                     val currentSelected = sortedList.firstOrNull { it.mac.equals(selectedDeviceMac, ignoreCase = true) }
@@ -175,11 +180,14 @@ internal class HotspotViewController : DrawerScreen(
             detailRadioDenied?.isChecked = false
         }
 
+        val container = activity.findViewById<View>(R.id.hotspot_container) as? NotchAwareFrameLayout
+
         detailRadioAllowed?.setOnClickListener {
             if (client.isDenied) {
                 detailRadioAllowed.isChecked = true
                 detailRadioDenied?.isChecked = false
                 HotspotManager.updateClientStatus(activity, client.mac, false)
+                container?.updateChildOffsets()
             } else {
                 detailRadioAllowed.isChecked = true
                 detailRadioDenied?.isChecked = false
@@ -191,6 +199,7 @@ internal class HotspotViewController : DrawerScreen(
                 detailRadioDenied.isChecked = true
                 detailRadioAllowed?.isChecked = false
                 HotspotManager.updateClientStatus(activity, client.mac, true)
+                container?.updateChildOffsets()
             } else {
                 detailRadioDenied.isChecked = true
                 detailRadioAllowed?.isChecked = false

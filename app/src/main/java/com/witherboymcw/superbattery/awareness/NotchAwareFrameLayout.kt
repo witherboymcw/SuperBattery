@@ -117,6 +117,10 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         applyDetourToScrollChildren(this, peakX, peakY, totalHeight, tempRootLoc[1], reductionPx)
     }
 
+    private val rvLayoutChangeListener = OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+        updateChildOffsets()
+    }
+
     private fun ensureRecyclerViewScrollListener(rv: RecyclerView) {
         if (!attachedRecyclerViews.containsKey(rv)) {
             val listener = object : RecyclerView.OnScrollListener() {
@@ -125,6 +129,7 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
                 }
             }
             rv.addOnScrollListener(listener)
+            rv.addOnLayoutChangeListener(rvLayoutChangeListener)
             attachedRecyclerViews[rv] = listener
         }
     }
@@ -137,7 +142,6 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         rootScreenY: Int,
         reductionPx: Int
     ) {
-        val halfInfluenceHeight = totalHeight / 2f
         viewGroup.clipChildren = false
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
@@ -157,9 +161,13 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
                     card.getLocationOnScreen(tempCardLoc)
                     val cardCenterY = (tempCardLoc[1] - rootScreenY) + card.height / 2f
 
-                    val t = (1f - abs(cardCenterY - peakY) / halfInfluenceHeight).coerceIn(0f, 1f)
+                    val influenceRadius = totalHeight * 0.75f
+                    val minOffset = dp(16f)
+                    val extraOffset = (peakX - minOffset).coerceAtLeast(0f)
+                    val distY = abs(cardCenterY - peakY)
+                    val t = (1f - distY / influenceRadius).coerceIn(0f, 1f)
                     val smoothT = t * t * (3f - 2f * t)
-                    card.translationX = peakX * smoothT
+                    card.translationX = minOffset + extraOffset * smoothT
                 }
             } else if (child.id == R.id.hotspot_recycler_view && child is RecyclerView) {
                 child.clipChildren = false
@@ -177,9 +185,13 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
                     card.getLocationOnScreen(tempCardLoc)
                     val cardCenterY = (tempCardLoc[1] - rootScreenY) + card.height / 2f
 
-                    val t = (1f - abs(cardCenterY - peakY) / halfInfluenceHeight).coerceIn(0f, 1f)
+                    val influenceRadius = totalHeight * 0.75f
+                    val minOffset = dp(16f)
+                    val extraOffset = (peakX - minOffset).coerceAtLeast(0f)
+                    val distY = abs(cardCenterY - peakY)
+                    val t = (1f - distY / influenceRadius).coerceIn(0f, 1f)
                     val smoothT = t * t * (3f - 2f * t)
-                    card.translationX = peakX * smoothT
+                    card.translationX = minOffset + extraOffset * smoothT
                 }
             } else if (child is ViewGroup) {
                 child.clipChildren = false

@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.witherboymcw.superbattery.MainActivity
 import com.witherboymcw.superbattery.OledThemeAllInOne
 import com.witherboymcw.superbattery.R
+import com.witherboymcw.superbattery.awareness.NotchAwareFrameLayout
 import com.witherboymcw.superbattery.awareness.NotchAwareness
 
 class HotspotClientDiffCallback : DiffUtil.ItemCallback<HotspotClient>() {
@@ -145,6 +146,7 @@ class HotspotClientAdapter(
                     clientHolder.radioAllowed.isChecked = true
                     clientHolder.radioDenied.isChecked = false
                     onStatusChanged(client, false)
+                    (clientHolder.itemView.parent?.parent as? NotchAwareFrameLayout)?.updateChildOffsets()
                 } else {
                     clientHolder.radioAllowed.isChecked = true
                     clientHolder.radioDenied.isChecked = false
@@ -156,6 +158,7 @@ class HotspotClientAdapter(
                     clientHolder.radioDenied.isChecked = true
                     clientHolder.radioAllowed.isChecked = false
                     onStatusChanged(client, true)
+                    (clientHolder.itemView.parent?.parent as? NotchAwareFrameLayout)?.updateChildOffsets()
                 } else {
                     clientHolder.radioDenied.isChecked = true
                     clientHolder.radioAllowed.isChecked = false
@@ -178,6 +181,10 @@ class HotspotClientAdapter(
                     clientHolder.tvName.text = client.deviceName
                 }
                 onClientClick(client)
+            }
+
+            clientHolder.itemView.post {
+                (clientHolder.itemView.parent?.parent as? NotchAwareFrameLayout)?.updateChildOffsets()
             }
         }
     }

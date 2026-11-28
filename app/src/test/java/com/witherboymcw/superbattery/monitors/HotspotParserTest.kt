@@ -40,18 +40,18 @@ class HotspotParserTest {
         assertNotNull(parsedNeigh)
         assertEquals("A4:C3:F0:11:22:33", parsedNeigh!!.first)
         assertEquals("192.168.43.101", parsedNeigh.second)
-        
-        val staleLine = "192.168.43.102 dev wlan0 lladdr BB:C3:F0:11:22:33 STALE"
-        val parsedStale = HotspotParser.parseIpNeighLine(staleLine)
-        assertNotNull(parsedStale)
-        assertEquals("BB:C3:F0:11:22:33", parsedStale!!.first)
-        assertEquals("192.168.43.102", parsedStale.second)
 
-        val fourTokenLine = "192.168.228.247 lladdr 8e:23:55:4f:58:4a STALE"
+        val fourTokenLine = "192.168.228.247 lladdr 8e:23:55:4f:58:4a REACHABLE"
         val parsedFourToken = HotspotParser.parseIpNeighLine(fourTokenLine)
         assertNotNull(parsedFourToken)
         assertEquals("8e:23:55:4f:58:4a", parsedFourToken!!.first)
         assertEquals("192.168.228.247", parsedFourToken.second)
+
+        val staleLine = "192.168.43.102 dev wlan0 lladdr BB:C3:F0:11:22:33 STALE"
+        assertNull(HotspotParser.parseIpNeighLine(staleLine))
+
+        val ipv6Line = "fe80::1cef:dbc5:5b1f:4747 dev wlan1 lladdr d2:d5:ed:4b:65:1e REACHABLE"
+        assertNull(HotspotParser.parseIpNeighLine(ipv6Line))
 
         val failedLine = "192.168.43.103 dev wlan0 lladdr CC:C3:F0:11:22:33 FAILED"
         assertNull(HotspotParser.parseIpNeighLine(failedLine))

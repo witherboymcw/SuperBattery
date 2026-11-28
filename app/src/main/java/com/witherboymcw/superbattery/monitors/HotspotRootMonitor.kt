@@ -222,11 +222,12 @@ object HotspotRootMonitor {
 
             val activeClients = mutableMapOf<String, Pair<String, String>>()
             val hostnameMap = mutableMapOf<String, String>()
+            val onlineMacs = mutableSetOf<String>()
 
             fun isIpv4(addr: String?): Boolean = addr != null && addr.contains(".") && !addr.contains(":")
 
             for (line in dataLines) {
-                // 1. Dumpsys Tethering active clients: client: /IP (MAC)
+                // 1. Dumpsys Tethering allocated IP leases: client: /IP (MAC)
                 val dumpsysMatches = HotspotParser.parseDumpsysTetheringClients(line)
                 for (match in dumpsysMatches) {
                     val mac = match.first.lowercase()
@@ -234,21 +235,23 @@ object HotspotRootMonitor {
                     activeClients[mac] = Pair(ip, "Unknown Device")
                 }
 
-                // 2. ARP table active clients
+                // 2. ARP table live clients (flags != 0x0)
                 val arpMatch = HotspotParser.parseArpLine(line, iface)
                 if (arpMatch != null) {
                     val mac = arpMatch.first.lowercase()
                     val ip = arpMatch.second
+                    onlineMacs.add(mac)
                     val existing = activeClients[mac]
                     val bestIp = if (existing != null && isIpv4(existing.first)) existing.first else ip
                     activeClients[mac] = Pair(bestIp, existing?.second ?: "Unknown Device")
                 }
 
-                // 3. IP Neigh active clients
+                // 3. IP Neigh live clients (state REACHABLE, DELAY, STALE, PROBE, PERMANENT)
                 val neighMatch = HotspotParser.parseIpNeighLine(line)
                 if (neighMatch != null) {
                     val mac = neighMatch.first.lowercase()
                     val ip = neighMatch.second
+                    onlineMacs.add(mac)
                     val existing = activeClients[mac]
                     val bestIp = if (existing != null && isIpv4(existing.first)) existing.first else ip
                     activeClients[mac] = Pair(bestIp, existing?.second ?: "Unknown Device")
@@ -260,6 +263,7 @@ object HotspotRootMonitor {
                     val mac = leaseMatch.first.lowercase()
                     val ip = leaseMatch.second
                     val hostname = leaseMatch.third
+                    onlineMacs.add(mac)
                     activeClients[mac] = Pair(ip, hostname)
                     if (hostname != "Unknown Device" && hostname != "Unknown") {
                         hostnameMap[mac] = hostname
@@ -277,11 +281,12 @@ object HotspotRootMonitor {
                 }
             }
 
-            // Enrich active clients with resolved hostnames
+            // Enrich ONLY genuinely online L2/L3 clients with resolved hostnames
             val finalDiscoveredClients = mutableMapOf<String, Pair<String, String>>()
-            activeClients.forEach { (mac, ipAndHost) ->
-                val ip = ipAndHost.first
-                val currentHost = ipAndHost.second
+            onlineMacs.forEach { mac ->
+                val ipAndHost = activeClients[mac]
+                val ip = ipAndHost?.first ?: "—"
+                val currentHost = ipAndHost?.second ?: "Unknown Device"
                 val resolvedHost = if (currentHost != "Unknown Device" && currentHost != "Unknown") {
                     currentHost
                 } else {
