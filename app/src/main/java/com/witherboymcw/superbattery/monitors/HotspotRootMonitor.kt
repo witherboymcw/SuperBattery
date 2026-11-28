@@ -220,58 +220,78 @@ object HotspotRootMonitor {
                 emptyList()
             }
 
-            val discoveredClients = mutableMapOf<String, Pair<String, String>>()
+            val activeClients = mutableMapOf<String, Pair<String, String>>()
+            val hostnameMap = mutableMapOf<String, String>()
 
             fun isIpv4(addr: String?): Boolean = addr != null && addr.contains(".") && !addr.contains(":")
 
-            fun recordClient(mac: String, ip: String, hostname: String = "Unknown Device") {
-                val macLower = mac.lowercase()
-                val existing = discoveredClients[macLower]
-                val currentIp = existing?.first
-
-                val bestIp = when {
-                    currentIp == null -> ip
-                    isIpv4(currentIp) -> currentIp
-                    isIpv4(ip) -> ip
-                    else -> ip
-                }
-                val bestHostname = if (existing != null && existing.second != "Unknown Device" && existing.second != "Unknown") {
-                    existing.second
-                } else {
-                    hostname
-                }
-                discoveredClients[macLower] = Pair(bestIp, bestHostname)
-            }
-
             for (line in dataLines) {
+                // 1. Dumpsys Tethering active clients: client: /IP (MAC)
                 val dumpsysMatches = HotspotParser.parseDumpsysTetheringClients(line)
-                for (dumpsysMatch in dumpsysMatches) {
-                    recordClient(dumpsysMatch.first, dumpsysMatch.second)
+                for (match in dumpsysMatches) {
+                    val mac = match.first.lowercase()
+                    val ip = match.second
+                    activeClients[mac] = Pair(ip, "Unknown Device")
                 }
 
+                // 2. ARP table active clients
                 val arpMatch = HotspotParser.parseArpLine(line, iface)
                 if (arpMatch != null) {
-                    recordClient(arpMatch.first, arpMatch.second)
+                    val mac = arpMatch.first.lowercase()
+                    val ip = arpMatch.second
+                    val existing = activeClients[mac]
+                    val bestIp = if (existing != null && isIpv4(existing.first)) existing.first else ip
+                    activeClients[mac] = Pair(bestIp, existing?.second ?: "Unknown Device")
                 }
 
+                // 3. IP Neigh active clients
                 val neighMatch = HotspotParser.parseIpNeighLine(line)
                 if (neighMatch != null) {
-                    recordClient(neighMatch.first, neighMatch.second)
+                    val mac = neighMatch.first.lowercase()
+                    val ip = neighMatch.second
+                    val existing = activeClients[mac]
+                    val bestIp = if (existing != null && isIpv4(existing.first)) existing.first else ip
+                    activeClients[mac] = Pair(bestIp, existing?.second ?: "Unknown Device")
                 }
 
+                // 4. Legacy dnsmasq lease active clients
                 val leaseMatch = HotspotParser.parseDnsmasqLeaseLine(line)
                 if (leaseMatch != null) {
-                    recordClient(leaseMatch.first, leaseMatch.second, leaseMatch.third)
+                    val mac = leaseMatch.first.lowercase()
+                    val ip = leaseMatch.second
+                    val hostname = leaseMatch.third
+                    activeClients[mac] = Pair(ip, hostname)
+                    if (hostname != "Unknown Device" && hostname != "Unknown") {
+                        hostnameMap[mac] = hostname
+                    }
                 }
 
+                // 5. NetworkStack DHCP logs: used for hostname resolution!
                 val netStackMatch = HotspotParser.parseNetworkStackDhcpLine(line)
                 if (netStackMatch != null) {
-                    recordClient(netStackMatch.first, netStackMatch.second, netStackMatch.third)
+                    val mac = netStackMatch.first.lowercase()
+                    val hostname = netStackMatch.third
+                    if (hostname != "Unknown Device" && hostname != "Unknown") {
+                        hostnameMap[mac] = hostname
+                    }
                 }
+            }
+
+            // Enrich active clients with resolved hostnames
+            val finalDiscoveredClients = mutableMapOf<String, Pair<String, String>>()
+            activeClients.forEach { (mac, ipAndHost) ->
+                val ip = ipAndHost.first
+                val currentHost = ipAndHost.second
+                val resolvedHost = if (currentHost != "Unknown Device" && currentHost != "Unknown") {
+                    currentHost
+                } else {
+                    hostnameMap[mac] ?: "Unknown Device"
+                }
+                finalDiscoveredClients[mac] = Pair(ip, resolvedHost)
             }
 
             appContext?.let { ctx ->
-                HotspotManager.syncClients(ctx, discoveredClients)
+                HotspotManager.syncClients(ctx, finalDiscoveredClients)
                 updateNotificationListenerState(true)
             }
             true
