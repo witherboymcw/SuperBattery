@@ -83,4 +83,21 @@ class HotspotParserTest {
         assertEquals("8e:23:55:4f:58:4a", parsedComplex!!.first)
         assertEquals("192.168.228.247", parsedComplex.second)
     }
+
+    @Test
+    fun testParseNetworkStackDhcpLine() {
+        val line = "2026-11-28T20:54:15.719557 - [wlan1.DHCP.Repository] Offering new generated lease clientId: 019E5A913F4CFF, hwAddr: 9e:5a:91:3f:4c:ff, netAddr: 192.168.71.19/24, expTime: 809881545,hostname: Redmi-Note-10S"
+        val parsed = HotspotParser.parseNetworkStackDhcpLine(line)
+        assertNotNull(parsed)
+        assertEquals("9e:5a:91:3f:4c:ff", parsed!!.first)
+        assertEquals("192.168.71.19", parsed.second)
+        assertEquals("Redmi Note 10S", parsed.third)
+
+        val nullHostLine = "hwAddr: 22:b3:8f:de:8a:99, netAddr: 192.168.71.101/24, expTime: 533398783,hostname: null"
+        val parsedNullHost = HotspotParser.parseNetworkStackDhcpLine(nullHostLine)
+        assertNotNull(parsedNullHost)
+        assertEquals("22:b3:8f:de:8a:99", parsedNullHost!!.first)
+        assertEquals("192.168.71.101", parsedNullHost.second)
+        assertEquals("Unknown Device", parsedNullHost.third)
+    }
 }

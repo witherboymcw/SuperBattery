@@ -197,7 +197,7 @@ object HotspotRootMonitor {
     private suspend fun syncAndCheckHotspotState(iface: String?): Boolean = withContext(Dispatchers.IO) {
         try {
             val neighCmd = if (!iface.isNullOrEmpty()) "ip neigh show dev $iface 2>/dev/null" else "ip neigh 2>/dev/null"
-            val cmd = "dumpsys tethering 2>/dev/null | grep -E -q '[a-zA-Z0-9_-]+ - TetheredState' && echo 'HOTSPOT_ON' || (iw dev 2>/dev/null | grep -q 'type AP' && echo 'HOTSPOT_ON' || (ip addr 2>/dev/null | grep -E -q '(softap|swlan|ap0|ap_br).*(UP|UNKNOWN)' && echo 'HOTSPOT_ON' || echo 'HOTSPOT_OFF')); echo '---MARKER---'; dumpsys tethering 2>/dev/null | grep \"client:\"; cat /proc/net/arp 2>/dev/null; $neighCmd; cat /data/misc/apexdata/com.android.tethering/misc/dhcp/dnsmasq.leases /data/misc/dhcp/dnsmasq.leases 2>/dev/null"
+            val cmd = "dumpsys tethering 2>/dev/null | grep -E -q '[a-zA-Z0-9_-]+ - TetheredState' && echo 'HOTSPOT_ON' || (iw dev 2>/dev/null | grep -q 'type AP' && echo 'HOTSPOT_ON' || (ip addr 2>/dev/null | grep -E -q '(softap|swlan|ap0|ap_br).*(UP|UNKNOWN)' && echo 'HOTSPOT_ON' || echo 'HOTSPOT_OFF')); echo '---MARKER---'; dumpsys tethering 2>/dev/null | grep \"client:\"; cat /proc/net/arp 2>/dev/null; $neighCmd; cat /data/misc/apexdata/com.android.tethering/misc/dhcp/dnsmasq.leases /data/misc/dhcp/dnsmasq.leases 2>/dev/null; dumpsys network_stack 2>/dev/null"
             val lines = runShellCommand(cmd)
 
             if (lines.isEmpty()) return@withContext false
@@ -262,6 +262,11 @@ object HotspotRootMonitor {
                 val leaseMatch = HotspotParser.parseDnsmasqLeaseLine(line)
                 if (leaseMatch != null) {
                     recordClient(leaseMatch.first, leaseMatch.second, leaseMatch.third)
+                }
+
+                val netStackMatch = HotspotParser.parseNetworkStackDhcpLine(line)
+                if (netStackMatch != null) {
+                    recordClient(netStackMatch.first, netStackMatch.second, netStackMatch.third)
                 }
             }
 

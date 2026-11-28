@@ -72,4 +72,22 @@ object HotspotParser {
     fun parseDumpsysTetheringClient(line: String): Pair<String, String>? {
         return parseDumpsysTetheringClients(line).firstOrNull()
     }
+
+    private val NETWORK_STACK_DHCP_REGEX = Regex(
+        "hwAddr:\\s*([0-9a-fA-F:]{17}).*?netAddr:\\s*([0-9.]+)(?:/\\d+)?.*?hostname:\\s*([^,\\s]+)",
+        RegexOption.IGNORE_CASE
+    )
+
+    fun parseNetworkStackDhcpLine(line: String): Triple<String, String, String>? {
+        val match = NETWORK_STACK_DHCP_REGEX.find(line) ?: return null
+        val mac = match.groupValues[1]
+        val ip = match.groupValues[2]
+        val rawHostname = match.groupValues[3].trim().replace("-", " ")
+        val hostname = if (rawHostname.equals("null", ignoreCase = true) || rawHostname.isBlank()) {
+            "Unknown Device"
+        } else {
+            rawHostname
+        }
+        return Triple(mac, ip, hostname)
+    }
 }
