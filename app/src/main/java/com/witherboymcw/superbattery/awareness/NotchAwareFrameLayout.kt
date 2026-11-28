@@ -142,6 +142,7 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
         rootScreenY: Int,
         reductionPx: Int
     ) {
+        val halfInfluenceHeight = totalHeight / 2f
         viewGroup.clipChildren = false
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
@@ -161,13 +162,9 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
                     card.getLocationOnScreen(tempCardLoc)
                     val cardCenterY = (tempCardLoc[1] - rootScreenY) + card.height / 2f
 
-                    val influenceRadius = totalHeight * 0.75f
-                    val minOffset = dp(16f)
-                    val extraOffset = (peakX - minOffset).coerceAtLeast(0f)
-                    val distY = abs(cardCenterY - peakY)
-                    val t = (1f - distY / influenceRadius).coerceIn(0f, 1f)
+                    val t = (1f - abs(cardCenterY - peakY) / halfInfluenceHeight).coerceIn(0f, 1f)
                     val smoothT = t * t * (3f - 2f * t)
-                    card.translationX = minOffset + extraOffset * smoothT
+                    card.translationX = peakX * smoothT
                 }
             } else if (child.id == R.id.hotspot_recycler_view && child is RecyclerView) {
                 child.clipChildren = false
@@ -185,13 +182,9 @@ class NotchAwareFrameLayout @JvmOverloads constructor(
                     card.getLocationOnScreen(tempCardLoc)
                     val cardCenterY = (tempCardLoc[1] - rootScreenY) + card.height / 2f
 
-                    val influenceRadius = totalHeight * 0.75f
-                    val minOffset = dp(16f)
-                    val extraOffset = (peakX - minOffset).coerceAtLeast(0f)
-                    val distY = abs(cardCenterY - peakY)
-                    val t = (1f - distY / influenceRadius).coerceIn(0f, 1f)
+                    val t = (1f - abs(cardCenterY - peakY) / halfInfluenceHeight).coerceIn(0f, 1f)
                     val smoothT = t * t * (3f - 2f * t)
-                    card.translationX = minOffset + extraOffset * smoothT
+                    card.translationX = peakX * smoothT
                 }
             } else if (child is ViewGroup) {
                 child.clipChildren = false
