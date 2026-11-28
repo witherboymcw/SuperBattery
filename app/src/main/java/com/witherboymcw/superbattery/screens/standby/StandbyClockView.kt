@@ -86,6 +86,7 @@ class StandbyClockView @JvmOverloads constructor(
         } else {
             Typeface.create("sans-serif-medium", Typeface.NORMAL)
         }
+        fontFeatureSettings = "tnum"
     }
 
     private val textHhMmPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -99,6 +100,7 @@ class StandbyClockView @JvmOverloads constructor(
         style = Paint.Style.FILL
         color = Color.WHITE
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        fontFeatureSettings = "tnum"
     }
 
     private val textSsPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -106,6 +108,7 @@ class StandbyClockView @JvmOverloads constructor(
         color = Color.parseColor("#8E8E93")
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        fontFeatureSettings = "tnum"
     }
 
     private val outerArcRect = RectF()
@@ -363,8 +366,8 @@ class StandbyClockView @JvmOverloads constructor(
         // ----------------------------------------------------
         // 4. Center Digital Clock
         // ----------------------------------------------------
-        val hhMmTextSize = size * 0.24f
-        val ssTextSize = size * 0.13f
+        val hhMmTextSize = size * 0.26f
+        val ssTextSize = size * 0.14f
 
         textHhMmPaint.textSize = hhMmTextSize
         textColonPaint.textSize = hhMmTextSize
@@ -374,16 +377,20 @@ class StandbyClockView @JvmOverloads constructor(
         val mmStr = digitCache[minute]
         val ssStr = digitCache[second]
 
-        // Vertical positioning
-        val hhMmOffsetY = (1f - animProgress) * (size * 0.06f)
-        val baseHhMmY = cy - (size * 0.02f) + hhMmOffsetY
-        val baseSsY = cy + (size * 0.14f)
+        // Group vertical positioning:
+        // - HH:MM sits at cy - (0.05 * size) when seconds are shown, shifting down to cy when seconds are hidden.
+        // - Seconds (SS) sit further down at cy + (0.18 * size) to provide clear spacing below HH:MM.
+        val hhMmOffsetY = (1f - animProgress) * (size * 0.05f)
+        val baseHhMmY = cy - (size * 0.05f) + hhMmOffsetY
+        val baseSsY = cy + (size * 0.18f)
 
-        // Center HH:mm horizontally
-        val hhWidth = textHhMmPaint.measureText(hhStr)
-        val colonWidth = textColonPaint.measureText(":")
-        val mmWidth = textHhMmPaint.measureText(mmStr)
-        val totalHhMmWidth = hhWidth + colonWidth + mmWidth
+        // Center HH:mm horizontally with monospace digit slots
+        val singleDigitWidthHhMm = (0..9).maxOf { textHhMmPaint.measureText(it.toString()) }
+        val colonMeasuredWidth = textColonPaint.measureText(":")
+        val colonSlotWidth = maxOf(colonMeasuredWidth, size * 0.08f)
+        val colonPadding = (colonSlotWidth - colonMeasuredWidth) / 2f
+
+        val totalHhMmWidth = (singleDigitWidthHhMm * 4f) + colonSlotWidth
         val startX = cx - (totalHhMmWidth / 2f)
 
         val fontMetricsHh = textHhMmPaint.fontMetrics
@@ -392,20 +399,45 @@ class StandbyClockView @JvmOverloads constructor(
         textHhMmPaint.textAlign = Paint.Align.LEFT
         textColonPaint.textAlign = Paint.Align.LEFT
 
-        // Draw HH
-        canvas.drawText(hhStr, startX, hhMmBaselineY, textHhMmPaint)
-        // Draw blinking colon
-        textColonPaint.alpha = if (second % 2 == 0) 255 else 0
-        canvas.drawText(":", startX + hhWidth, hhMmBaselineY, textColonPaint)
-        // Draw mm
-        canvas.drawText(mmStr, startX + hhWidth + colonWidth, hhMmBaselineY, textHhMmPaint)
+        // Draw HH digit by digit into fixed-width slots
+        if (hhStr.length >= 2) {
+            canvas.drawText(hhStr, 0, 1, startX, hhMmBaselineY, textHhMmPaint)
+            canvas.drawText(hhStr, 1, 2, startX + singleDigitWidthHhMm, hhMmBaselineY, textHhMmPaint)
+        } else {
+            canvas.drawText(hhStr, startX, hhMmBaselineY, textHhMmPaint)
+        }
 
-        // Draw ss if visible or animating
+        // Draw blinking colon centered in its fixed slot
+        textColonPaint.alpha = if (second % 2 == 0) 255 else 0
+        val colonX = startX + (singleDigitWidthHhMm * 2f) + colonPadding
+        canvas.drawText(":", colonX, hhMmBaselineY, textColonPaint)
+
+        // Draw MM digit by digit into fixed-width slots
+        val mmStartX = startX + (singleDigitWidthHhMm * 2f) + colonSlotWidth
+        if (mmStr.length >= 2) {
+            canvas.drawText(mmStr, 0, 1, mmStartX, hhMmBaselineY, textHhMmPaint)
+            canvas.drawText(mmStr, 1, 2, mmStartX + singleDigitWidthHhMm, hhMmBaselineY, textHhMmPaint)
+        } else {
+            canvas.drawText(mmStr, mmStartX, hhMmBaselineY, textHhMmPaint)
+        }
+
+        // Draw SS if visible or animating with monospace digit slots
         if (animProgress > 0f) {
             textSsPaint.alpha = (animProgress * 255).toInt().coerceIn(0, 255)
             val fontMetricsSs = textSsPaint.fontMetrics
             val ssBaselineY = baseSsY - (fontMetricsSs.descent + fontMetricsSs.ascent) / 2f
-            canvas.drawText(ssStr, cx, ssBaselineY, textSsPaint)
+
+            val singleDigitWidthSs = (0..9).maxOf { textSsPaint.measureText(it.toString()) }
+            val totalSsWidth = singleDigitWidthSs * 2f
+            val ssStartX = cx - (totalSsWidth / 2f)
+
+            textSsPaint.textAlign = Paint.Align.LEFT
+            if (ssStr.length >= 2) {
+                canvas.drawText(ssStr, 0, 1, ssStartX, ssBaselineY, textSsPaint)
+                canvas.drawText(ssStr, 1, 2, ssStartX + singleDigitWidthSs, ssBaselineY, textSsPaint)
+            } else {
+                canvas.drawText(ssStr, ssStartX, ssBaselineY, textSsPaint)
+            }
         }
     }
 
